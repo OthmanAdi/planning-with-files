@@ -54,7 +54,9 @@ notes.md          → Store research and findings
 
 ## Installation
 
-### Option 1: Clone directly (Recommended)
+### Claude Code
+
+#### Option 1: Clone directly (Recommended)
 
 ```bash
 # Navigate to your Claude Code skills directory
@@ -64,19 +66,50 @@ cd ~/.claude/skills  # or your custom skills path
 git clone https://github.com/OthmanAdi/planning-with-files.git
 ```
 
-### Option 2: Manual installation
+#### Option 2: Manual installation
 
 1. Download or copy the `planning-with-files` folder
 2. Place it in your Claude Code skills directory:
    - macOS/Linux: `~/.claude/skills/`
    - Windows: `%USERPROFILE%\.claude\skills\`
 
-### Verify Installation
+#### Verify Installation
 
 In Claude Code, the skill will automatically activate when you:
 - Start complex tasks
 - Mention "planning", "organize", or "track progress"
 - Ask for structured work
+
+---
+
+### Cursor
+
+Cursor doesn't support SKILL.md format, but this repo includes a Cursor-compatible version using the `.mdc` rules format.
+
+#### Option 1: Copy the rules folder (Recommended)
+
+```bash
+# Navigate to your project root
+cd /path/to/your/project
+
+# Copy the .cursor/rules folder from this repo
+cp -r /path/to/planning-with-files/.cursor .
+```
+
+#### Option 2: Manual installation
+
+1. Create a `.cursor/rules/` directory in your project root
+2. Copy `.cursor/rules/planning-with-files.mdc` into that directory
+
+#### Verify Installation
+
+In Cursor, the rule will be available for all AI models. You can:
+- Reference it by typing `@planning-with-files` in your prompt
+- The AI will use it automatically when you ask about planning or complex tasks
+
+#### Rule Configuration
+
+The `.mdc` file is configured with `alwaysApply: false`, meaning it won't bloat your context unless needed. To always include it, edit the file and set `alwaysApply: true`.
 
 ## Usage
 
@@ -128,11 +161,22 @@ This skill implements these key context engineering principles:
 
 ```
 planning-with-files/
-├── SKILL.md        # Core instructions (what Claude reads)
-├── reference.md    # Manus principles deep dive
-├── examples.md     # Real usage examples
-└── README.md       # This file
+├── .cursor/
+│   └── rules/
+│       └── planning-with-files.mdc  # Cursor rules file (MDC format)
+├── planning-with-files/
+│   ├── SKILL.md        # Core instructions (Claude Code format)
+│   ├── reference.md    # Manus principles deep dive
+│   └── examples.md     # Real usage examples
+└── README.md           # This file
 ```
+
+### Format Support
+
+| Editor | Format | Location |
+|--------|--------|----------|
+| Claude Code | `SKILL.md` | `~/.claude/skills/planning-with-files/` |
+| Cursor | `.mdc` | `.cursor/rules/` in your project |
 
 ## When to Use
 
