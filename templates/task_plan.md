@@ -3,6 +3,8 @@
   WHAT: This is your roadmap for the entire task. Think of it as your "working memory on disk."
   WHY: After 50+ tool calls, your original goals can get forgotten. This file keeps them fresh.
   WHEN: Create this FIRST, before starting any work. Update after each phase completes.
+  
+  Based on: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 -->
 
 ## Goal
@@ -24,7 +26,10 @@ Phase 1
 <!-- 
   WHAT: Break your task into 3-7 logical phases. Each phase should be completable.
   WHY: Breaking work into phases prevents overwhelm and makes progress visible.
-  WHEN: Update status after completing each phase: pending → in_progress → complete
+  WHEN: Update status and result after completing each phase.
+  
+  STATUS: pending → in_progress → complete
+  RESULT: pending → passed | failed | blocked
 -->
 
 ### Phase 1: Requirements & Discovery
@@ -36,11 +41,14 @@ Phase 1
 - [ ] Identify constraints and requirements
 - [ ] Document findings in findings.md
 - **Status:** in_progress
+- **Result:** pending
 <!-- 
-  STATUS VALUES:
-  - pending: Not started yet
-  - in_progress: Currently working on this
-  - complete: Finished this phase
+  STATUS VALUES: pending | in_progress | complete
+  RESULT VALUES: pending | passed | failed | blocked
+  
+  - passed: Phase completed successfully, all checks pass
+  - failed: Phase completed but with issues that need fixing
+  - blocked: Phase cannot proceed due to external dependency
 -->
 
 ### Phase 2: Planning & Structure
@@ -52,6 +60,7 @@ Phase 1
 - [ ] Create project structure if needed
 - [ ] Document decisions with rationale
 - **Status:** pending
+- **Result:** pending
 
 ### Phase 3: Implementation
 <!-- 
@@ -62,6 +71,7 @@ Phase 1
 - [ ] Write code to files before executing
 - [ ] Test incrementally
 - **Status:** pending
+- **Result:** pending
 
 ### Phase 4: Testing & Verification
 <!-- 
@@ -72,6 +82,7 @@ Phase 1
 - [ ] Document test results in progress.md
 - [ ] Fix any issues found
 - **Status:** pending
+- **Result:** pending
 
 ### Phase 5: Delivery
 <!-- 
@@ -82,6 +93,7 @@ Phase 1
 - [ ] Ensure deliverables are complete
 - [ ] Deliver to user
 - **Status:** pending
+- **Result:** pending
 
 ## Key Questions
 <!-- 
@@ -119,14 +131,31 @@ Phase 1
 |-------|---------|------------|
 |       | 1       |            |
 
+## Session Management
+<!--
+  WHAT: Track session switches for long-running tasks.
+  WHY: Context windows fill up. This helps you resume cleanly.
+  WHEN: Update when switching sessions or when context reaches ~80%.
+  
+  See: templates/RESUME.md for handoff template
+  Run: ./scripts/create-handoff.sh to generate handoff prompt
+-->
+| Session | Date | Phases Completed | Notes |
+|---------|------|------------------|-------|
+| 1       |      |                  | Initial session |
+
 ## Notes
 <!-- 
   REMINDERS:
-  - Update phase status as you progress: pending → in_progress → complete
+  - Update phase status AND result as you progress
   - Re-read this plan before major decisions (attention manipulation)
   - Log ALL errors - they help avoid repetition
   - Never repeat a failed action - mutate your approach instead
+  - Git commit after each phase: git commit -m "checkpoint: Phase X complete"
+  - When context fills up: run ./scripts/create-handoff.sh
 -->
 - Update phase status as you progress: pending → in_progress → complete
+- Update phase result when done: pending → passed | failed | blocked
 - Re-read this plan before major decisions (attention manipulation)
 - Log ALL errors - they help avoid repetition
+- Git commit after each phase for checkpoints
