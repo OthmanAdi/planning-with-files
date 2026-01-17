@@ -35,6 +35,7 @@ See [docs/installation.md](docs/installation.md) for all installation methods.
 | [Quick Start](docs/quickstart.md) | 5-step guide to using the pattern |
 | [Workflow Diagram](docs/workflow.md) | Visual diagram of how files and hooks interact |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+| [Codex Setup](docs/codex.md) | Codex CLI / IDE installation |
 | [Cursor Setup](docs/cursor.md) | Cursor IDE-specific instructions |
 | [Windows Setup](docs/windows.md) | Windows-specific notes |
 

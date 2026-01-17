@@ -80,6 +80,12 @@ Then move `planning-with-files/` to `~/.claude/skills/`.
 
 ---
 
+### 5. Codex CLI / IDE (Skills)
+
+See [docs/codex.md](codex.md) for full setup and usage steps.
+
+---
+
 ## Verifying Installation
 
 After installation, verify the skill is loaded:
