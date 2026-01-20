@@ -16,14 +16,32 @@ A Claude Code plugin that transforms your workflow to use persistent markdown fi
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blue)](https://code.claude.com/docs/en/plugins)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-green)](https://code.claude.com/docs/en/skills)
 [![Cursor Rules](https://img.shields.io/badge/Cursor-Rules-purple)](https://docs.cursor.com/context/rules-for-ai)
-[![Version](https://img.shields.io/badge/version-2.3.0-brightgreen)](https://github.com/OthmanAdi/planning-with-files/releases)
+[![Version](https://img.shields.io/badge/version-2.5.0-brightgreen)](https://github.com/OthmanAdi/planning-with-files/releases)
 
 ## Quick Install
 
 ```bash
-/plugin marketplace add OthmanAdi/planning-with-files
-/plugin install planning-with-files@planning-with-files
+# 1. Install plugin
+claude plugins install OthmanAdi/planning-with-files
+
+# 2. Copy to skills folder for autocomplete (REQUIRED!)
+cp -r ~/.claude/plugins/cache/planning-with-files/planning-with-files/*/skills/planning-with-files ~/.claude/skills/
+
+# 3. Restart Claude Code
 ```
+
+**Windows (PowerShell):**
+```powershell
+# 1. Install plugin
+claude plugins install OthmanAdi/planning-with-files
+
+# 2. Copy to skills folder for autocomplete
+Copy-Item -Recurse -Path "$env:USERPROFILE\.claude\plugins\cache\planning-with-files\planning-with-files\*\skills\planning-with-files" -Destination "$env:USERPROFILE\.claude\skills\"
+
+# 3. Restart Claude Code
+```
+
+Now type `/planning-with-files` in Claude Code!
 
 See [docs/installation.md](docs/installation.md) for all installation methods.
 
@@ -55,7 +73,8 @@ See [docs/installation.md](docs/installation.md) for all installation methods.
 
 | Version | Features | Install |
 |---------|----------|---------|
-| **v2.3.0** (current) | Codex & OpenCode IDE support | `/plugin install planning-with-files@planning-with-files` |
+| **v2.5.0** (current) | Fixed autocomplete - SKILL.md matches Anthropic format | `claude plugins install OthmanAdi/planning-with-files` |
+| **v2.3.0** | Codex & OpenCode IDE support | `/plugin install planning-with-files@planning-with-files` |
 | **v2.2.2** | Restored skill activation language | See [releases](https://github.com/OthmanAdi/planning-with-files/releases) |
 | **v2.2.1** | Session recovery after /clear, enhanced PreToolUse hook | See [releases](https://github.com/OthmanAdi/planning-with-files/releases) |
 | **v2.2.0** | Kilo Code IDE support, Windows PowerShell support, OS-aware hooks | See [releases](https://github.com/OthmanAdi/planning-with-files/releases) |
