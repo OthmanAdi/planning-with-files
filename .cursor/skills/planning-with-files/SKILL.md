@@ -27,10 +27,11 @@ hooks:
     - hooks:
         - type: command
           command: |
+            SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/planning-with-files}/scripts"
             if command -v pwsh &> /dev/null && [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OS" == "Windows_NT" ]]; then
-              pwsh -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/scripts/check-complete.ps1" 2>/dev/null || powershell -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/scripts/check-complete.ps1" 2>/dev/null || bash "${CLAUDE_PLUGIN_ROOT}/scripts/check-complete.sh"
+              pwsh -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null || powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/check-complete.ps1" 2>/dev/null || bash "$SCRIPT_DIR/check-complete.sh"
             else
-              bash "${CLAUDE_PLUGIN_ROOT}/scripts/check-complete.sh"
+              bash "$SCRIPT_DIR/check-complete.sh"
             fi
 ---
 
