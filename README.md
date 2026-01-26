@@ -70,6 +70,7 @@ See [docs/installation.md](docs/installation.md) for all installation methods.
 | Codex | ✅ Full Support | [Codex Setup](docs/codex.md) | Personal Skill |
 | FactoryAI Droid | ✅ Full Support | [Factory Setup](docs/factory.md) | Workspace/Personal Skill |
 | Antigravity | ✅ Full Support | [Antigravity Setup](docs/antigravity.md) | Workspace/Personal Skill |
+| CodeBuddy | ✅ Full Support | [CodeBuddy Setup](docs/codebuddy.md) | Workspace/Personal Skill |
 
 > **Note:** If your IDE uses the legacy Rules system instead of Skills, see the [`legacy-rules-support`](https://github.com/OthmanAdi/planning-with-files/tree/legacy-rules-support) branch.
 
@@ -92,6 +93,7 @@ See [docs/installation.md](docs/installation.md) for all installation methods.
 | [OpenCode Setup](docs/opencode.md) | OpenCode IDE installation, oh-my-opencode config |
 | [FactoryAI Droid Setup](docs/factory.md) | FactoryAI Droid integration guide |
 | [Antigravity Setup](docs/antigravity.md) | Antigravity IDE integration guide |
+| [CodeBuddy Setup](docs/codebuddy.md) | CodeBuddy IDE integration guide |
 
 ## Versions
 
