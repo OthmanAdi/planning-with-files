@@ -1,7 +1,7 @@
 {
   "name": "planning-with-files",
-  "version": "2.8.0",
-  "description": "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage. Use when starting complex tasks, multi-step projects, research tasks, or when you want structured output.",
+  "version": "2.9.0",
+  "description": "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage. Works with Claude Code, Clawd CLI, Gemini CLI, Cursor, Continue, and 10+ AI coding assistants.",
   "author": {
     "name": "OthmanAdi",
     "url": "https://github.com/OthmanAdi"
@@ -15,6 +15,14 @@
     "markdown",
     "context-engineering",
     "task-management",
-    "templates"
+    "templates",
+    "clawd",
+    "clawdbot",
+    "clawdhub",
+    "gemini",
+    "cursor",
+    "continue",
+    "multi-ide",
+    "agent-skills"
   ]
 }

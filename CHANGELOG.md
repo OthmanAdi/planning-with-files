@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.0] - 2026-01-26
+
+### Added
+
+- **Clawd CLI Support**
+  - Added Clawd CLI integration for workspace and local skills
+  - Created `.clawd/skills/planning-with-files/` skill bundle
+  - Full templates, scripts, and references included
+  - Cross-platform support (macOS, Linux, Windows)
+  - Added `docs/clawd.md` installation guide
+  - Added Clawd CLI badge to README
+
+### Changed
+
+- Updated plugin.json description to highlight multi-IDE support
+- Added new keywords: clawd, clawdbot, clawdhub, gemini, cursor, continue, multi-ide, agent-skills
+- Now supports 10+ AI coding assistants
+
+---
+
 ## [2.8.0] - 2026-01-26
 
 ### Added

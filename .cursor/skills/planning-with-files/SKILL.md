@@ -1,6 +1,6 @@
 ---
 name: planning-with-files
-version: "2.8.0"
+version: "2.9.0"
 description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery after /clear.
 user-invocable: true
 allowed-tools:
