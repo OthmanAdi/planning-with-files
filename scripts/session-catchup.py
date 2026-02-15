@@ -22,6 +22,55 @@ from typing import List, Dict, Optional, Tuple
 PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
+def get_active_plan_dir(project_path: Path) -> Optional[Path]:
+    """Resolve active plan directory from ./.planning/.active_plan, fallback to latest plan dir."""
+    plan_root = project_path / ".planning"
+    active_file = plan_root / ".active_plan"
+
+    env_plan_id = os.environ.get("PLAN_ID", "").strip()
+    if env_plan_id:
+        candidate = plan_root / env_plan_id
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+
+    if active_file.exists():
+        plan_id = active_file.read_text(encoding="utf-8").strip()
+        if plan_id:
+            candidate = plan_root / plan_id
+            if candidate.exists() and candidate.is_dir():
+                return candidate
+
+    if not plan_root.exists() or not plan_root.is_dir():
+        return None
+
+    dirs = [d for d in plan_root.iterdir() if d.is_dir()]
+    if not dirs:
+        return None
+    return sorted(dirs, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+
+
+def _matches_active_plan(file_path: str, active_plan_dir: Optional[Path]) -> bool:
+    """Check whether a tool-edited file belongs to active plan when active plan is known."""
+    if not file_path:
+        return False
+
+    normalized = file_path.replace("\\", "/")
+    if active_plan_dir is None:
+        return any(normalized.endswith(pf) for pf in PLANNING_FILES)
+
+    plan_id = active_plan_dir.name
+    plan_fragment_abs = f"/.planning/{plan_id}/"
+    plan_fragment_rel = f".planning/{plan_id}/"
+    active_prefix = str(active_plan_dir).replace("\\", "/").rstrip("/") + "/"
+
+    if plan_fragment_abs in normalized or normalized.startswith(plan_fragment_rel):
+        return any(normalized.endswith(pf) for pf in PLANNING_FILES)
+    if normalized.startswith(active_prefix):
+        return any(normalized.endswith(pf) for pf in PLANNING_FILES)
+
+    return False
+
+
 def detect_ide() -> str:
     """
     Detect which IDE is being used based on environment and file structure.
@@ -113,7 +162,9 @@ def get_session_first_timestamp(session_file: Path) -> Optional[str]:
     return None
 
 
-def scan_for_planning_update(session_file: Path) -> Tuple[int, Optional[str]]:
+def scan_for_planning_update(
+    session_file: Path, active_plan_dir: Optional[Path] = None
+) -> Tuple[int, Optional[str]]:
     """
     Quickly scan a session file for planning file updates.
     Returns (line_number, filename) of last update, or (-1, None) if none found.
@@ -144,11 +195,9 @@ def scan_for_planning_update(session_file: Path) -> Tuple[int, Optional[str]]:
                             continue
 
                         file_path = item.get('input', {}).get('file_path', '')
-                        for pf in PLANNING_FILES:
-                            if file_path.endswith(pf):
-                                last_update_line = line_num
-                                last_update_file = pf
-                                break
+                        if _matches_active_plan(file_path, active_plan_dir):
+                            last_update_line = line_num
+                            last_update_file = file_path or None
                 except json.JSONDecodeError:
                     continue
     except Exception:
@@ -243,6 +292,7 @@ def extract_messages_from_session(session_file: Path, after_line: int = -1) -> L
 
 def main():
     project_path = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+    project_path_obj = Path(project_path).resolve()
 
     # Detect IDE
     ide = detect_ide()
@@ -251,11 +301,12 @@ def main():
         print("\n[planning-with-files] OpenCode session catchup is not yet fully supported")
         print("OpenCode uses a different session storage format (.json) than Claude Code (.jsonl)")
         print("Session catchup requires parsing OpenCode's message storage structure.")
-        print("\nWorkaround: Manually read task_plan.md, progress.md, and findings.md to catch up.")
+        print("\nWorkaround: Manually read .planning/<active_plan_id>/task_plan.md, progress.md, and findings.md to catch up.")
         return
 
     # Claude Code path
     project_dir = get_project_dir_claude(project_path)
+    active_plan_dir = get_active_plan_dir(project_path_obj)
 
     if not project_dir.exists():
         return
@@ -275,7 +326,7 @@ def main():
     update_session_idx = -1
 
     for idx, session in enumerate(previous_sessions):
-        line, filename = scan_for_planning_update(session)
+        line, filename = scan_for_planning_update(session, active_plan_dir)
         if line >= 0:
             update_session = session
             update_line = line
@@ -343,7 +394,10 @@ def main():
 
     print("\n--- RECOMMENDED ---")
     print("1. Run: git diff --stat")
-    print("2. Read: task_plan.md, progress.md, findings.md")
+    if active_plan_dir:
+        print(f"2. Read: {active_plan_dir}/task_plan.md, {active_plan_dir}/progress.md, {active_plan_dir}/findings.md")
+    else:
+        print("2. Read: .planning/<active_plan_id>/task_plan.md, progress.md, findings.md")
     print("3. Update planning files based on above context")
     print("4. Continue with task")
 

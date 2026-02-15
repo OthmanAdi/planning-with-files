@@ -1,120 +1,43 @@
-# Initialize planning files for a new session
+# Initialize planning files for a new session in .\.planning\{plan_id}
 # Usage: .\init-session.ps1 [project-name]
 
 param(
     [string]$ProjectName = "project"
 )
 
-$DATE = Get-Date -Format "yyyy-MM-dd"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SkillRoot = Split-Path -Parent $ScriptDir
+$TemplateDir = Join-Path $SkillRoot "templates"
+$PlanRoot = Join-Path (Get-Location) ".planning"
+$ActivePlanFile = Join-Path $PlanRoot ".active_plan"
 
-Write-Host "Initializing planning files for: $ProjectName"
+$taskTemplate = Join-Path $TemplateDir "task_plan.md"
+$findingsTemplate = Join-Path $TemplateDir "findings.md"
+$progressTemplate = Join-Path $TemplateDir "progress.md"
 
-# Create task_plan.md if it doesn't exist
-if (-not (Test-Path "task_plan.md")) {
-    @"
-# Task Plan: [Brief Description]
-
-## Goal
-[One sentence describing the end state]
-
-## Current Phase
-Phase 1
-
-## Phases
-
-### Phase 1: Requirements & Discovery
-- [ ] Understand user intent
-- [ ] Identify constraints
-- [ ] Document in findings.md
-- **Status:** in_progress
-
-### Phase 2: Planning & Structure
-- [ ] Define approach
-- [ ] Create project structure
-- **Status:** pending
-
-### Phase 3: Implementation
-- [ ] Execute the plan
-- [ ] Write to files before executing
-- **Status:** pending
-
-### Phase 4: Testing & Verification
-- [ ] Verify requirements met
-- [ ] Document test results
-- **Status:** pending
-
-### Phase 5: Delivery
-- [ ] Review outputs
-- [ ] Deliver to user
-- **Status:** pending
-
-## Decisions Made
-| Decision | Rationale |
-|----------|-----------|
-
-## Errors Encountered
-| Error | Resolution |
-|-------|------------|
-"@ | Out-File -FilePath "task_plan.md" -Encoding UTF8
-    Write-Host "Created task_plan.md"
-} else {
-    Write-Host "task_plan.md already exists, skipping"
+if (-not (Test-Path $taskTemplate) -or -not (Test-Path $findingsTemplate) -or -not (Test-Path $progressTemplate)) {
+    Write-Error "Missing templates under $TemplateDir"
+    exit 1
 }
 
-# Create findings.md if it doesn't exist
-if (-not (Test-Path "findings.md")) {
-    @"
-# Findings & Decisions
+$planId = ([guid]::NewGuid().ToString().ToLowerInvariant())
+$planDir = Join-Path $PlanRoot $planId
 
-## Requirements
--
+New-Item -ItemType Directory -Path $planDir -Force | Out-Null
 
-## Research Findings
--
+Copy-Item $taskTemplate (Join-Path $planDir "task_plan.md") -Force
+Copy-Item $findingsTemplate (Join-Path $planDir "findings.md") -Force
+Copy-Item $progressTemplate (Join-Path $planDir "progress.md") -Force
+Set-Content -Path $ActivePlanFile -Value $planId -Encoding UTF8
 
-## Technical Decisions
-| Decision | Rationale |
-|----------|-----------|
-
-## Issues Encountered
-| Issue | Resolution |
-|-------|------------|
-
-## Resources
--
-"@ | Out-File -FilePath "findings.md" -Encoding UTF8
-    Write-Host "Created findings.md"
-} else {
-    Write-Host "findings.md already exists, skipping"
-}
-
-# Create progress.md if it doesn't exist
-if (-not (Test-Path "progress.md")) {
-    @"
-# Progress Log
-
-## Session: $DATE
-
-### Current Status
-- **Phase:** 1 - Requirements & Discovery
-- **Started:** $DATE
-
-### Actions Taken
--
-
-### Test Results
-| Test | Expected | Actual | Status |
-|------|----------|--------|--------|
-
-### Errors
-| Error | Resolution |
-|-------|------------|
-"@ | Out-File -FilePath "progress.md" -Encoding UTF8
-    Write-Host "Created progress.md"
-} else {
-    Write-Host "progress.md already exists, skipping"
-}
-
+Write-Host "Initialized planning files for: $ProjectName"
+Write-Host "PLAN_ID=$planId"
+Write-Host "PLAN_DIR=$planDir"
+Write-Host "Files:"
+Write-Host "  - $(Join-Path $planDir 'task_plan.md')"
+Write-Host "  - $(Join-Path $planDir 'findings.md')"
+Write-Host "  - $(Join-Path $planDir 'progress.md')"
 Write-Host ""
-Write-Host "Planning files initialized!"
-Write-Host "Files: task_plan.md, findings.md, progress.md"
+Write-Host "Active plan updated: $ActivePlanFile"
+Write-Host "For parallel sessions, pin this terminal to the plan:"
+Write-Host "  `$env:PLAN_ID = '$planId'"

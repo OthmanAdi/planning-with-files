@@ -1,7 +1,7 @@
 ---
 name: planning-with-files
-version: "2.10.0"
-description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery after /clear.
+version: "2.16.0"
+description: Implements Manus-style file-based planning for complex tasks. Creates isolated plans in ./.planning/{uuid}/ with task_plan.md, findings.md, and progress.md. Supports parallel plans via per-session PLAN_ID pinning.
 user-invocable: true
 allowed-tools:
   - Read
@@ -17,17 +17,31 @@ hooks:
     - matcher: "Write|Edit|Bash|Read|Glob|Grep"
       hooks:
         - type: command
-          command: "cat task_plan.md 2>/dev/null | head -30 || true"
+          command: |
+            SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"
+            SCRIPT_DIR="$SKILL_ROOT/scripts"
+            PLAN_DIR="$(sh "$SCRIPT_DIR/resolve-plan-dir.sh" 2>/dev/null || true)"
+            if [ -n "$PLAN_DIR" ] && [ -f "$PLAN_DIR/task_plan.md" ]; then
+              head -30 "$PLAN_DIR/task_plan.md"
+            fi
   PostToolUse:
     - matcher: "Write|Edit"
       hooks:
         - type: command
-          command: "echo '[planning-with-files] File updated. If this completes a phase, update task_plan.md status.'"
+          command: |
+            SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"
+            SCRIPT_DIR="$SKILL_ROOT/scripts"
+            PLAN_DIR="$(sh "$SCRIPT_DIR/resolve-plan-dir.sh" 2>/dev/null || true)"
+            if [ -n "$PLAN_DIR" ]; then
+              echo "[planning-with-files] File updated. If this completes a phase, update $PLAN_DIR/task_plan.md status."
+            else
+              echo "[planning-with-files] File updated. If this completes a phase, update active plan task_plan.md status."
+            fi
   Stop:
     - hooks:
         - type: command
           command: |
-            SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/planning-with-files}/scripts"
+            SCRIPT_DIR="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}/scripts"
 
             IS_WINDOWS=0
             if [ "${OS-}" = "Windows_NT" ]; then
@@ -63,7 +77,8 @@ Work like Manus: Use persistent markdown files as your "working memory on disk."
 
 ```bash
 # Linux/macOS
-$(command -v python3 || command -v python) ${CLAUDE_PLUGIN_ROOT}/scripts/session-catchup.py "$(pwd)"
+SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"
+$(command -v python3 || command -v python) "$SKILL_ROOT/scripts/session-catchup.py" "$(pwd)"
 ```
 
 ```powershell
@@ -79,25 +94,27 @@ If catchup report shows unsynced context:
 
 ## Important: Where Files Go
 
-- **Templates** are in `${CLAUDE_PLUGIN_ROOT}/templates/`
-- **Your planning files** go in **your project directory**
+- **Templates** are in `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}/templates/`
+- **Your planning files** go in **`./.planning/{plan_id}/` under your project directory**
 
 | Location | What Goes There |
 |----------|-----------------|
-| Skill directory (`${CLAUDE_PLUGIN_ROOT}/`) | Templates, scripts, reference docs |
-| Your project directory | `task_plan.md`, `findings.md`, `progress.md` |
+| Skill directory (`${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}/`) | Templates, scripts, reference docs |
+| Your project directory | `.planning/.active_plan` + `.planning/{plan_id}/task_plan.md|findings.md|progress.md` |
 
 ## Quick Start
 
 Before ANY complex task:
 
-1. **Create `task_plan.md`** — Use [templates/task_plan.md](templates/task_plan.md) as reference
-2. **Create `findings.md`** — Use [templates/findings.md](templates/findings.md) as reference
-3. **Create `progress.md`** — Use [templates/progress.md](templates/progress.md) as reference
-4. **Re-read plan before decisions** — Refreshes goals in attention window
-5. **Update after each phase** — Mark complete, log errors
+1. **Generate a new plan ID and create plan files** — Run `SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"; sh "$SKILL_ROOT/scripts/init-session.sh"` (or PowerShell script)
+2. **Confirm active plan** — `cat .planning/.active_plan` and use `.planning/<plan_id>/...` files for this task
+3. **Pin this terminal to the plan (recommended for parallel work)** — `export PLAN_ID=<plan_id>` (PowerShell: `$env:PLAN_ID='<plan_id>'`)
+4. **Re-read active `task_plan.md` before decisions** — Refreshes goals in attention window
+5. **Update active plan files after each phase** — Mark complete, log errors
 
-> **Note:** Planning files go in your project root, not the skill installation folder.
+> **Note:** Planning files are isolated per task in `./.planning/{uuid}/` to avoid conflicts across parallel plans.
+> **Parallel safety:** `.planning/.active_plan` is a shared default pointer; set `PLAN_ID` per terminal/session to avoid cross-session pointer collisions.
+> **Switch shared default pointer (optional):** run `SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"; sh "$SKILL_ROOT/scripts/set-active-plan.sh" <plan_id>` (or PowerShell script).
 
 ## The Core Pattern
 
@@ -112,14 +129,14 @@ Filesystem = Disk (persistent, unlimited)
 
 | File | Purpose | When to Update |
 |------|---------|----------------|
-| `task_plan.md` | Phases, progress, decisions | After each phase |
-| `findings.md` | Research, discoveries | After ANY discovery |
-| `progress.md` | Session log, test results | Throughout session |
+| `.planning/{plan_id}/task_plan.md` | Phases, progress, decisions | After each phase |
+| `.planning/{plan_id}/findings.md` | Research, discoveries | After ANY discovery |
+| `.planning/{plan_id}/progress.md` | Session log, test results | Throughout session |
 
 ## Critical Rules
 
 ### 1. Create Plan First
-Never start a complex task without `task_plan.md`. Non-negotiable.
+Never start a complex task without creating a new `.planning/{uuid}/task_plan.md`. Non-negotiable.
 
 ### 2. The 2-Action Rule
 > "After every 2 view/browser/search operations, IMMEDIATELY save key findings to text files."
@@ -194,11 +211,11 @@ If you can answer these, your context management is solid:
 
 | Question | Answer Source |
 |----------|---------------|
-| Where am I? | Current phase in task_plan.md |
+| Where am I? | Current phase in active `.planning/{plan_id}/task_plan.md` |
 | Where am I going? | Remaining phases |
 | What's the goal? | Goal statement in plan |
-| What have I learned? | findings.md |
-| What have I done? | progress.md |
+| What have I learned? | active `.planning/{plan_id}/findings.md` |
+| What have I done? | active `.planning/{plan_id}/progress.md` |
 
 ## When to Use This Pattern
 
@@ -226,9 +243,11 @@ Copy these templates to start:
 
 Helper scripts for automation:
 
-- `scripts/init-session.sh` — Initialize all planning files
+- `scripts/init-session.sh` — Create a new UUID plan under `./.planning/{plan_id}/`
 - `scripts/check-complete.sh` — Verify all phases complete
 - `scripts/session-catchup.py` — Recover context from previous session (v2.2.0)
+- `scripts/resolve-plan-dir.sh` — Resolve active plan directory (`$PLAN_ID` > `.planning/.active_plan` > latest plan dir)
+- `scripts/set-active-plan.sh` — Switch shared `.planning/.active_plan` pointer manually
 
 ## Advanced Topics
 
@@ -239,7 +258,7 @@ Helper scripts for automation:
 
 | Don't | Do Instead |
 |-------|------------|
-| Use TodoWrite for persistence | Create task_plan.md file |
+| Use TodoWrite for persistence | Run `init-session` to create `.planning/{uuid}` files |
 | State goals once and forget | Re-read plan before decisions |
 | Hide errors and retry silently | Log errors to plan file |
 | Stuff everything in context | Store large content in files |
