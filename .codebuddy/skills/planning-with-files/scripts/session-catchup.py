@@ -19,12 +19,12 @@ PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
 def get_project_dir(project_path: str) -> Path:
-    """Convert project path to CodeBuddy's storage path format."""
+    """Convert project path to Claude's storage path format."""
     sanitized = project_path.replace('/', '-')
     if not sanitized.startswith('-'):
         sanitized = '-' + sanitized
     sanitized = sanitized.replace('_', '-')
-    return Path.home() / '.codebuddy' / 'projects' / sanitized
+    return Path.home() / '.claude' / 'projects' / sanitized
 
 
 def get_sessions_sorted(project_dir: Path) -> List[Path]:
@@ -146,6 +146,9 @@ def main():
     has_planning_files = any(
         Path(project_path, f).exists() for f in PLANNING_FILES
     )
+    if not has_planning_files:
+        # No planning files in this project; skip catchup to avoid noise.
+        return
 
     if not project_dir.exists():
         # No previous sessions, nothing to catch up on
@@ -168,11 +171,12 @@ def main():
     messages = parse_session_messages(target_session)
     last_update_line, last_update_file = find_last_planning_update(messages)
 
-    # Only output if there's unsynced content
+    # No planning updates in the target session; skip catchup output.
     if last_update_line < 0:
-        messages_after = extract_messages_after(messages, len(messages) - 30)
-    else:
-        messages_after = extract_messages_after(messages, last_update_line)
+        return
+
+    # Only output if there's unsynced content
+    messages_after = extract_messages_after(messages, last_update_line)
 
     if not messages_after:
         return
@@ -181,11 +185,8 @@ def main():
     print("\n[planning-with-files] SESSION CATCHUP DETECTED")
     print(f"Previous session: {target_session.stem}")
 
-    if last_update_line >= 0:
-        print(f"Last planning update: {last_update_file} at message #{last_update_line}")
-        print(f"Unsynced messages: {len(messages_after)}")
-    else:
-        print("No planning file updates found in previous session")
+    print(f"Last planning update: {last_update_file} at message #{last_update_line}")
+    print(f"Unsynced messages: {len(messages_after)}")
 
     print("\n--- UNSYNCED CONTEXT ---")
     for msg in messages_after[-15:]:  # Last 15 messages
@@ -193,7 +194,7 @@ def main():
             print(f"USER: {msg['content'][:300]}")
         else:
             if msg.get('content'):
-                print(f"CODEBUDDY: {msg['content'][:300]}")
+                print(f"CLAUDE: {msg['content'][:300]}")
             if msg.get('tools'):
                 print(f"  Tools: {', '.join(msg['tools'][:4])}")
 
