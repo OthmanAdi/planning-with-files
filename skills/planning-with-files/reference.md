@@ -45,12 +45,12 @@ Filesystem = Disk (persistent, unlimited)
 
 **Problem:** After ~50 tool calls, models forget original goals ("lost in the middle" effect).
 
-**Solution:** Re-read `task_plan.md` before each decision. Goals appear in the attention window.
+**Solution:** Re-read active `.planning/{plan_id}/task_plan.md` before each decision. Goals appear in the attention window.
 
 ```
 Start of context: [Original goal - far away, forgotten]
 ...many tool calls...
-End of context: [Recently read task_plan.md - gets ATTENTION!]
+End of context: [Recently read .planning/{plan_id}/task_plan.md - gets ATTENTION!]
 ```
 
 ### Principle 5: Keep the Wrong Stuff In
@@ -169,9 +169,9 @@ Manus operates in a continuous 7-step loop:
 
 | File | Purpose | When Created | When Updated |
 |------|---------|--------------|--------------|
-| `task_plan.md` | Phase tracking, progress | Task start | After completing phases |
-| `findings.md` | Discoveries, decisions | After ANY discovery | After viewing images/PDFs |
-| `progress.md` | Session log, what's done | At breakpoints | Throughout session |
+| `.planning/{plan_id}/task_plan.md` | Phase tracking, progress | Task start | After completing phases |
+| `.planning/{plan_id}/findings.md` | Discoveries, decisions | After ANY discovery | After viewing images/PDFs |
+| `.planning/{plan_id}/progress.md` | Session log, what's done | At breakpoints | Throughout session |
 | Code files | Implementation | Before execution | After errors |
 
 ---

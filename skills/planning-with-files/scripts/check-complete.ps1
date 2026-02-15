@@ -3,11 +3,25 @@
 # Used by Stop hook to report task completion status
 
 param(
-    [string]$PlanFile = "task_plan.md"
+    [string]$PlanFile = ""
 )
 
-if (-not (Test-Path $PlanFile)) {
-    Write-Host "[planning-with-files] No task_plan.md found — no active planning session."
+if (-not $PlanFile) {
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $resolveScript = Join-Path $scriptDir "resolve-plan-dir.ps1"
+
+    $planDir = ""
+    if (Test-Path $resolveScript) {
+        $planDir = (& $resolveScript | Select-Object -First 1)
+    }
+
+    if ($planDir) {
+        $PlanFile = Join-Path $planDir "task_plan.md"
+    }
+}
+
+if (-not $PlanFile -or -not (Test-Path $PlanFile)) {
+    Write-Host "[planning-with-files] No task_plan.md found under active plan — no active planning session."
     exit 0
 }
 
@@ -31,9 +45,9 @@ if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0 -and $PENDING -eq 0) {
 
 # Report status (always exit 0 — incomplete task is a normal state)
 if ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
-    Write-Host "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL)"
+    Write-Host "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL) in $PlanFile"
 } else {
-    Write-Host "[planning-with-files] Task in progress ($COMPLETE/$TOTAL phases complete)"
+    Write-Host "[planning-with-files] Task in progress ($COMPLETE/$TOTAL phases complete) in $PlanFile"
     if ($IN_PROGRESS -gt 0) {
         Write-Host "[planning-with-files] $IN_PROGRESS phase(s) still in progress."
     }

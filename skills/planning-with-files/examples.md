@@ -6,7 +6,10 @@
 
 ### Loop 1: Create Plan
 ```bash
-Write task_plan.md
+SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"
+sh "$SKILL_ROOT/scripts/init-session.sh" morning-exercise
+export PLAN_ID=$(cat .planning/.active_plan)
+Write .planning/$PLAN_ID/task_plan.md
 ```
 
 ```markdown
@@ -32,23 +35,23 @@ Create a research summary on the benefits of morning exercise.
 
 ### Loop 2: Research
 ```bash
-Read task_plan.md           # Refresh goals
+Read .planning/$PLAN_ID/task_plan.md           # Refresh goals
 WebSearch "morning exercise benefits"
 Write notes.md              # Store findings
-Edit task_plan.md           # Mark Phase 2 complete
+Edit .planning/$PLAN_ID/task_plan.md           # Mark Phase 2 complete
 ```
 
 ### Loop 3: Synthesize
 ```bash
-Read task_plan.md           # Refresh goals
+Read .planning/$PLAN_ID/task_plan.md           # Refresh goals
 Read notes.md               # Get findings
 Write morning_exercise_summary.md
-Edit task_plan.md           # Mark Phase 3 complete
+Edit .planning/$PLAN_ID/task_plan.md           # Mark Phase 3 complete
 ```
 
 ### Loop 4: Deliver
 ```bash
-Read task_plan.md           # Verify complete
+Read .planning/$PLAN_ID/task_plan.md           # Verify complete
 Deliver morning_exercise_summary.md
 ```
 
@@ -58,7 +61,7 @@ Deliver morning_exercise_summary.md
 
 **User Request:** "Fix the login bug in the authentication module"
 
-### task_plan.md
+### .planning/{plan_id}/task_plan.md
 ```markdown
 # Task Plan: Fix Login Bug
 
@@ -97,7 +100,7 @@ Identify and fix the bug preventing successful login.
 
 ### The 3-File Pattern in Action
 
-**task_plan.md:**
+**.planning/{plan_id}/task_plan.md:**
 ```markdown
 # Task Plan: Dark Mode Toggle
 
@@ -175,7 +178,7 @@ Action: Read config.json  # Another retry
 Action: Read config.json
 Error: File not found
 
-# Update task_plan.md:
+# Update .planning/{plan_id}/task_plan.md:
 ## Errors Encountered
 - config.json not found → Will create default config
 
@@ -195,8 +198,25 @@ Success!
 [Context is getting long...]
 [Original goal might be forgotten...]
 
-→ Read task_plan.md          # This brings goals back into attention!
+→ Read .planning/$PLAN_ID/task_plan.md   # This brings goals back into attention!
 → Now make the decision       # Goals are fresh in context
 ```
 
 This is why Manus can handle ~50 tool calls without losing track. The plan file acts as a "goal refresh" mechanism.
+
+---
+
+## Example 5: Parallel Plans (No Collision)
+
+```bash
+# Terminal A
+SKILL_ROOT="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}"
+sh "$SKILL_ROOT/scripts/init-session.sh" task-a
+export PLAN_ID=$(cat .planning/.active_plan)
+
+# Terminal B
+sh "$SKILL_ROOT/scripts/init-session.sh" task-b
+export PLAN_ID=$(cat .planning/.active_plan)
+```
+
+Now each terminal reads/writes `.planning/$PLAN_ID/...` independently, even if `.planning/.active_plan` changes later.
