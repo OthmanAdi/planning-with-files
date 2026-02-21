@@ -2,6 +2,8 @@
 
 > **Work like Manus** — the AI agent company Meta acquired for **$2 billion**.
 
+> ⚠️ **EXPERIMENTAL BRANCH** — This branch contains **Isolated Planning** ([PR #77](https://github.com/OthmanAdi/planning-with-files/pull/77)): parallel-safe plans in `.planning/{uuid}/` folders. Under active testing before merging to master. [Report issues here](https://github.com/OthmanAdi/planning-with-files/issues). For stable version, use [`master`](https://github.com/OthmanAdi/planning-with-files/tree/master).
+
 [![Closed Issues](https://img.shields.io/github/issues-closed/OthmanAdi/planning-with-files?color=success)](https://github.com/OthmanAdi/planning-with-files/issues?q=is%3Aissue+is%3Aclosed)
 [![Closed PRs](https://img.shields.io/github/issues-pr-closed/OthmanAdi/planning-with-files?color=success)](https://github.com/OthmanAdi/planning-with-files/pulls?q=is%3Apr+is%3Aclosed)
 
