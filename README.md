@@ -31,10 +31,11 @@ If this skill helps you work smarter, that's all I wanted.
 <details>
 <summary><strong>📦 Releases & Session Recovery</strong></summary>
 
-### Current Version: v2.15.0
+### Current Version: v2.15.1
 
 | Version | Highlights |
 |---------|------------|
+| **v2.15.1** | Session catchup false-positive fix (thanks @gydx6!) |
 | **v2.15.0** | `/plan:status` command, OpenCode compatibility fix |
 | **v2.14.0** | Pi Agent support, OpenClaw docs update, Codex path fix |
 | **v2.11.0** | `/plan` command for easier autocomplete |
@@ -43,6 +44,8 @@ If this skill helps you work smarter, that's all I wanted.
 | **v2.2.0** | Session recovery, Windows PowerShell, OS-aware hooks |
 
 [View all releases](https://github.com/OthmanAdi/planning-with-files/releases) · [CHANGELOG](CHANGELOG.md)
+
+> 🧪 **Experimental:** Isolated parallel planning (`.planning/{uuid}/` folders) is being tested on [`experimental/isolated-planning`](https://github.com/OthmanAdi/planning-with-files/tree/experimental/isolated-planning). Try it and share feedback!
 
 ---
 
@@ -101,7 +104,7 @@ A Claude Code plugin that transforms your workflow to use persistent markdown fi
 [![Kiro](https://img.shields.io/badge/Kiro-Steering-00D4AA)](https://kiro.dev/docs/cli/steering/)
 [![AdaL CLI](https://img.shields.io/badge/AdaL%20CLI-Skills-9B59B6)](https://docs.sylph.ai/features/plugins-and-skills)
 [![Pi Agent](https://img.shields.io/badge/Pi%20Agent-Skills-FF4081)](https://pi.dev)
-[![Version](https://img.shields.io/badge/version-2.15.0-brightgreen)](https://github.com/OthmanAdi/planning-with-files/releases)
+[![Version](https://img.shields.io/badge/version-2.15.1-brightgreen)](https://github.com/OthmanAdi/planning-with-files/releases)
 [![SkillCheck Validated](https://img.shields.io/badge/SkillCheck-Validated-4c1)](https://getskillcheck.com)
 
 ## Quick Install

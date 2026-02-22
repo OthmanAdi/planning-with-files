@@ -61,6 +61,12 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[@gydx6](https://github.com/gydx6)** - [PR #79](https://github.com/OthmanAdi/planning-with-files/pull/79)
+  - Fixed session-catchup false positives in all 9 skill-distributed copies
+  - Added early return guards for non-planning projects
+  - Thorough bug report with root cause analysis
+  - **Impact:** Eliminates noise from false catchup reports
+
 - **[@tobrun](https://github.com/tobrun)** - [PR #3](https://github.com/OthmanAdi/planning-with-files/pull/3)
   - Early directory structure improvements
   - Helped identify optimal repository layout
@@ -112,6 +118,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 11+ and growing!
+**Total Contributors:** 12+ and growing!
 
-*Last updated: January 27, 2026*
+*Last updated: February 21, 2026*
