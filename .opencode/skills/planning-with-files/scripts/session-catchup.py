@@ -231,11 +231,12 @@ def main():
     messages = parse_session_messages(target_session)
     last_update_line, last_update_file = find_last_planning_update(messages)
 
-    # Only output if there's unsynced content
+    # No planning updates in the target session; skip catchup output.
     if last_update_line < 0:
-        messages_after = extract_messages_after(messages, len(messages) - 30)
-    else:
-        messages_after = extract_messages_after(messages, last_update_line)
+        return
+
+    # Only output if there's unsynced content
+    messages_after = extract_messages_after(messages, last_update_line)
 
     if not messages_after:
         return
@@ -244,11 +245,8 @@ def main():
     print("\n[planning-with-files] SESSION CATCHUP DETECTED")
     print(f"Previous session: {target_session.stem}")
 
-    if last_update_line >= 0:
-        print(f"Last planning update: {last_update_file} at message #{last_update_line}")
-        print(f"Unsynced messages: {len(messages_after)}")
-    else:
-        print("No planning file updates found in previous session")
+    print(f"Last planning update: {last_update_file} at message #{last_update_line}")
+    print(f"Unsynced messages: {len(messages_after)}")
 
     print("\n--- UNSYNCED CONTEXT ---")
     for msg in messages_after[-15:]:  # Last 15 messages
