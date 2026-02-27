@@ -1,5 +1,5 @@
 # Check if all phases in task_plan.md are complete
-# Always exits 0 — uses stdout for status reporting
+# Always exits 0 -- uses stdout for status reporting
 # Used by Stop hook to report task completion status
 
 param(
@@ -7,7 +7,7 @@ param(
 )
 
 if (-not (Test-Path $PlanFile)) {
-    Write-Host "[planning-with-files] No task_plan.md found — no active planning session."
+    Write-Host '[planning-with-files] No task_plan.md found -- no active planning session.'
     exit 0
 }
 
@@ -29,16 +29,16 @@ if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0 -and $PENDING -eq 0) {
     $PENDING = ([regex]::Matches($content, "\[pending\]")).Count
 }
 
-# Report status (always exit 0 — incomplete task is a normal state)
+# Report status -- always exit 0, incomplete task is a normal state
 if ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
-    Write-Host "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL)"
+    Write-Host ('[planning-with-files] ALL PHASES COMPLETE (' + $COMPLETE + '/' + $TOTAL + ')')
 } else {
-    Write-Host "[planning-with-files] Task in progress ($COMPLETE/$TOTAL phases complete)"
+    Write-Host ('[planning-with-files] Task in progress (' + $COMPLETE + '/' + $TOTAL + ' phases complete)')
     if ($IN_PROGRESS -gt 0) {
-        Write-Host "[planning-with-files] $IN_PROGRESS phase(s) still in progress."
+        Write-Host ('[planning-with-files] ' + $IN_PROGRESS + ' phase(s) still in progress.')
     }
     if ($PENDING -gt 0) {
-        Write-Host "[planning-with-files] $PENDING phase(s) pending."
+        Write-Host ('[planning-with-files] ' + $PENDING + ' phase(s) pending.')
     }
 }
 exit 0
