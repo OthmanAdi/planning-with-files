@@ -59,7 +59,48 @@ These amazing people have contributed code, documentation, or significant improv
   - Created `docs/codebuddy.md` installation guide
   - **Impact:** Expands IDE support to CodeBuddy ecosystem
 
+- **[@lincolnwan](https://github.com/lincolnwan)** - [PR #80](https://github.com/OthmanAdi/planning-with-files/pull/80)
+  - Added native GitHub Copilot hooks integration using the early 2026 hooks system
+  - Created `.github/hooks/planning-with-files.json` with full hook scripts in `.github/hooks/scripts/`
+  - Full cross-platform support (bash + PowerShell) and `docs/copilot.md` installation guide
+  - **Impact:** Brought total supported platforms to 15, expanding the skill to the GitHub Copilot ecosystem
+
+- **[@ciberponk](https://github.com/ciberponk)** - [PR #77](https://github.com/OthmanAdi/planning-with-files/pull/77)
+  - Added isolated `.planning/{uuid}/` plan sessions with UUID generation and PLAN_ID pinning
+  - Enables parallel planning sessions in separate terminals without state collision
+  - Cross-platform scripts (bash + PowerShell) with full backward compatibility for single-session users
+  - **Impact:** Unlocks parallel planning workflows, shipped to experimental branch ahead of master
+
+- **[@ttttmr](https://github.com/ttttmr)** - [PR #67](https://github.com/OthmanAdi/planning-with-files/pull/67)
+  - Added Pi Agent support with full skill integration
+  - **Impact:** Expands the skill to the Pi Agent ecosystem
+
 ### Other Contributors
+
+- **[@popey](https://github.com/popey)** - [PR #83](https://github.com/OthmanAdi/planning-with-files/pull/83)
+  - Fixed `allowed-tools` YAML list (invalid per Anthropic skill spec, silently killing discoverability)
+  - Fixed `metadata.version` placement and added trigger terms for better skill matching
+  - Applied across the canonical SKILL.md file
+
+- **[@jonthebeef](https://github.com/jonthebeef)** - [PR #75](https://github.com/OthmanAdi/planning-with-files/pull/75)
+  - Added `/plan:status` command for quick planning progress display without reading through all planning files
+
+- **[@codelyc](https://github.com/codelyc)** - [PR #66](https://github.com/OthmanAdi/planning-with-files/pull/66), [PR #70](https://github.com/OthmanAdi/planning-with-files/pull/70), [PR #76](https://github.com/OthmanAdi/planning-with-files/pull/76)
+  - Fixed Codex skill path references and replaced CLAUDE_PLUGIN_ROOT with correct absolute paths (PR #66)
+  - Fixed CodeBuddy skill path references and environment variables (PR #70)
+  - Added OpenCode scripts for the planning-with-files skill (PR #76)
+
+- **[@Guozihong](https://github.com/Guozihong)** - [PR #51](https://github.com/OthmanAdi/planning-with-files/pull/51)
+  - Added `/planning-with-files:start` command, enabling skill activation without copying files manually
+
+- **[@fahmyelraie](https://github.com/fahmyelraie)** - [PR #49](https://github.com/OthmanAdi/planning-with-files/pull/49)
+  - Fixed Stop hook path resolution when CLAUDE_PLUGIN_ROOT is not set in the environment
+
+- **[@olgasafonova](https://github.com/olgasafonova)** - [PR #46](https://github.com/OthmanAdi/planning-with-files/pull/46)
+  - Added SkillCheck validation badge after running the skill through spec validation
+
+- **[@AZLabsAI](https://github.com/AZLabsAI)** - [PR #65](https://github.com/OthmanAdi/planning-with-files/pull/65)
+  - Updated OpenClaw docs to reflect the product rename from Moltbot, correcting all paths and CLI commands
 
 - **[@raykuo998](https://github.com/raykuo998)** - [PR #88](https://github.com/OthmanAdi/planning-with-files/pull/88), [PR #86](https://github.com/OthmanAdi/planning-with-files/pull/86)
   - Fixed `check-complete.ps1` completely failing on PowerShell 5.1 due to special character parse errors in double-quoted strings; switched to single-quoted strings with concatenation across all 12 platform copies (PR #88)
@@ -87,6 +128,9 @@ These amazing people have contributed code, documentation, or significant improv
 ## Community Forks
 
 These developers have created forks that extend the functionality:
+
+- **[@RioTheGreat-ai](https://github.com/RioTheGreat-ai)** - [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill)
+  - Crowdfunding platform for AI agents using milestone-based escrow on Base, built with planning-with-files
 
 - **[@kmichels](https://github.com/kmichels)** - [multi-manus-planning](https://github.com/kmichels/multi-manus-planning)
   - Multi-project support
@@ -123,6 +167,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 13+ and growing!
+**Total Contributors:** 24+ and growing!
 
 *Last updated: February 28, 2026*
