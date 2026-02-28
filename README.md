@@ -31,27 +31,7 @@ If this skill helps you work smarter, that's all I wanted.
 <details>
 <summary><strong>🤝 Contributors</strong></summary>
 
-Everyone who made this project better — bug reports, PRs, and integrations.
-
-| Contributor | Contribution |
-|-------------|-------------|
-| [@popey](https://github.com/popey) | Skill metadata & discoverability fixes (PR #83) |
-| [@lincolnwan](https://github.com/lincolnwan) | GitHub Copilot hooks support (PR #80) |
-| [@gydx6](https://github.com/gydx6) | Session catchup false-positive fix (PR #79) |
-| [@ciberponk](https://github.com/ciberponk) | Isolated plan sessions with UUID pinning (PR #77) |
-| [@jonthebeef](https://github.com/jonthebeef) | `/plan:status` command (PR #75) |
-| [@codelyc](https://github.com/codelyc) | OpenCode scripts + CodeBuddy path fixes (PRs #76, #70, #66) |
-| [@ttttmr](https://github.com/ttttmr) | Pi Agent integration (PR #67) |
-| [@AZLabsAI](https://github.com/AZLabsAI) | OpenClaw docs update (PR #65) |
-| [@ZWkang](https://github.com/ZWkang) | CodeBuddy integration (PR #60) |
-| [@SaladDay](https://github.com/SaladDay) | POSIX stop hook fix (PR #57) |
-| [@murphyXu](https://github.com/murphyXu) | Continue IDE integration (PR #56) |
-| [@Guozihong](https://github.com/Guozihong) | Start command (PR #51) |
-| [@fahmyelraie](https://github.com/fahmyelraie) | Stop hook path resolution fix (PR #49) |
-| [@olgasafonova](https://github.com/olgasafonova) | SkillCheck validation badge (PR #46) |
-| [@lasmarois](https://github.com/lasmarois) | Session catchup cross-session improvements (PRs #37, #34) |
-| [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | AgentFund community extension (PR #72) |
-| [@Hexiaopi](https://github.com/Hexiaopi) | Copilot garbled characters bug report (Issue #82) |
+See the full list of everyone who made this project better in [CONTRIBUTORS.md](./CONTRIBUTORS.md).
 
 </details>
 
