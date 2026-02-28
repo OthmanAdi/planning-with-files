@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.18.3] - 2026-02-28
+
+### Fixed
+
+- **Stop hook multiline YAML command fails under Git Bash on Windows** (PR #86 by @raykuo998)
+  - Root cause: YAML `command: |` multiline blocks are not reliably parsed by Git Bash on Windows. The shell received the first line (`SCRIPT_DIR=...`) as a command name rather than a variable assignment, crashing the hook before it could do anything.
+  - Replaced 25-line OS detection scripts with a single-line implicit platform fallback chain: `powershell.exe` first, `sh` as fallback. Applied to all 7 SKILL.md variants with Stop hooks.
+  - Added `-NoProfile` to PowerShell invocation for faster startup
+
+- **`check-complete.ps1` completely failing on PowerShell 5.1** (PR #88 by @raykuo998)
+  - Root cause: Special characters inside double-quoted `Write-Host` strings (`[`, `(`, em-dash) caused parse errors in Windows PowerShell 5.1
+  - Replaced double-quoted strings with single-quoted strings plus explicit concatenation for variable interpolation. Applied to all 12 platform copies.
+
+### Thanks
+
+- @raykuo998 for both Windows compatibility fixes (PR #86, PR #88)
+
+---
+
 ## [2.18.2] - 2026-02-26
 
 ### Fixed
