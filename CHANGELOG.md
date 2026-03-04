@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.20.0] - 2026-03-04
+
+### Fixed
+
+- **Codex session-catchup silent failure** (PR #100 by @tt-a1i, fixes #94)
+  - `session-catchup.py` in the Codex variant was silently scanning `~/.claude/projects` even when running from a Codex context, where sessions live under `~/.codex/sessions` in a different format
+  - Now detects the Codex runtime from `__file__` path and prints a clear fallback message instead of a silent no-op
+
+- **Docs broken links** (PR #99 by @tt-a1i, fixes #95)
+  - `docs/opencode.md` linked to `.opencode/INSTALL.md` which does not exist — corrected to `docs/installation.md`
+  - `docs/factory.md` See Also links used `../skills/planning-with-files/` paths — corrected to `../.factory/skills/planning-with-files/`
+
+- **Examples used stale `notes.md` filename** (PR #99 by @tt-a1i, fixes #96)
+  - All `examples.md` files across 16 IDE copies referenced `notes.md` which was renamed to `findings.md` — updated consistently everywhere
+
+- **`sync-ide-folders.py --help` ran a sync instead of printing usage** (PR #99 by @tt-a1i, fixes #98)
+  - Replaced manual `sys.argv` parsing with `argparse` — `--help` now exits cleanly with usage information
+
+### Changed
+
+- **OpenCode README support label corrected** (PR #99 by @tt-a1i, fixes #97)
+  - Changed from `Full Support` to `Partial Support` with a note about session catchup limitations — aligns README with what `docs/opencode.md` actually says
+
+### Thanks
+
+- @tt-a1i for the full consistency sweep (PR #99, PR #100)
+
+---
+
 ## [2.19.0] - 2026-03-04
 
 ### Fixed

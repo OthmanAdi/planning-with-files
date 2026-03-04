@@ -125,8 +125,11 @@ These amazing people have contributed code, documentation, or significant improv
   - Added `assets` field to ensure templates copy to cache
   - **Impact:** Resolved template path issues
 
-- **[@tt-a1i](https://github.com/tt-a1i)** - [PR #92](https://github.com/OthmanAdi/planning-with-files/pull/92)
-  - Fixed broken Advanced Topics links in Codex SKILL.md (reference.md and examples.md paths)
+- **[@tt-a1i](https://github.com/tt-a1i)** - [PR #92](https://github.com/OthmanAdi/planning-with-files/pull/92), [PR #99](https://github.com/OthmanAdi/planning-with-files/pull/99), [PR #100](https://github.com/OthmanAdi/planning-with-files/pull/100)
+  - Fixed broken Advanced Topics links in Codex SKILL.md (PR #92)
+  - Fixed 5 consistency issues across docs: broken links in opencode.md and factory.md, stale `notes.md` references replaced with `findings.md` across all 16 IDE copies, OpenCode support label corrected in README, `--help` in sync-ide-folders.py no longer runs a sync (PR #99)
+  - Fixed Codex session-catchup silently scanning Claude session paths; now prints an explicit fallback message when running from Codex context (PR #100)
+  - **Impact:** Significant docs and tooling consistency sweep across the entire multi-IDE surface
 
 ## Community Forks
 
