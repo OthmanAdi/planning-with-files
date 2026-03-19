@@ -1,0 +1,71 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "name": "planning-session-start",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-start.sh",
+            "timeout": 15000,
+            "description": "Check for previous planning session and recover context"
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|edit_file|replace|create_file|patch|read_file|shell",
+        "hooks": [
+          {
+            "name": "planning-before-tool",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool.sh",
+            "timeout": 5000,
+            "description": "Read plan context before tool use to keep goals in attention"
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "write_file|edit_file|replace|create_file|patch",
+        "hooks": [
+          {
+            "name": "planning-after-tool",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/after-tool.sh",
+            "timeout": 5000,
+            "description": "Remind agent to update progress after file changes"
+          }
+        ]
+      }
+    ],
+    "BeforeModel": [
+      {
+        "hooks": [
+          {
+            "name": "planning-before-model",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-model.sh",
+            "timeout": 5000,
+            "description": "Inject plan awareness before every model call"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "name": "planning-session-end",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/session-end.sh",
+            "timeout": 10000,
+            "description": "Check all phases are complete before session ends"
+          }
+        ]
+      }
+    ]
+  }
+}

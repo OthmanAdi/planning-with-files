@@ -116,27 +116,10 @@ IDE_MANIFESTS = {
         ".codex/skills/planning-with-files",
         ref_style="subdir",
         include_scripts=True,
-        extra_template_dirs=["assets/templates/"],
     ),
 
-    ".openclaw": _build_manifest(
-        ".openclaw/skills/planning-with-files",
-        ref_style="subdir",
-        include_scripts=True,
-    ),
-
-    ".kilocode": _build_manifest(
-        ".kilocode/skills/planning-with-files",
-        ref_style="flat",
-        include_scripts=False,
-    ),
-
-    ".adal": _build_manifest(
-        ".adal/skills/planning-with-files",
-        ref_style="subdir",
-        include_scripts=True,
-        # .adal also has check-continue.sh — not synced (IDE-specific)
-    ),
+    # .openclaw, .kilocode, .adal, .agent removed in v2.24.0 (IDE audit)
+    # These IDEs use the standard Agent Skills spec — install via npx skills add
 
     ".pi": _build_manifest(
         ".pi/skills/planning-with-files",
@@ -157,20 +140,12 @@ IDE_MANIFESTS = {
         ".codebuddy/skills/planning-with-files",
         ref_style="subdir",
         include_scripts=True,
-        extra_template_dirs=["assets/templates/"],
     ),
 
     ".factory": _build_manifest(
         ".factory/skills/planning-with-files",
         ref_style="skip",  # Uses combined references.md, not synced
-        include_scripts=False,
-    ),
-
-    ".agent": _build_manifest(
-        ".agent/skills/planning-with-files",
-        ref_style="skip",  # Uses combined references.md, not synced
-        template_dirs=[],   # Templates in references/ — custom layout, not synced
-        include_scripts=False,
+        include_scripts=True,
     ),
 
     ".opencode": _build_manifest(

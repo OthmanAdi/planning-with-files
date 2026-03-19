@@ -33,9 +33,9 @@ fi
 
 # Report status (always exit 0 — incomplete task is a normal state)
 if [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
-    echo "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL)"
+    echo "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL). If the user has additional work, add new phases to task_plan.md before starting."
 else
-    echo "[planning-with-files] Task in progress ($COMPLETE/$TOTAL phases complete)"
+    echo "[planning-with-files] Task in progress ($COMPLETE/$TOTAL phases complete). Update progress.md before stopping."
     if [ "$IN_PROGRESS" -gt 0 ]; then
         echo "[planning-with-files] $IN_PROGRESS phase(s) still in progress."
     fi

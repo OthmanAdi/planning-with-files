@@ -108,31 +108,73 @@ You can also manually enable/disable skills:
 /skills reload
 ```
 
+## Hooks (v2.24.0)
+
+Gemini CLI supports [hooks](https://geminicli.com/docs/hooks/) — lifecycle events that run shell scripts automatically. This skill ships with a `settings.json` that configures 4 hooks:
+
+| Hook Event | What It Does |
+|------------|-------------|
+| **SessionStart** | Recovers context from previous session via `session-catchup.py` |
+| **BeforeTool** | Reads first 30 lines of `task_plan.md` before write/read/shell operations |
+| **AfterTool** | Reminds to update `progress.md` after file changes |
+| **BeforeModel** | Injects current phase awareness before every model call (unique to Gemini!) |
+
+### Installing Hooks
+
+Copy the hooks configuration to your project:
+
+```bash
+# Copy settings.json (merges with existing settings)
+cp /path/to/planning-with-files/.gemini/settings.json .gemini/settings.json
+
+# Copy hook scripts
+cp -r /path/to/planning-with-files/.gemini/hooks .gemini/hooks
+```
+
+Or for user-level hooks:
+
+```bash
+# Copy to user settings (applies to all projects)
+cp /path/to/planning-with-files/.gemini/settings.json ~/.gemini/settings.json
+cp -r /path/to/planning-with-files/.gemini/hooks ~/.gemini/hooks
+```
+
+> **Note:** If you already have a `settings.json`, merge the `"hooks"` key manually.
+
+---
+
 ## How It Works
 
-1. **Session Start**: Gemini loads skill names and descriptions
+1. **Session Start**: Gemini loads skill names and descriptions, hooks run session recovery
 2. **Task Detection**: When you describe a complex task, Gemini matches it to the skill
 3. **Activation Prompt**: You approve the skill activation
 4. **Instructions Loaded**: Full SKILL.md content is added to context
-5. **Execution**: Gemini follows the planning workflow
+5. **Execution**: Gemini follows the planning workflow with hooks enforcing discipline
 
 ## Skill Structure
 
 ```
-.gemini/skills/planning-with-files/
-├── SKILL.md              # Main skill instructions
-├── templates/
-│   ├── task_plan.md      # Phase tracking template
-│   ├── findings.md       # Research storage template
-│   └── progress.md       # Session logging template
-├── scripts/
-│   ├── init-session.sh   # Initialize planning files
-│   ├── check-complete.sh # Verify completion
-│   ├── init-session.ps1  # Windows PowerShell version
-│   └── check-complete.ps1
-└── references/
-    ├── reference.md      # Manus principles
-    └── examples.md       # Real-world examples
+.gemini/
+├── settings.json             # Hook configuration (v2.24.0)
+├── hooks/                    # Hook scripts
+│   ├── session-start.sh      # Session recovery
+│   ├── before-tool.sh        # Plan context injection
+│   ├── after-tool.sh         # Progress update reminder
+│   └── before-model.sh       # Phase awareness (unique to Gemini)
+└── skills/planning-with-files/
+    ├── SKILL.md              # Main skill instructions
+    ├── templates/
+    │   ├── task_plan.md      # Phase tracking template
+    │   ├── findings.md       # Research storage template
+    │   └── progress.md       # Session logging template
+    ├── scripts/
+    │   ├── init-session.sh   # Initialize planning files
+    │   ├── check-complete.sh # Verify completion
+    │   ├── init-session.ps1  # Windows PowerShell version
+    │   └── check-complete.ps1
+    └── references/
+        ├── reference.md      # Manus principles
+        └── examples.md       # Real-world examples
 ```
 
 ## Sharing Skills with Claude Code
@@ -173,4 +215,5 @@ Copy-Item -Recurse -Path ".\.gemini\skills\planning-with-files" -Destination "$e
 
 - [Gemini CLI Documentation](https://geminicli.com/docs/)
 - [Agent Skills Guide](https://geminicli.com/docs/cli/skills/)
+- [Hooks Guide](https://geminicli.com/docs/hooks/)
 - [Skills Tutorial](https://geminicli.com/docs/cli/tutorials/skills-getting-started/)

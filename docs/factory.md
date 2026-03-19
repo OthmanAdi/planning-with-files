@@ -135,6 +135,21 @@ All important information gets written to disk, not lost in context window.
 
 ---
 
+## Hooks (v2.23.0)
+
+Factory Droid supports hooks — lifecycle events that run shell commands automatically. The SKILL.md includes hooks that:
+
+| Hook Event | What It Does |
+|------------|-------------|
+| **UserPromptSubmit** | Detects active plan and reminds to read planning files |
+| **PreToolUse** | Reads first 30 lines of `task_plan.md` before Write/Edit/Bash/Read operations |
+| **PostToolUse** | Reminds to update `progress.md` after file changes |
+| **Stop** | Runs `check-complete.sh` to verify all phases are done before stopping |
+
+These hooks work automatically — no configuration needed beyond copying the `.factory/` directory.
+
+---
+
 ## Skill Features
 
 ### The 3-Strike Error Protocol

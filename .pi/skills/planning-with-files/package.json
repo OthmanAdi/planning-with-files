@@ -24,12 +24,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ttttmr/planning-with-files.git"
+    "url": "git+https://github.com/OthmanAdi/planning-with-files.git"
   },
-  "author": "",
+  "author": "Ahmad Othman Ammar Adi",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ttttmr/planning-with-files/issues"
+    "url": "https://github.com/OthmanAdi/planning-with-files/issues"
   },
-  "homepage": "https://github.com/ttttmr/planning-with-files#readme"
+  "homepage": "https://github.com/OthmanAdi/planning-with-files#readme"
 }

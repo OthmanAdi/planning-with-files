@@ -1,34 +1,34 @@
 ---
 name: planning-with-files
-description: 启动“Planning with Files”三文件工作流（task_plan.md / findings.md / progress.md）
+description: Start the "Planning with Files" 3-file workflow (task_plan.md / findings.md / progress.md)
 invokable: true
 ---
 
-你将采用“Planning with Files”模式来完成接下来的工作：把计划、发现与进度持久化到 3 个 Markdown 文件里，以避免上下文漂移与遗忘。
+You will use the "Planning with Files" pattern for the work ahead: persist plans, findings, and progress into 3 Markdown files to prevent context drift and forgotten goals.
 
-## 目标
+## Goal
 
-- 在项目根目录确保存在：task_plan.md、findings.md、progress.md
-- 所有关键决策、研究结论、错误与修复路径必须写入文件
-- 每完成一个阶段就更新 task_plan.md 的状态
+- Ensure these files exist in the project root: task_plan.md, findings.md, progress.md
+- All key decisions, research conclusions, errors, and fix paths must be written to files
+- Update task_plan.md status after completing each phase
 
-## 工作步骤
+## Steps
 
-1. 检查项目根目录是否已有 task_plan.md / findings.md / progress.md
-2. 如果不存在，先创建它们（可直接运行初始化脚本，或在 IDE 里新建同名文件）：
-   - macOS/Linux：bash .continue/skills/planning-with-files/scripts/init-session.sh
-   - Windows：powershell -ExecutionPolicy Bypass -File .continue/skills/planning-with-files/scripts/init-session.ps1
-3. 读取 task_plan.md，补全：
-   - Goal（1 句话）
-   - Phases（3-7 个阶段，带 Status: pending / in_progress / complete）
-   - Key Questions（需要回答的关键问题）
-4. 执行任务时遵守：
-   - 每 2 次“查看/搜索/浏览”后，立刻把发现写入 findings.md
-   - 每次重要决策前，先读取 task_plan.md 刷新目标
-   - 任何错误都记录在 task_plan.md 的 Errors Encountered，并写清楚尝试次数与解决方式
-5. 持续把本次会话的行动与验证结果写入 progress.md（包括命令、测试、输出）
+1. Check whether the project root already has task_plan.md / findings.md / progress.md
+2. If they don't exist, create them (run the init script or create the files manually):
+   - macOS/Linux: `bash .continue/skills/planning-with-files/scripts/init-session.sh`
+   - Windows: `powershell -ExecutionPolicy Bypass -File .continue/skills/planning-with-files/scripts/init-session.ps1`
+3. Read task_plan.md and fill in:
+   - Goal (one sentence)
+   - Phases (3-7 phases, each with Status: pending / in_progress / complete)
+   - Key Questions (critical questions that need answers)
+4. While executing the task, follow these rules:
+   - After every 2 view/search/browse operations, immediately write findings to findings.md
+   - Before every major decision, re-read task_plan.md to refresh goals
+   - Log every error in task_plan.md under Errors Encountered, including attempt count and resolution
+5. Continuously write session actions and verification results to progress.md (including commands, tests, output)
 
-## 输出要求
+## Output Requirements
 
-- 你的回答优先引用这些文件中的最新内容（而不是依赖聊天记忆）
-- 任务结束前，确保所有阶段均为 complete（或明确说明未完成原因与后续）
+- Prioritize referencing the latest content from these files (not chat memory)
+- Before finishing, ensure all phases are marked complete (or clearly explain what remains and why)

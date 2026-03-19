@@ -32,6 +32,14 @@
         "powershell": ".github/hooks/scripts/agent-stop.ps1",
         "timeout": 10
       }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": ".github/hooks/scripts/error-occurred.sh",
+        "powershell": ".github/hooks/scripts/error-occurred.ps1",
+        "timeout": 5
+      }
     ]
   }
 }
