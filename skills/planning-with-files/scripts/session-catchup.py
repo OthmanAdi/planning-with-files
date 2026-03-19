@@ -13,18 +13,31 @@ import sys
 import os
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime
 
 PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
-def get_project_dir(project_path: str) -> Path:
-    """Convert project path to Claude's storage path format."""
+def get_project_dir(project_path: str) -> Tuple[Optional[Path], Optional[str]]:
+    """Resolve session storage path for the current runtime variant."""
     sanitized = project_path.replace('/', '-')
     if not sanitized.startswith('-'):
         sanitized = '-' + sanitized
     sanitized = sanitized.replace('_', '-')
-    return Path.home() / '.claude' / 'projects' / sanitized
+
+    claude_path = Path.home() / '.claude' / 'projects' / sanitized
+
+    # Codex stores sessions in ~/.codex/sessions with a different format.
+    # Avoid silently scanning Claude paths when running from Codex skill folder.
+    script_path = Path(__file__).as_posix().lower()
+    is_codex_variant = '/.codex/' in script_path
+    codex_sessions_dir = Path.home() / '.codex' / 'sessions'
+    if is_codex_variant and codex_sessions_dir.exists() and not claude_path.exists():
+        return None, (
+            "[planning-with-files] Session catchup skipped: Codex stores sessions "
+            "in ~/.codex/sessions and native Codex parsing is not implemented yet."
+        )
+
+    return claude_path, None
 
 
 def get_sessions_sorted(project_dir: Path) -> List[Path]:
@@ -140,7 +153,6 @@ def extract_messages_after(messages: List[Dict], after_line: int) -> List[Dict]:
 
 def main():
     project_path = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
-    project_dir = get_project_dir(project_path)
 
     # Check if planning files exist (indicates active task)
     has_planning_files = any(
@@ -148,6 +160,11 @@ def main():
     )
     if not has_planning_files:
         # No planning files in this project; skip catchup to avoid noise.
+        return
+
+    project_dir, skip_reason = get_project_dir(project_path)
+    if skip_reason:
+        print(skip_reason)
         return
 
     if not project_dir.exists():
