@@ -1,17 +1,48 @@
 #!/bin/bash
 # Initialize planning files for a new session
-# Usage: ./init-session.sh [project-name]
+# Usage: ./init-session.sh [--template TYPE] [project-name]
+# Templates: default, analytics
 
 set -e
 
-PROJECT_NAME="${1:-project}"
+# Parse arguments
+TEMPLATE="default"
+PROJECT_NAME="project"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --template|-t)
+            TEMPLATE="$2"
+            shift 2
+            ;;
+        *)
+            PROJECT_NAME="$1"
+            shift
+            ;;
+    esac
+done
+
 DATE=$(date +%Y-%m-%d)
 
-echo "Initializing planning files for: $PROJECT_NAME"
+# Resolve template directory (skill root is one level up from scripts/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
+TEMPLATE_DIR="$SKILL_ROOT/templates"
+
+echo "Initializing planning files for: $PROJECT_NAME (template: $TEMPLATE)"
+
+# Validate template
+if [ "$TEMPLATE" != "default" ] && [ "$TEMPLATE" != "analytics" ]; then
+    echo "Unknown template: $TEMPLATE (available: default, analytics). Using default."
+    TEMPLATE="default"
+fi
 
 # Create task_plan.md if it doesn't exist
 if [ ! -f "task_plan.md" ]; then
-    cat > task_plan.md << 'EOF'
+    if [ "$TEMPLATE" = "analytics" ] && [ -f "$TEMPLATE_DIR/analytics_task_plan.md" ]; then
+        cp "$TEMPLATE_DIR/analytics_task_plan.md" task_plan.md
+    else
+        cat > task_plan.md << 'EOF'
 # Task Plan: [Brief Description]
 
 ## Goal
@@ -56,6 +87,7 @@ Phase 1
 | Error | Resolution |
 |-------|------------|
 EOF
+    fi
     echo "Created task_plan.md"
 else
     echo "task_plan.md already exists, skipping"
@@ -63,7 +95,10 @@ fi
 
 # Create findings.md if it doesn't exist
 if [ ! -f "findings.md" ]; then
-    cat > findings.md << 'EOF'
+    if [ "$TEMPLATE" = "analytics" ] && [ -f "$TEMPLATE_DIR/analytics_findings.md" ]; then
+        cp "$TEMPLATE_DIR/analytics_findings.md" findings.md
+    else
+        cat > findings.md << 'EOF'
 # Findings & Decisions
 
 ## Requirements
@@ -83,6 +118,7 @@ if [ ! -f "findings.md" ]; then
 ## Resources
 -
 EOF
+    fi
     echo "Created findings.md"
 else
     echo "findings.md already exists, skipping"
@@ -90,7 +126,29 @@ fi
 
 # Create progress.md if it doesn't exist
 if [ ! -f "progress.md" ]; then
-    cat > progress.md << EOF
+    if [ "$TEMPLATE" = "analytics" ]; then
+        cat > progress.md << EOF
+# Progress Log
+
+## Session: $DATE
+
+### Current Status
+- **Phase:** 1 - Data Discovery
+- **Started:** $DATE
+
+### Actions Taken
+-
+
+### Query Log
+| Query | Result Summary | Interpretation |
+|-------|---------------|----------------|
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+EOF
+    else
+        cat > progress.md << EOF
 # Progress Log
 
 ## Session: $DATE
@@ -110,6 +168,7 @@ if [ ! -f "progress.md" ]; then
 | Error | Resolution |
 |-------|------------|
 EOF
+    fi
     echo "Created progress.md"
 else
     echo "progress.md already exists, skipping"
