@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "component": "planning-with-files",
+  "interface": {
+    "health": "bash scripts/check-continue.sh",
+    "capabilities": [
+      "task_plan.md management",
+      "findings.md management",
+      "progress.md management",
+      "session-catchup"
+    ],
+    "export_state": "python scripts/stack_contract.py export --output <file>",
+    "import_state": "python scripts/stack_contract.py import --input <file>"
+  }
+}
