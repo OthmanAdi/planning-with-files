@@ -21,9 +21,9 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "SD=\"${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/plugins/planning-with-files-zht}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
+          command: "SD=\"${CLAUDE_SKILL_DIR:-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files-zht}}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
 metadata:
-  version: "2.28.0"
+  version: "2.30.0"
 ---
 
 # 檔案規劃系統
@@ -39,7 +39,7 @@ metadata:
 
 ```bash
 # Linux/macOS
-$(command -v python3 || command -v python) ${CLAUDE_PLUGIN_ROOT}/scripts/session-catchup.py "$(pwd)"
+$(command -v python3 || command -v python) ${CLAUDE_SKILL_DIR}/scripts/session-catchup.py "$(pwd)"
 ```
 
 ```powershell
@@ -55,12 +55,12 @@ $(command -v python3 || command -v python) ${CLAUDE_PLUGIN_ROOT}/scripts/session
 
 ## 重要：檔案存放位置
 
-- **範本**在 `${CLAUDE_PLUGIN_ROOT}/templates/` 中
+- **範本**在 `${CLAUDE_SKILL_DIR}/templates/` 中
 - **你的規劃檔案**放在**你的專案目錄**中
 
 | 位置 | 存放內容 |
 |------|---------|
-| 技能目錄 (`${CLAUDE_PLUGIN_ROOT}/`) | 範本、腳本、參考文件 |
+| 技能目錄 (`${CLAUDE_SKILL_DIR}/`) | 範本、腳本、參考文件 |
 | 你的專案目錄 | `task_plan.md`、`findings.md`、`progress.md` |
 
 ## 快速開始
