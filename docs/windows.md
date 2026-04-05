@@ -85,9 +85,9 @@ Copy-Item templates\progress.md .
 
 The hooks use Unix-style commands. On Windows with Claude Code:
 
-- Hooks run in a Unix-compatible shell environment
-- Commands like `cat`, `head`, `echo` work automatically
-- No changes needed to the skill configuration
+- Hooks are dispatched through `sh -lc` so they behave consistently even when Claude Code launches them from PowerShell
+- Ensure Git Bash (or another `sh` implementation) is installed and available on your `PATH`
+- The Stop hook still prefers `check-complete.ps1` on Windows after the `sh` wrapper resolves the script path
 
 ---
 

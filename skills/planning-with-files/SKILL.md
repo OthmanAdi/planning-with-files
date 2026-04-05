@@ -7,21 +7,21 @@ hooks:
   UserPromptSubmit:
     - hooks:
         - type: command
-          command: "if [ -f task_plan.md ]; then echo '[planning-with-files] ACTIVE PLAN — current state:'; head -50 task_plan.md; echo ''; echo '=== recent progress ==='; tail -20 progress.md 2>/dev/null; echo ''; echo '[planning-with-files] Read findings.md for research context. Continue from the current phase.'; fi"
+          command: "sh -lc 'if [ -f task_plan.md ]; then echo \"[planning-with-files] ACTIVE PLAN — current state:\"; head -50 task_plan.md; echo \"\"; echo \"=== recent progress ===\"; tail -20 progress.md 2>/dev/null; echo \"\"; echo \"[planning-with-files] Read findings.md for research context. Continue from the current phase.\"; fi'"
   PreToolUse:
     - matcher: "Write|Edit|Bash|Read|Glob|Grep"
       hooks:
         - type: command
-          command: "cat task_plan.md 2>/dev/null | head -30 || true"
+          command: "sh -lc 'cat task_plan.md 2>/dev/null | head -30 || true'"
   PostToolUse:
     - matcher: "Write|Edit"
       hooks:
         - type: command
-          command: "if [ -f task_plan.md ]; then echo '[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status.'; fi"
+          command: "sh -lc 'if [ -f task_plan.md ]; then echo \"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status.\"; fi'"
   Stop:
     - hooks:
         - type: command
-          command: "SD=\"${CLAUDE_SKILL_DIR:-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
+          command: "sh -lc 'SD=\"${CLAUDE_SKILL_DIR:-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/planning-with-files}}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\"'"
 metadata:
   version: "2.30.0"
 ---
