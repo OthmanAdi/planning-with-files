@@ -21,7 +21,7 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "SD=\"${CODEBUDDY_PLUGIN_ROOT:-$HOME/.codebuddy/skills/planning-with-files}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
+          command: "export SD=\"${CODEBUDDY_PLUGIN_ROOT:-$HOME/.codebuddy/skills/planning-with-files}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
 metadata:
   version: "2.23.0"
 ---

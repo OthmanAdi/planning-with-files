@@ -21,7 +21,7 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "SD=\"$HOME/.mastracode/skills/planning-with-files/scripts\"; [ -f \"$SD/check-complete.sh\" ] || SD=\".mastracode/skills/planning-with-files/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
+          command: "export SD=\"$HOME/.mastracode/skills/planning-with-files/scripts\"; [ -f \"$SD/check-complete.sh\" ] || export SD=\".mastracode/skills/planning-with-files/scripts\"; powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
 metadata:
   version: "2.23.0"
 ---

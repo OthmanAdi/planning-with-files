@@ -12,6 +12,7 @@
 [![Benchmark](https://img.shields.io/badge/Benchmark-96.7%25_pass_rate-brightgreen)](docs/evals.md)
 [![A/B Verified](https://img.shields.io/badge/A%2FB_Blind-3%2F3_wins-brightgreen)](docs/evals.md)
 [![Security Verified](https://img.shields.io/badge/Security-Audited_%26_Fixed_v2.21.0-blue)](docs/evals.md)
+[![Loaditout Security Grade](https://loaditout.ai/badge/OthmanAdi/planning-with-files)](https://loaditout.ai/skills/OthmanAdi/planning-with-files)
 
 <details>
 <summary><strong>💬 A Note from the Author</strong></summary>
