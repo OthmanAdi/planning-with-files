@@ -1,0 +1,10 @@
+name: planning-with-files
+version: 0.1.0
+description: Hermes adapter for persistent planning files, status commands, and planning helpers.
+author: planning-with-files contributors
+provides_tools:
+  - planning_with_files_init
+  - planning_with_files_status
+  - planning_with_files_check_complete
+provides_hooks:
+  - pre_llm_call
