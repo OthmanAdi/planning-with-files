@@ -9,7 +9,11 @@ INPUT=$(cat)
 
 PLAN_FILE="task_plan.md"
 SKILL_DIR=".github/skills/planning-with-files"
-PYTHON=$(command -v python3 || command -v python)
+PYTHON=""
+for _p in /usr/bin/python3 /usr/local/bin/python3 /opt/homebrew/bin/python3; do
+    [ -x "$_p" ] && { PYTHON="$_p"; break; }
+done
+[ -z "$PYTHON" ] && PYTHON=$(command -v python3 2>/dev/null || command -v python 2>/dev/null)
 
 if [ -f "$PLAN_FILE" ]; then
     # Plan exists — try session catchup, fall back to reading plan header

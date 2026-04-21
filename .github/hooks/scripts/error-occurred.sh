@@ -14,7 +14,11 @@ if [ ! -f "$PLAN_FILE" ]; then
 fi
 
 # Extract error message from input JSON
-PYTHON=$(command -v python3 || command -v python)
+PYTHON=""
+for _p in /usr/bin/python3 /usr/local/bin/python3 /opt/homebrew/bin/python3; do
+    [ -x "$_p" ] && { PYTHON="$_p"; break; }
+done
+[ -z "$PYTHON" ] && PYTHON=$(command -v python3 2>/dev/null || command -v python 2>/dev/null)
 ERROR_MSG=$($PYTHON -c "
 import sys, json
 try:
