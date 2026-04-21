@@ -80,7 +80,7 @@ class HermesAdapterTests(unittest.TestCase):
             result = json.loads(tools_module.planning_with_files_check_complete(cwd=tmpdir))
             self.assertTrue(result["ok"])
             self.assertIn("Task in progress", result["stdout"])
-            self.assertEqual(str(REPO_ROOT), result["repo_root"])
+            self.assertEqual(str(REPO_ROOT / ".hermes" / "skills" / "planning-with-files"), result["skill_root"])
 
     def test_post_tool_hook_queues_reminder_for_next_turn(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -151,18 +151,19 @@ class HermesAdapterTests(unittest.TestCase):
             self.assertEqual(1, result["counts"]["pending"])
             self.assertEqual(1, result["errors_logged"])
 
-    def test_repo_root_env_override_is_supported(self) -> None:
-        old_env = os.environ.get("PLANNING_WITH_FILES_REPO_ROOT")
-        os.environ["PLANNING_WITH_FILES_REPO_ROOT"] = str(REPO_ROOT)
+    def test_skill_root_env_override_is_supported(self) -> None:
+        skill_root = REPO_ROOT / ".hermes" / "skills" / "planning-with-files"
+        old_env = os.environ.get("PLANNING_WITH_FILES_SKILL_ROOT")
+        os.environ["PLANNING_WITH_FILES_SKILL_ROOT"] = str(skill_root)
         try:
             import planning_with_files_plugin.paths as env_plugin
             env_plugin = importlib.reload(env_plugin)
         finally:
             if old_env is None:
-                os.environ.pop("PLANNING_WITH_FILES_REPO_ROOT", None)
+                os.environ.pop("PLANNING_WITH_FILES_SKILL_ROOT", None)
             else:
-                os.environ["PLANNING_WITH_FILES_REPO_ROOT"] = old_env
-        self.assertEqual(REPO_ROOT, env_plugin.REPO_ROOT)
+                os.environ["PLANNING_WITH_FILES_SKILL_ROOT"] = old_env
+        self.assertEqual(skill_root, env_plugin.SKILL_ROOT)
         self.assertTrue(env_plugin.TEMPLATES_DIR.is_dir())
         self.assertTrue(env_plugin.SCRIPTS_DIR.is_dir())
 
@@ -384,10 +385,13 @@ class HermesAdapterTests(unittest.TestCase):
                 "### Phase 2: Build\n- **Status:** complete\n",
                 encoding="utf-8",
             )
+            skill_copy = workspace / "skills" / "planning-with-files"
+            shutil.copytree(REPO_ROOT / ".hermes" / "skills" / "planning-with-files", skill_copy)
+
             result = json.loads(installed_tools.planning_with_files_check_complete(cwd=str(project_dir)))
             self.assertTrue(result["ok"])
             self.assertTrue(result["complete"])
-            self.assertEqual(str(REPO_ROOT), result["repo_root"])
+            self.assertEqual(str(skill_copy), result["skill_root"])
 
 
 if __name__ == "__main__":

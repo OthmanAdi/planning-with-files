@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-from .paths import normalize_cwd, resolve_repo_root
+from .paths import normalize_cwd, resolve_skill_dir
 from .planning_files import ensure_planning_files, summarize_status
 
 
@@ -19,11 +19,11 @@ def planning_with_files_status(cwd: str = "") -> str:
 
 def planning_with_files_check_complete(cwd: str = "") -> str:
     project_dir = normalize_cwd(cwd)
-    repo_root = resolve_repo_root(project_dir)
-    script = repo_root / "scripts" / "check-complete.sh"
+    skill_root = resolve_skill_dir(project_dir)
+    script = skill_root / "scripts" / "check-complete.sh"
     if not script.exists():
         return json.dumps(
-            {"ok": False, "error": f"Missing script: {script}", "repo_root": str(repo_root), "complete": False},
+            {"ok": False, "error": f"Missing script: {script}", "skill_root": str(skill_root), "complete": False},
             ensure_ascii=False,
         )
     completed = subprocess.run(
@@ -40,7 +40,7 @@ def planning_with_files_check_complete(cwd: str = "") -> str:
             "returncode": completed.returncode,
             "stdout": stdout,
             "stderr": completed.stderr.strip(),
-            "repo_root": str(repo_root),
+            "skill_root": str(skill_root),
             "complete": "ALL PHASES COMPLETE" in stdout,
         },
         ensure_ascii=False,

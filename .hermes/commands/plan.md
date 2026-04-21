@@ -2,7 +2,7 @@
 description: "Start Hermes planning-with-files workflow in the current project."
 ---
 
-Load the `planning-with-files-hermes` skill and follow it.
+Load the `planning-with-files` skill and follow it.
 
 1. Determine the actual project root for the current task.
 2. Run `planning_with_files_init` with `cwd` set to that project root.

@@ -3,25 +3,53 @@ from pathlib import Path
 
 from .constants import PLUGIN_DIR
 
+SKILL_DIR_NAME = "planning-with-files"
 
-def has_adapter_assets(candidate: Path) -> bool:
+
+def has_skill_assets(candidate: Path) -> bool:
     return (candidate / "templates").is_dir() and (candidate / "scripts" / "check-complete.sh").is_file()
 
 
-def find_repo_root(start: Path) -> Path:
-    explicit = os.environ.get("PLANNING_WITH_FILES_REPO_ROOT", "").strip()
-    if explicit:
-        candidate = Path(explicit).expanduser().resolve()
-        if has_adapter_assets(candidate):
+def candidate_skill_dirs(root: Path) -> list[Path]:
+    return [
+        root,
+        root / "skills" / SKILL_DIR_NAME,
+        root / ".hermes" / "skills" / SKILL_DIR_NAME,
+    ]
+
+
+def resolve_skill_dir_from(root: Path) -> Path | None:
+    for candidate in candidate_skill_dirs(root.resolve()):
+        if has_skill_assets(candidate):
             return candidate
-    for candidate in [start, *start.parents]:
-        if has_adapter_assets(candidate):
-            return candidate
+    return None
+
+
+def resolve_explicit_skill_dir() -> Path | None:
+    for env_name in ("PLANNING_WITH_FILES_SKILL_ROOT", "PLANNING_WITH_FILES_REPO_ROOT"):
+        explicit = os.environ.get(env_name, "").strip()
+        if not explicit:
+            continue
+        resolved = resolve_skill_dir_from(Path(explicit).expanduser())
+        if resolved is not None:
+            return resolved
+    return None
+
+
+def find_skill_dir(start: Path) -> Path:
+    explicit = resolve_explicit_skill_dir()
+    if explicit is not None:
+        return explicit
+    for candidate in [start.resolve(), *start.resolve().parents]:
+        resolved = resolve_skill_dir_from(candidate)
+        if resolved is not None:
+            return resolved
     cwd = Path.cwd().resolve()
     for candidate in [cwd, *cwd.parents]:
-        if has_adapter_assets(candidate):
-            return candidate
-    return start
+        resolved = resolve_skill_dir_from(candidate)
+        if resolved is not None:
+            return resolved
+    return start.resolve()
 
 
 def normalize_cwd(cwd: str | None = None) -> Path:
@@ -29,25 +57,25 @@ def normalize_cwd(cwd: str | None = None) -> Path:
     return Path(candidate).expanduser().resolve()
 
 
-def resolve_repo_root(project_dir: Path) -> Path:
-    explicit = os.environ.get("PLANNING_WITH_FILES_REPO_ROOT", "").strip()
-    if explicit:
-        candidate = Path(explicit).expanduser().resolve()
-        if has_adapter_assets(candidate):
-            return candidate
-    plugin_root = find_repo_root(PLUGIN_DIR)
-    if has_adapter_assets(plugin_root):
+def resolve_skill_dir(project_dir: Path) -> Path:
+    explicit = resolve_explicit_skill_dir()
+    if explicit is not None:
+        return explicit
+    plugin_root = find_skill_dir(PLUGIN_DIR)
+    if has_skill_assets(plugin_root):
         return plugin_root
     for candidate in [project_dir.resolve(), *project_dir.resolve().parents]:
-        if has_adapter_assets(candidate):
-            return candidate
+        resolved = resolve_skill_dir_from(candidate)
+        if resolved is not None:
+            return resolved
     cwd = Path.cwd().resolve()
     for candidate in [cwd, *cwd.parents]:
-        if has_adapter_assets(candidate):
-            return candidate
+        resolved = resolve_skill_dir_from(candidate)
+        if resolved is not None:
+            return resolved
     return plugin_root
 
 
-REPO_ROOT = find_repo_root(PLUGIN_DIR)
-TEMPLATES_DIR = REPO_ROOT / "templates"
-SCRIPTS_DIR = REPO_ROOT / "scripts"
+SKILL_ROOT = find_skill_dir(PLUGIN_DIR)
+TEMPLATES_DIR = SKILL_ROOT / "templates"
+SCRIPTS_DIR = SKILL_ROOT / "scripts"

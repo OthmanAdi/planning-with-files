@@ -4,7 +4,7 @@ This repository ships a Hermes adapter for planning-with-files.
 
 The adapter has two parts:
 
-- `.hermes/skills/planning-with-files-hermes/` contains the Hermes-facing workflow skill
+- `.hermes/skills/planning-with-files/` contains the Hermes-facing workflow skill and its bundled templates/scripts
 - `.hermes/plugins/planning-with-files/` contains the project plugin that provides planning tools and context injection
 
 ## What the Adapter Provides
@@ -22,7 +22,9 @@ The adapter has two parts:
 export HERMES_ENABLE_PROJECT_PLUGINS=1
 ```
 
-### 2. Add the skill directory to your Hermes profile
+### 2. Install the Hermes skill bundle
+
+Add the skill directory to your Hermes profile. The skill bundle includes `SKILL.md`, `templates/`, and `scripts/`.
 
 ```yaml
 skills:
@@ -30,7 +32,11 @@ skills:
     - /absolute/path/to/planning-with-files/.hermes/skills
 ```
 
-### 3. Start Hermes from the target project directory
+### 3. Install the Hermes project plugin
+
+Copy `.hermes/plugins/planning-with-files/` into the target profile or repository so Hermes can load the Python adapter.
+
+### 4. Start Hermes from the target project directory
 
 The project plugin lives under `.hermes/plugins/planning-with-files/`. Hermes discovers it automatically when project plugins are enabled and the working directory is this repository.
 
@@ -38,7 +44,7 @@ The project plugin lives under `.hermes/plugins/planning-with-files/`. Hermes di
 
 - Run `/plan` to start the planning workflow in the current project
 - Run `/plan-status` to inspect the current planning state
-- Load `planning-with-files-hermes` directly when you want the workflow instructions without the command wrapper
+- Load `planning-with-files` directly when you want the workflow instructions without the command wrapper
 
 ## Validation
 

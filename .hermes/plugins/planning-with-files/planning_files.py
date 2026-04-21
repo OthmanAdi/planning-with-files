@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from .constants import PLANNING_FILES, PLAN_PREVIEW_LINES, PROGRESS_TAIL_LINES
-from .paths import resolve_repo_root
+from .paths import resolve_skill_dir
 
 
 def tail_lines(path: Path, limit: int) -> str:
@@ -21,8 +21,8 @@ def head_lines(path: Path, limit: int) -> str:
 
 
 def ensure_planning_files(project_dir: Path, template: str = "default") -> dict[str, Any]:
-    repo_root = resolve_repo_root(project_dir)
-    templates_dir = repo_root / "templates"
+    skill_root = resolve_skill_dir(project_dir)
+    templates_dir = skill_root / "templates"
     created: list[str] = []
     for name in PLANNING_FILES:
         dest = project_dir / name
@@ -43,7 +43,7 @@ def ensure_planning_files(project_dir: Path, template: str = "default") -> dict[
         "project_dir": str(project_dir),
         "created": created,
         "existing": [name for name in PLANNING_FILES if (project_dir / name).exists()],
-        "repo_root": str(repo_root),
+        "skill_root": str(skill_root),
     }
 
 
