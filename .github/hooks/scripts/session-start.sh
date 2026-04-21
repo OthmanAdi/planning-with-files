@@ -15,11 +15,12 @@ if [ -f "$PLAN_FILE" ]; then
     # Plan exists — try session catchup, fall back to reading plan header
     CATCHUP=""
     if [ -n "$PYTHON" ] && [ -f "$SKILL_DIR/scripts/session-catchup.py" ]; then
-        CATCHUP=$($PYTHON "$SKILL_DIR/scripts/session-catchup.py" "$(pwd)" 2>/dev/null)
+        CATCHUP=$($PYTHON "$SKILL_DIR/scripts/session-catchup.py" "$(pwd)" 2>/dev/null | head -100)
     fi
 
     if [ -n "$CATCHUP" ]; then
-        CONTEXT="$CATCHUP"
+        CONTEXT="[planning-with-files] Previous session context (truncated to 100 lines):
+$CATCHUP"
     else
         CONTEXT=$(head -5 "$PLAN_FILE" 2>/dev/null || echo "")
     fi
