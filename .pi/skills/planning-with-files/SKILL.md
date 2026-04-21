@@ -20,7 +20,7 @@ python scripts/session-catchup.py "$(pwd)"
 
 ```powershell
 # Windows PowerShell
-python scripts\session-catchup.py" (Get-Location)
+python "scripts\session-catchup.py" (Get-Location)
 ```
 
 **If you cannot find the script:**
