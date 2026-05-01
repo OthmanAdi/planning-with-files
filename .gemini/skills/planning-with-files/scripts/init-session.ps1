@@ -1,17 +1,34 @@
 # Initialize planning files for a new session
-# Usage: .\init-session.ps1 [project-name]
+# Usage: .\init-session.ps1 [-Template TYPE] [project-name]
+# Templates: default, analytics
 
 param(
-    [string]$ProjectName = "project"
+    [string]$ProjectName = "project",
+    [string]$Template = "default"
 )
 
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
-Write-Host "Initializing planning files for: $ProjectName"
+# Resolve template directory (skill root is one level up from scripts/)
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SkillRoot = Split-Path -Parent $ScriptDir
+$TemplateDir = Join-Path $SkillRoot "templates"
+
+Write-Host "Initializing planning files for: $ProjectName (template: $Template)"
+
+# Validate template
+if ($Template -ne "default" -and $Template -ne "analytics") {
+    Write-Host "Unknown template: $Template (available: default, analytics). Using default."
+    $Template = "default"
+}
 
 # Create task_plan.md if it doesn't exist
 if (-not (Test-Path "task_plan.md")) {
-    @"
+    $AnalyticsPlan = Join-Path $TemplateDir "analytics_task_plan.md"
+    if ($Template -eq "analytics" -and (Test-Path $AnalyticsPlan)) {
+        Copy-Item $AnalyticsPlan "task_plan.md"
+    } else {
+        @"
 # Task Plan: [Brief Description]
 
 ## Goal
@@ -56,6 +73,7 @@ Phase 1
 | Error | Resolution |
 |-------|------------|
 "@ | Out-File -FilePath "task_plan.md" -Encoding UTF8
+    }
     Write-Host "Created task_plan.md"
 } else {
     Write-Host "task_plan.md already exists, skipping"
@@ -63,7 +81,11 @@ Phase 1
 
 # Create findings.md if it doesn't exist
 if (-not (Test-Path "findings.md")) {
-    @"
+    $AnalyticsFindings = Join-Path $TemplateDir "analytics_findings.md"
+    if ($Template -eq "analytics" -and (Test-Path $AnalyticsFindings)) {
+        Copy-Item $AnalyticsFindings "findings.md"
+    } else {
+        @"
 # Findings & Decisions
 
 ## Requirements
@@ -83,6 +105,7 @@ if (-not (Test-Path "findings.md")) {
 ## Resources
 -
 "@ | Out-File -FilePath "findings.md" -Encoding UTF8
+    }
     Write-Host "Created findings.md"
 } else {
     Write-Host "findings.md already exists, skipping"
@@ -90,7 +113,29 @@ if (-not (Test-Path "findings.md")) {
 
 # Create progress.md if it doesn't exist
 if (-not (Test-Path "progress.md")) {
-    @"
+    if ($Template -eq "analytics") {
+        @"
+# Progress Log
+
+## Session: $DATE
+
+### Current Status
+- **Phase:** 1 - Data Discovery
+- **Started:** $DATE
+
+### Actions Taken
+-
+
+### Query Log
+| Query | Result Summary | Interpretation |
+|-------|---------------|----------------|
+
+### Errors
+| Error | Resolution |
+|-------|------------|
+"@ | Out-File -FilePath "progress.md" -Encoding UTF8
+    } else {
+        @"
 # Progress Log
 
 ## Session: $DATE
@@ -110,6 +155,7 @@ if (-not (Test-Path "progress.md")) {
 | Error | Resolution |
 |-------|------------|
 "@ | Out-File -FilePath "progress.md" -Encoding UTF8
+    }
     Write-Host "Created progress.md"
 } else {
     Write-Host "progress.md already exists, skipping"
