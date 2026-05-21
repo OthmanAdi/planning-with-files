@@ -160,7 +160,7 @@ These IDEs implement the [Agent Skills](https://agentskills.io) open specificati
 | IDE | Installation Guide | Skill Discovery Path |
 |-----|-------------------|---------------------|
 | Continue | [Continue Setup](docs/continue.md) | `.continue/skills/` + [.prompt files](https://docs.continue.dev/customize/deep-dives/prompts) |
-| Pi Agent | [Pi Agent Setup](docs/pi-agent.md) | `.pi/skills/` ([npm package](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)) |
+| Pi Agent | [Pi Agent Setup](docs/pi-agent.md) | `.pi/skills/` + bundled extension hooks (mode-based: parity/cache-safe/notify) |
 | OpenClaw | [OpenClaw Setup](docs/openclaw.md) | `.openclaw/skills/` ([docs](https://docs.openclaw.ai/tools/skills)) |
 | Antigravity | [Antigravity Setup](docs/antigravity.md) | `.agent/skills/` ([docs](https://codelabs.developers.google.com/getting-started-with-antigravity-skills)) |
 | Kilocode | [Kilocode Setup](docs/kilocode.md) | `.kilocode/skills/` ([docs](https://kilo.ai/docs/agent-behavior/skills)) |
@@ -444,9 +444,12 @@ planning-with-files/
 │   └── skills/
 ├── .factory/                # FactoryAI Droid skills + hooks (v2.26.0)
 │   └── skills/
-├── .pi/                     # Pi Agent skills (npm package)
+├── .pi/                     # Pi Agent skill + extension package (npm)
 │   └── skills/
 │       └── planning-with-files/
+│           ├── extensions/
+│           │   └── planning-with-files/
+│           └── ...
 ├── .continue/               # Continue.dev skills + prompt files
 │   ├── prompts/             # .prompt file for slash commands
 │   └── skills/

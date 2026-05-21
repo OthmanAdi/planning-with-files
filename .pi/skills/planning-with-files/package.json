@@ -12,6 +12,9 @@
   "pi": {
     "skills": [
       "SKILL.md"
+    ],
+    "extensions": [
+      "extensions/planning-with-files/index.ts"
     ]
   },
   "files": [
@@ -20,8 +23,12 @@
     "examples.md",
     "reference.md",
     "scripts/",
-    "templates/"
+    "templates/",
+    "extensions/"
   ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OthmanAdi/planning-with-files.git"
