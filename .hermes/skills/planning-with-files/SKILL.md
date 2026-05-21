@@ -2,7 +2,7 @@
 name: planning-with-files
 description: Implements Manus-style file-based planning to organize and track progress on complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when asked to plan out, break down, or organize a multi-step project, research task, or any work requiring 5+ tool calls. Hermes adaptation with minimal notes.
 metadata:
-  version: "2.38.1"
+  version: "2.39.0"
 ---
 
 > Hermes note: lifecycle automation for this skill is provided by the Hermes adapter plugin in `.hermes/plugins/planning-with-files/`.

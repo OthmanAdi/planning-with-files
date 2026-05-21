@@ -30,6 +30,10 @@ skill-submission-targets.txt
 # Claude session files
 .claude/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # Keep the skill folder clean
 *.log
 *.tmp

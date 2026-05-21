@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.39.0] - 2026-05-22
+
+### Added
+
+- **Pi Coding Agent full hook parity** (`feat/pi-full-adaptation`): Pi integration now matches Claude Code's lifecycle behavior via a bundled TypeScript extension. Six Pi events are mapped: `session_start` (catchup), `before_agent_start` (plan injection), `tool_call` (pre-tool recitation), `tool_result` (post-write reminder), `agent_end` (auto-continue, loop limit 3), and `session_before_compact` (compaction reminder with Plan-SHA256).
+- **Mode system**: `PWF_MODE` env var and settings.json config support four modes: `auto` (default, DeepSeek -> cache-safe, other -> parity), `parity` (full dynamic plan injection), `cache-safe` (fixed constant reminder for DeepSeek KV-cache stability), and `notify` (notification-only).
+- **Attestation gate**: Extension verifies SHA-256 of `task_plan.md` against trusted hash. Plan injection is blocked with `[PLAN TAMPERED]` warning on mismatch.
+- **Pi commands**: `/plan-status`, `/plan-attest [--show|--clear]`, `/plan-goal <text|default|clear>`, `/plan-loop [interval] [prompt]` (use `stop` to cancel).
+- **Schema-agnostic plan parsing**: Both `**Status:** complete` and `[complete]` bracket formats supported. Parallel plan directory resolution matches `resolve-plan-dir.sh` semantics (PLAN_ID > .active_plan > newest mtime > legacy root).
+- **Package wiring**: `.pi/skills/planning-with-files/package.json` declares `pi.extensions` for automatic extension loading on `pi install`.
+- **Contract tests**: 12 new tests for packaging, capabilities, and docs assertions.
+
+### Changed
+
+- `docs/pi-agent.md` rewritten for mode-based behavior; no longer states hooks are unsupported in Pi.
+- `.pi/skills/planning-with-files/README.md` updated for new extension and mode system.
+- `.gitignore` now excludes `__pycache__/` and `*.pyc`.
+- `.pi/skills/planning-with-files/package.json` bumped from `1.0.1` to `1.1.0` (Pi npm scheme).
+
 ## [2.38.1] - 2026-05-16
 
 ### Fixed

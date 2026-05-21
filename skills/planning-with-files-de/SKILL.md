@@ -28,7 +28,7 @@ hooks:
         - type: command
           command: "if [ -f task_plan.md ]; then echo '[planning-with-files] PreCompact: context compaction is about to occur.'; echo 'Before compaction completes: ensure progress.md captures recent actions and task_plan.md status reflects current phase.'; echo 'task_plan.md, findings.md, progress.md remain on disk and will be re-read after compaction.'; ATTEST=''; if [ -f .planning/.active_plan ]; then AP=$(tr -d '[:space:]' < .planning/.active_plan 2>/dev/null); if [ -n \"$AP\" ] && [ -f \".planning/$AP/.attestation\" ]; then ATTEST=$(tr -d '[:space:]' < \".planning/$AP/.attestation\" 2>/dev/null); fi; fi; if [ -z \"$ATTEST\" ] && [ -f .plan-attestation ]; then ATTEST=$(tr -d '[:space:]' < .plan-attestation 2>/dev/null); fi; if [ -n \"$ATTEST\" ]; then echo \"Plan-SHA256 at compaction: $ATTEST\"; fi; fi; exit 0"
 metadata:
-  version: "2.38.1"
+  version: "2.39.0"
 ---
 
 # Dateiplanungssystem

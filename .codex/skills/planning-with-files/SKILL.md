@@ -23,7 +23,7 @@ hooks:
         - type: command
           command: "SD=\"${CODEX_SKILL_ROOT:-$HOME/.codex/skills/planning-with-files}/scripts\"; powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File \"$SD/check-complete.ps1\" 2>/dev/null || sh \"$SD/check-complete.sh\""
 metadata:
-  version: "2.38.1"
+  version: "2.39.0"
 
 ---
 

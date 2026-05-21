@@ -9,7 +9,7 @@
       "name": "planning-with-files",
       "source": "./",
       "description": "Manus-style persistent markdown files for planning, progress tracking, and knowledge storage. Now with hooks integration and multi-language support (Arabic, German, Spanish, Chinese).",
-      "version": "2.38.1"
+      "version": "2.39.0"
     }
   ]
 }
