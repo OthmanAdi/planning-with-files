@@ -1,24 +1,10 @@
 # Pi Planning With Files
 
-> **Work like Manus** — Use persistent markdown files as your "working memory on disk."
+> **Work like Manus** - Use persistent markdown files as your "working memory on disk."
 
-A [Pi Coding Agent](https://pi.dev) skill that transforms your workflow to use persistent markdown files for planning, progress tracking, and knowledge storage.
-
-## The Problem
-
-Most AI agents suffer from:
-- **Volatile memory** — Context resets lose history
-- **Goal drift** — Long tasks lose focus
-- **Hidden errors** — Failures aren't tracked
-
-## The Solution
-
-For every complex task, create THREE files:
-- `task_plan.md` (Phases & Progress)
-- `findings.md` (Research & Notes)
-- `progress.md` (Session Log)
-
----
+A [Pi Coding Agent](https://pi.dev) package that ships both:
+- the planning skill (task_plan.md / findings.md / progress.md)
+- a Pi extension that provides Claude-style lifecycle automation
 
 ## Installation
 
@@ -31,51 +17,99 @@ pi install npm:pi-planning-with-files
 ### Manual Install
 
 1. Navigate to your project root.
-2. Create the `.pi/skills` directory if it doesn't exist.
-3. Copy the `planning-with-files` skill folder into `.pi/skills/`.
+2. Copy `.pi/skills/planning-with-files/` into your Pi skills directory.
+3. Reload Pi (`/reload`) if already running.
 
 ---
 
 ## Usage
 
-Pi Agent automatically discovers skills in `.pi/skills` or installed via NPM.
+Pi discovers the skill and extension from the installed package.
 
-### Start Planning
+Start with:
 
-Ask Pi:
-```
+```text
 Use the planning-with-files skill to help me with this task.
 ```
+
 Or:
+
+```text
+/skill:planning-with-files
 ```
-Start by creating task_plan.md.
+
+---
+
+## Hook Parity in Pi
+
+The bundled extension maps Claude-style behavior onto Pi events:
+
+- `session_start` - session catchup
+- `before_agent_start` - plan reminder/injection
+- `tool_call` - pre-tool recitation equivalent
+- `tool_result` - post-write reminder
+- `agent_end` - incomplete-task auto-continue (limit 3)
+- `session_before_compact` - pre-compaction reminder
+
+Attestation is supported. If `task_plan.md` differs from approved hash, plan injection is blocked with:
+
+```text
+[planning-with-files] [PLAN TAMPERED - injection blocked]
 ```
 
-## Important Limitations
+---
 
-> **Note:** Hooks (PreToolUse, PostToolUse, Stop) are **Claude Code specific** and are not currently supported in Pi Agent.
+## Mode System
 
-### What works in Pi Agent:
-- Core 3-file planning pattern
-- Templates (task_plan.md, findings.md, progress.md)
-- All planning rules and guidelines
-- The 2-Action Rule
-- The 3-Strike Error Protocol
-- Session Recovery (via `session-catchup.py`)
+`planningWithFiles.mode` supports:
 
-### Session Recovery
-If you clear context, recover your state:
+- `auto` (default): DeepSeek -> `cache-safe`, others -> `parity`
+- `parity`: full dynamic hook-equivalent behavior
+- `cache-safe`: fixed reminder strings for KV-cache stability
+- `notify`: notification-only mode
+
+Configure via env:
+
+```bash
+PWF_MODE=cache-safe pi
+```
+
+Or settings:
+
+```json
+{
+  "planningWithFiles": {
+    "mode": "auto"
+  }
+}
+```
+
+---
+
+## Commands
+
+- `/plan-status`
+- `/plan-attest [--show|--clear]`
+- `/plan-goal <text|default|clear>`
+- `/plan-loop [interval] [prompt]` (`stop` to cancel)
+
+---
+
+## Session Recovery
+
+If needed, run catchup manually:
+
 ```bash
 python3 .pi/skills/planning-with-files/scripts/session-catchup.py .
 ```
 
 ## File Structure
 
-When installed, the skill provides templates to create:
+The skill workflow still centers on three files in your project:
 
-```
+```text
 your-project/
 ├── task_plan.md
 ├── findings.md
-├── progress.md
+└── progress.md
 ```

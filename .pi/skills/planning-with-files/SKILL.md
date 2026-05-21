@@ -185,6 +185,23 @@ Helper scripts for automation:
 - `scripts/init-session.sh` — Initialize all planning files
 - `scripts/check-complete.sh` — Verify all phases complete
 - `scripts/session-catchup.py` — Recover context from previous session (v2.2.0)
+- `scripts/attest-plan.sh` / `.ps1` — Approve and lock the current plan hash
+
+## Pi Extension Hooks (mode-based)
+
+When installed via `pi install npm:pi-planning-with-files`, this package also loads a Pi extension that maps lifecycle events to hook-equivalent behavior.
+
+Modes:
+- `auto` (default): DeepSeek -> `cache-safe`, other models -> `parity`
+- `parity`: maximum Claude-style behavior (dynamic plan context)
+- `cache-safe`: fixed reminder strings for better DeepSeek KV-cache stability
+- `notify`: notification-only mode
+
+Commands:
+- `/plan-status`
+- `/plan-attest [--show|--clear]`
+- `/plan-goal <text|default|clear>`
+- `/plan-loop [interval] [prompt]` (use `stop` to cancel)
 
 ## Advanced Topics
 
