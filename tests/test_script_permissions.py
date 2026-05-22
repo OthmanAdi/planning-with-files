@@ -1,3 +1,5 @@
+import sys
+import pytest
 import stat
 import unittest
 from pathlib import Path
@@ -15,6 +17,15 @@ class CanonicalScriptPermissionsTests(unittest.TestCase):
             f"{path} is not executable (mode: {oct(mode)})",
         )
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows does not preserve POSIX executable bits"
+)
+def test_session_catchup_is_executable():
+    @pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows does not preserve POSIX executable bits"
+)
     def test_shell_scripts_are_executable(self) -> None:
         self.assert_executable(SCRIPTS_DIR / "check-complete.sh")
         self.assert_executable(SCRIPTS_DIR / "init-session.sh")
