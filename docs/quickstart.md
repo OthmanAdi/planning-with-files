@@ -77,6 +77,40 @@ If you invoke the skill without a task description, the AI will ask you what you
 
 ---
 
+## Optional: Split Large or Unrelated Topics
+
+For one focused task, the three root files are enough. For several unrelated
+tasks in the same repository, use an isolated plan directory so each topic has
+its own `task_plan.md`, `findings.md`, and `progress.md`:
+
+```bash
+./scripts/init-session.sh backend-refactor
+./scripts/init-session.sh production-incident
+./scripts/set-active-plan.sh 2026-01-10-backend-refactor
+```
+
+For a long-running operational topic that shares the same root plan, keep
+`progress.md` concise and move durable details into a topic handoff file:
+
+```text
+progress.md
+  Runtime-wide timeline and short pointers
+
+handoffs/backend-refactor.md
+  Current state, commands, validation, risks, rollback, PR links
+```
+
+Use this pattern when a discussion spans multiple sessions, has many commands,
+or needs a clean resume point without scanning the full timeline. Add one short
+line to `progress.md` whenever the topic handoff changes, then put the details
+in the handoff file.
+
+For GitHub work, `progress.md` should usually record only the branch, commit,
+PR URL, validation summary, and handoff file. Put the longer PR context,
+remaining risks, and rollback notes in the topic handoff.
+
+---
+
 ## Step 4: Re-read Before Decisions
 
 **When:** Before making major decisions (automatic with hooks in Claude Code)

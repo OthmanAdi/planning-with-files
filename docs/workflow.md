@@ -189,6 +189,52 @@ When an error occurs:
 
 ---
 
+## Topic Handoff Pattern
+
+The three root files work best for one active task. When work splits into
+multiple unrelated topics, prefer isolated planning directories:
+
+```text
+.planning/
+  2026-01-10-backend-refactor/
+    task_plan.md
+    findings.md
+    progress.md
+  2026-01-10-production-incident/
+    task_plan.md
+    findings.md
+    progress.md
+```
+
+Use `scripts/init-session.sh <slug>` to create a scoped plan and
+`scripts/set-active-plan.sh <plan-id>` to switch the active plan. Hooks resolve
+the active plan from `$PLAN_ID`, `.planning/.active_plan`, the newest scoped
+plan, then the legacy root files.
+
+Some teams also keep durable topic handoffs alongside the root planning files:
+
+```text
+progress.md
+  Short runtime timeline, plus links to topic handoffs
+
+handoffs/<topic>.md
+  Detailed current state, commands, validation, risks, rollback, PR links
+```
+
+This is useful when a topic spans many sessions or many chat threads. Keep
+`progress.md` as the index and put details in the topic handoff. A good
+handoff section answers:
+
+| Question | Where to put it |
+|----------|-----------------|
+| What is running now? | `handoffs/<topic>.md` |
+| How do I check it? | `handoffs/<topic>.md` |
+| What changed today? | Short pointer in `progress.md` |
+| What branch, commit, or PR matters? | Pointer in `progress.md`, details in the handoff |
+| What risk remains? | `handoffs/<topic>.md` |
+
+---
+
 ## The 5-Question Reboot Test
 
 If you can answer these questions, your context management is solid:
