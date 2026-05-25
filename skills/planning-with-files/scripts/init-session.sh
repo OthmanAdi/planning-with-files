@@ -19,7 +19,7 @@ TEMPLATE="default"
 PROJECT_NAME=""
 USE_PLAN_DIR=0
 
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case "$1" in
         --template|-t)
             TEMPLATE="$2"
