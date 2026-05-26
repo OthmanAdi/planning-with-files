@@ -8,22 +8,10 @@ This project keeps contribution work small, traceable, and reviewable. Please ma
 
 Fork the repository, then clone your fork:
 
-````bash
-git clone https://github.com/YOUR-USERNAME/planning-with-files.git
-cd planning-with-files# Contributing
-
-Thank you for considering a contribution to planning-with-files.
-
-This project keeps contribution work small, traceable, and reviewable. Please make one logical change per pull request and keep the tone concise and concrete.
-
-## How to set up locally
-
-Fork the repository, then clone your fork:
-
 ```bash
 git clone https://github.com/YOUR-USERNAME/planning-with-files.git
 cd planning-with-files
-````
+```
 
 Add the upstream repository so you can sync your fork with the original project:
 
