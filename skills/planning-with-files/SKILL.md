@@ -346,7 +346,7 @@ This skill uses PreToolUse and UserPromptSubmit hooks to inject plan context. Ho
 
 The attestation is written to `.planning/<active-plan>/.attestation` (parallel-plan mode) or `./.plan-attestation` (legacy mode). When set, the injected context also carries a `Plan-SHA256:` line so the model can log the attested hash for audit.
 
-For the `attest-plan.sh` write path, optional `flock` guard, macOS and Windows Git Bash fallback, and why slug-mode is preferred for parallel sessions, see [attestation locking and fallback](../../docs/attestation-locking.md).
+For the `attest-plan.sh` write path, optional `flock` guard, macOS and Windows Git Bash fallback, and why slug-mode is preferred for parallel sessions, see [attestation locking and fallback](../../docs/attestation-locking.md). For the transient SHA cache under `${TMPDIR:-/tmp}/pwf-sha/`, see [performance notes](../../docs/perf-notes.md).
 
 | Rule | Why |
 |------|-----|
