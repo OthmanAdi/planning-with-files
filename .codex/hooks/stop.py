@@ -18,15 +18,7 @@ def main() -> None:
     if not isinstance(message, str) or not message:
         return
 
-    if "ALL PHASES COMPLETE" in message:
-        adapter.emit_json({"systemMessage": message})
-        return
-
-    if bool(payload.get("stop_hook_active")):
-        adapter.emit_json({"systemMessage": message})
-        return
-
-    adapter.emit_json({"decision": "block", "reason": message})
+    adapter.emit_json({"systemMessage": message})
 
 
 if __name__ == "__main__":
