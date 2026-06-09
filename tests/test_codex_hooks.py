@@ -46,6 +46,7 @@ class CodexHooksTests(unittest.TestCase):
                 "PreToolUse",
                 "PermissionRequest",
                 "PostToolUse",
+                "PreCompact",
                 "Stop",
             },
             set(payload["hooks"]),
@@ -146,6 +147,27 @@ class CodexHooksTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         payload = json.loads(result.stdout)
         self.assertIn("progress.md", payload["systemMessage"])
+
+    def test_pre_compact_emits_flush_reminder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            root.joinpath("task_plan.md").write_text("# Task Plan\n", encoding="utf-8")
+            root.joinpath(".plan-attestation").write_text("abc123\n", encoding="utf-8")
+
+            result = self.run_shell_hook("pre-compact.sh", root)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("[planning-with-files] PreCompact", result.stdout)
+        self.assertIn("progress.md", result.stdout)
+        self.assertIn("Plan-SHA256", result.stdout)
+
+    def test_pre_compact_silent_without_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            result = self.run_shell_hook("pre-compact.sh", root)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout.strip())
 
     def test_stop_adapter_reports_incomplete_plan_without_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

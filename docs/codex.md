@@ -100,7 +100,7 @@ Codex reads hooks from:
 1. `.codex/hooks.json` in your project root
 2. `~/.codex/hooks.json` for your global install
 
-This integration includes all five Codex lifecycle hooks:
+This integration includes the Codex lifecycle hooks used by the adapter:
 
 | Hook | What It Does |
 |------|--------------|
@@ -108,6 +108,7 @@ This integration includes all five Codex lifecycle hooks:
 | **UserPromptSubmit** | Re-injects plan and recent progress on every user message |
 | **PreToolUse** | Re-reads the first 30 lines of `task_plan.md` before Bash |
 | **PostToolUse** | Reminds the agent to update `progress.md` after Bash activity |
+| **PreCompact** | Reminds the agent to flush `progress.md` and `task_plan.md` before compaction |
 | **Stop** | Blocks once when phases are incomplete, then falls back to a follow-up reminder |
 
 ### The Three Files

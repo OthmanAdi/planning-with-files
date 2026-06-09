@@ -56,6 +56,18 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh .codex/hooks/pre-compact.sh 2>/dev/null || sh \"$HOME/.codex/hooks/pre-compact.sh\" 2>/dev/null || true",
+            "statusMessage": "Preparing planning context before compact"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
