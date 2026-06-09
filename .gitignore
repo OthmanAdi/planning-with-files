@@ -59,3 +59,8 @@ node_modules/
 
 # Deferred personal dev/strategy notes (never published)
 .dev-notes/
+
+# v3 banner assets staged for release (v3-banner.png gets tracked at release time;
+# v3-banner-large.png exceeds GitHub's 100MB limit and stays local permanently)
+media/v3-banner.png
+media/v3-banner-large.png
