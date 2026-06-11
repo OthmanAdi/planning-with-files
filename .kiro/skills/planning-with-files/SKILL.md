@@ -7,6 +7,9 @@ allowed-tools: shell read write
 metadata:
   version: "3.0.0-kiro"
   integration: kiro
+metadata:
+  hermes:
+    tags: [planning,files,workflow]
 ---
 
 # Planning with Files (Kiro)

@@ -30,6 +30,10 @@ hooks:
 metadata:
   version: "3.0.0"
 
+license: MIT
+metadata:
+  hermes:
+    tags: [planning,files,workflow]
 ---
 
 # Planning with Files

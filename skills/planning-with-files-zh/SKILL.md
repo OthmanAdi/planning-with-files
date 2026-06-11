@@ -31,6 +31,10 @@ metadata:
 
   version: "3.0.0"
 
+license: MIT
+metadata:
+  hermes:
+    tags: [planning,chinese]
 ---
 
 # 文件规划系统

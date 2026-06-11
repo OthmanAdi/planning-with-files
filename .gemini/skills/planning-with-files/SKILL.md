@@ -4,6 +4,10 @@ description: Implements Manus-style file-based planning to organize and track pr
 metadata:
   version: "2.43.0"
   hooks: "Configured in .gemini/settings.json (SessionStart, BeforeTool, AfterTool, BeforeModel)"
+license: MIT
+metadata:
+  hermes:
+    tags: [planning,files,workflow]
 ---
 
 # Planning with Files
