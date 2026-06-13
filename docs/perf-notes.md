@@ -8,18 +8,24 @@ small transient cache for that hash calculation.
 
 ### Location
 
-The cache lives under:
+The cache lives under the first of these that resolves:
 
 ```bash
-${TMPDIR:-/tmp}/pwf-sha/
+$XDG_CACHE_HOME/pwf-sha/        # when XDG_CACHE_HOME is set
+$HOME/.cache/pwf-sha/           # otherwise, when HOME is set
+${TMPDIR:-/tmp}/pwf-sha/        # fallback only when neither is set
 ```
 
-Each cache entry stores the plan file mtime on the first line and the computed
-SHA-256 on the second line.
+v2.40.0 introduced the cache under `${TMPDIR:-/tmp}/pwf-sha/`. v3.0.0 moved it to
+the user-private path above so a world-writable `/tmp` can no longer be used to
+poison the attestation hash. Each cache entry stores the plan file mtime on the
+first line and the computed SHA-256 on the second line.
 
 ### Keying
 
-The cache key is derived from the active plan file path:
+The cache key is the first 16 hex characters of the SHA-256 of the active plan
+file path (the path string, not the file contents). Each plan location gets its
+own entry:
 
 ```text
 task_plan.md
@@ -28,7 +34,8 @@ task_plan.md
 
 The stored hash is reused only when the current plan file mtime matches the
 cached mtime. If the file changes, the hook recomputes `sha256sum` or
-`shasum -a 256` and updates the cache entry.
+`shasum -a 256` and rewrites the cache entry. In gated mode the hook always
+recomputes on a hit, so the completion gate never trusts a stale entry.
 
 ### When it helps
 
@@ -46,9 +53,10 @@ Bash process startup can dominate the actual hash cost.
 
 ### Containers and CI
 
-The cache is per-system and transient. Containers, CI jobs, and sandboxes often
-use a non-persistent `/tmp`, so `${TMPDIR:-/tmp}/pwf-sha/` disappears across
-restarts.
+The cache is per-user and transient. In a container `HOME` is usually set (for
+example `/root`), so the cache lives at `$HOME/.cache/pwf-sha/`. Containers, CI
+jobs, and sandboxes that do not persist `$HOME` across restarts lose the cache
+between runs.
 
 That only affects speed. A cache miss recomputes the SHA-256 from the current
 plan file and preserves the same attestation behavior.
@@ -58,12 +66,10 @@ plan file and preserves the same attestation behavior.
 Clear the cache:
 
 ```bash
-rm -rf "${TMPDIR:-/tmp}/pwf-sha/"
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/pwf-sha/"
 ```
 
-There is no separate SHA-cache toggle. To avoid reuse for a single shell
-session, run the agent with a fresh `TMPDIR`:
-
-```bash
-TMPDIR="$(mktemp -d)" claude
-```
+There is no separate SHA-cache toggle, and overriding `TMPDIR` does not move the
+cache when `HOME` is set. The cache self-invalidates whenever the plan file mtime
+changes, so editing `task_plan.md` already forces a recompute. To force a clean
+state explicitly, remove the directory above.
