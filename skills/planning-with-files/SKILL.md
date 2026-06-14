@@ -43,7 +43,14 @@ Work like Manus: Use persistent markdown files as your "working memory on disk."
 **Before starting work**, check for unsynced context from a previous session:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-catchup.py "$(pwd)"
+# Claude Code users
+python3 ~/.claude/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"
+
+# Codex users
+python3 ~/.codex/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"
+
+# Cursor users
+python3 ~/.cursor/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"
 ```
 
 If catchup report shows unsynced context:
@@ -54,12 +61,16 @@ If catchup report shows unsynced context:
 
 ## Important: Where Files Go
 
-- **Templates** are in `${CLAUDE_PLUGIN_ROOT}/templates/`
-- **Your planning files** go in **your project directory**
+**Templates location (based on your IDE):**
+- Claude Code: `~/.claude/skills/planning-with-files/templates/`
+- Codex: `~/.codex/skills/planning-with-files/templates/`
+- Cursor: `~/.cursor/skills/planning-with-files/templates/`
+
+**Your planning files** go in **your project directory**
 
 | Location | What Goes There |
 |----------|-----------------|
-| Skill directory (`${CLAUDE_PLUGIN_ROOT}/`) | Templates, scripts, reference docs |
+| Skill directory (`~/.claude/skills/planning-with-files/` or `~/.codex/skills/planning-with-files/`) | Templates, scripts, reference docs |
 | Your project directory | `task_plan.md`, `findings.md`, `progress.md` |
 
 ## Quick Start
