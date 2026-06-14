@@ -82,12 +82,12 @@ If you already have a `[features]` section, add `hooks = true` under it instead 
 
 ```bash
 codex --version
-codex features list | rg '^codex_hooks\s'
+codex features list | rg '^(hooks|codex_hooks)\s'
 ls -la ~/.codex/skills/planning-with-files/SKILL.md
 ls -la ~/.codex/hooks.json ~/.codex/hooks/
 ```
 
-If `codex_hooks` does not appear in `codex features list`, upgrade Codex before troubleshooting the skill.
+If neither `hooks` nor the deprecated alias `codex_hooks` appears in `codex features list`, upgrade Codex before troubleshooting the skill.
 
 ---
 
