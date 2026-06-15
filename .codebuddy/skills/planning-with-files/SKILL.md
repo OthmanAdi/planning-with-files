@@ -41,8 +41,9 @@ Work like Manus: Use persistent markdown files as your "working memory on disk."
 **Before starting work**, check for unsynced context from a previous session:
 
 ```bash
-# Linux/macOS (auto-detects python3 or python)
-$(command -v python3 || command -v python) ${CODEBUDDY_PLUGIN_ROOT}/scripts/session-catchup.py "$(pwd)"
+# Linux/macOS — auto-detects skill directory (plugin env or default install path)
+SKILL_DIR="${CODEBUDDY_PLUGIN_ROOT:-$HOME/.codebuddy/skills/planning-with-files}"
+$(command -v python3 || command -v python) "${SKILL_DIR}/scripts/session-catchup.py" "$(pwd)"
 ```
 
 ```powershell
