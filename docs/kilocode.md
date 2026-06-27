@@ -21,7 +21,7 @@ git clone https://github.com/OthmanAdi/planning-with-files.git
 
 # Copy the skill to Kilo Code's skills directory
 mkdir -p .kilocode/skills
-cp -r planning-with-files/.kilocode/skills/planning-with-files .kilocode/skills/planning-with-files
+cp -r planning-with-files/skills/planning-with-files .kilocode/skills/
 ```
 
 **Windows (PowerShell):**
@@ -31,7 +31,7 @@ git clone https://github.com/OthmanAdi/planning-with-files.git
 
 # Copy the skill to Kilo Code's skills directory
 New-Item -ItemType Directory -Force -Path .kilocode\skills
-Copy-Item -Recurse -Force planning-with-files\.kilocode\skills\planning-with-files .kilocode\skills\planning-with-files
+Copy-Item -Recurse -Force planning-with-files\skills\planning-with-files .kilocode\skills\
 ```
 
 ### Manual Installation (Project-Level)
@@ -42,14 +42,14 @@ Copy the skill directory to your project:
 ```bash
 # From the cloned repository
 mkdir -p .kilocode/skills
-cp -r planning-with-files/.kilocode/skills/planning-with-files .kilocode/skills/planning-with-files
+cp -r planning-with-files/skills/planning-with-files .kilocode/skills/
 ```
 
 **Windows (PowerShell):**
 ```powershell
 # From the cloned repository
 New-Item -ItemType Directory -Force -Path .kilocode\skills
-Copy-Item -Recurse -Force planning-with-files\.kilocode\skills\planning-with-files .kilocode\skills\planning-with-files
+Copy-Item -Recurse -Force planning-with-files\skills\planning-with-files .kilocode\skills\
 ```
 
 ### Global Installation (User-Level)
@@ -60,14 +60,14 @@ To make the skill available across all projects:
 ```bash
 # Copy to global skills directory
 mkdir -p ~/.kilocode/skills
-cp -r planning-with-files/.kilocode/skills/planning-with-files ~/.kilocode/skills/planning-with-files
+cp -r planning-with-files/skills/planning-with-files ~/.kilocode/skills/
 ```
 
 **Windows (PowerShell):**
 ```powershell
 # Copy to global skills directory (replace YourUsername with your actual username)
 New-Item -ItemType Directory -Force -Path C:\Users\YourUsername\.kilocode\skills
-Copy-Item -Recurse -Force planning-with-files\.kilocode\skills\planning-with-files C:\Users\YourUsername\.kilocode\skills\planning-with-files
+Copy-Item -Recurse -Force planning-with-files\skills\planning-with-files C:\Users\YourUsername\.kilocode\skills\
 ```
 
 ### Verifying Installation

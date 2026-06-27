@@ -35,6 +35,7 @@ class InitModesTestBase(unittest.TestCase):
             ["sh", str(INIT_SH), *args],
             cwd=str(cwd),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             env=env,
             check=False,

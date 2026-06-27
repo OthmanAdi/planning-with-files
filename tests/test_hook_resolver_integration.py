@@ -27,6 +27,7 @@ def run_hook(script: str, cwd: Path, env_extra: dict | None = None) -> subproces
         ["sh", str(HOOKS_DIR / script)],
         cwd=str(cwd),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         env=env,
         check=False,

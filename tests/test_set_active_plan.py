@@ -21,6 +21,7 @@ def run_set_active(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
         ["sh", str(SET_ACTIVE_SH), *args],
         cwd=str(cwd),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         check=False,
     )
@@ -90,6 +91,7 @@ class SetActivePlanTests(unittest.TestCase):
                 ["sh", str(resolve_sh)],
                 cwd=str(root),
                 text=True,
+                encoding="utf-8",
                 capture_output=True,
                 check=False,
             )
@@ -100,6 +102,7 @@ class SetActivePlanTests(unittest.TestCase):
                 ["sh", str(resolve_sh)],
                 cwd=str(root),
                 text=True,
+                encoding="utf-8",
                 capture_output=True,
                 check=False,
             )

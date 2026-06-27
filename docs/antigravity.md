@@ -16,8 +16,9 @@ Share the skill with your entire team by adding it to your repository:
 # In your project repository
 git clone https://github.com/OthmanAdi/planning-with-files.git /tmp/planning-with-files
 
-# Copy the Antigravity skill to your repo
-cp -r /tmp/planning-with-files/.agent .
+# Copy the planning-with-files skill to your repo
+mkdir -p .agent/skills
+cp -r /tmp/planning-with-files/skills/planning-with-files .agent/skills/
 
 # Commit to share with team
 git add .agent/
@@ -40,7 +41,7 @@ git clone https://github.com/OthmanAdi/planning-with-files.git /tmp/planning-wit
 
 # Copy to your personal Antigravity skills folder
 mkdir -p ~/.gemini/antigravity/skills
-cp -r /tmp/planning-with-files/.agent/skills/planning-with-files ~/.gemini/antigravity/skills/
+cp -r /tmp/planning-with-files/skills/planning-with-files ~/.gemini/antigravity/skills/
 
 # Clean up
 rm -rf /tmp/planning-with-files
@@ -97,7 +98,7 @@ Once activated, the skill creates:
 
 ### Templates
 
-The skill includes starter templates in `.agent/skills/planning-with-files/references/`:
+The skill includes starter templates in `.agent/skills/planning-with-files/templates/`:
 - `task_plan.md` — Phase tracking template
 - `findings.md` — Research storage template
 - `progress.md` — Session logging template
@@ -208,9 +209,9 @@ Check:
 
 ### Need Templates?
 
-Templates are in:
-- **Workspace:** `.agent/skills/planning-with-files/references/`
-- **Personal:** `~/.gemini/antigravity/skills/planning-with-files/references/`
+Check:
+- **Workspace:** `.agent/skills/planning-with-files/templates/`
+- **Personal:** `~/.gemini/antigravity/skills/planning-with-files/templates/`
 
 Copy them to your project root and customize.
 
@@ -229,7 +230,7 @@ Edit `.agent/skills/planning-with-files/SKILL.md` to customize:
 
 Place custom templates in:
 ```
-.agent/skills/planning-with-files/references/
+.agent/skills/planning-with-files/templates/
 ```
 
 Antigravity will reference them automatically.

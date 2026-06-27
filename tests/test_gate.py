@@ -90,6 +90,7 @@ class GateDecisionTableTests(unittest.TestCase):
             ["sh", *args],
             cwd=str(self.tmp),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             input=json.dumps({"stop_hook_active": stop_hook_active}),
             env=env,

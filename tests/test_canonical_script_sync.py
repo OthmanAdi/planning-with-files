@@ -81,6 +81,7 @@ class CanonicalScriptSyncTests(unittest.TestCase):
             [sys.executable, str(REPO_ROOT / "scripts" / "sync-ide-folders.py"), "--verify"],
             cwd=str(REPO_ROOT),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )
