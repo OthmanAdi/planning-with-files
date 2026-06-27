@@ -29,21 +29,24 @@ How to use planning-with-files with AdaL CLI (Sylph AI).
 
 ```bash
 git clone https://github.com/OthmanAdi/planning-with-files.git
-cp -r planning-with-files/.adal/skills/planning-with-files ~/.adal/skills/
+mkdir -p ~/.adal/skills
+cp -r planning-with-files/skills/planning-with-files ~/.adal/skills/
 ```
 
 ### Option 3: Copy to project skills directory
 
 ```bash
 git clone https://github.com/OthmanAdi/planning-with-files.git
-cp -r planning-with-files/.adal/skills/planning-with-files .adal/skills/
+mkdir -p .adal/skills
+cp -r planning-with-files/skills/planning-with-files .adal/skills/
 ```
 
 ### Option 4: Windows (PowerShell)
 
 ```powershell
 git clone https://github.com/OthmanAdi/planning-with-files.git
-Copy-Item -Recurse -Path "planning-with-files\.adal\skills\planning-with-files" -Destination "$env:USERPROFILE\.adal\skills\"
+New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.adal\skills
+Copy-Item -Recurse -Path "planning-with-files\skills\planning-with-files" -Destination "$env:USERPROFILE\.adal\skills\"
 ```
 
 ---

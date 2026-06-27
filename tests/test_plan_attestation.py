@@ -54,6 +54,7 @@ class PlanAttestationTests(unittest.TestCase):
             ["sh", str(self.scripts_dir / "attest-plan.sh"), *args],
             cwd=str(self.tmp),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=False,
         )

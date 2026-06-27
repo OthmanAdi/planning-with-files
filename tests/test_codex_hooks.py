@@ -20,6 +20,7 @@ class CodexHooksTests(unittest.TestCase):
             [sys.executable, str(HOOKS_DIR / script_name)],
             input=json.dumps(payload),
             text=True,
+            encoding="utf-8",
             capture_output=True,
             cwd=str(cwd),
             check=False,
@@ -29,6 +30,7 @@ class CodexHooksTests(unittest.TestCase):
         return subprocess.run(
             ["sh", str(HOOKS_DIR / script_name)],
             text=True,
+            encoding="utf-8",
             capture_output=True,
             cwd=str(cwd),
             env=env,

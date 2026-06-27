@@ -39,7 +39,7 @@ git clone https://github.com/OthmanAdi/planning-with-files.git
 
 # Copy the skill files to your workspace
 mkdir -p skills/planning-with-files
-cp -r planning-with-files/clawhub-upload/* skills/planning-with-files/
+cp -r planning-with-files/skills/planning-with-files/* skills/planning-with-files/
 
 # Clean up
 rm -rf planning-with-files
@@ -57,7 +57,7 @@ git clone https://github.com/OthmanAdi/planning-with-files.git
 
 # Copy to global OpenClaw skills
 mkdir -p ~/.openclaw/skills/planning-with-files
-cp -r planning-with-files/clawhub-upload/* ~/.openclaw/skills/planning-with-files/
+cp -r planning-with-files/skills/planning-with-files/* ~/.openclaw/skills/planning-with-files/
 
 # Clean up
 rm -rf planning-with-files
