@@ -148,7 +148,7 @@ When your context fills up and you run `/clear`, this skill **automatically reco
 </details>
 
 <details>
-<summary><strong>🛠️ Supported IDEs (17+ Platforms)</strong></summary>
+<summary><strong>🛠️ Supported IDEs (18+ Platforms)</strong></summary>
 
 #### Enhanced Support (hooks + lifecycle automation)
 
@@ -177,6 +177,7 @@ These IDEs implement the [Agent Skills](https://agentskills.io) open specificati
 | Continue | [Continue Setup](docs/continue.md) | `.continue/skills/` + [.prompt files](https://docs.continue.dev/customize/deep-dives/prompts) |
 | Pi Agent | [Pi Agent Setup](docs/pi-agent.md) | `.pi/skills/` ([npm package](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)) |
 | OpenClaw | [OpenClaw Setup](docs/openclaw.md) | `.openclaw/skills/` ([docs](https://docs.openclaw.ai/tools/skills)) |
+| Autohand Code | [Autohand Code Setup](docs/autohand.md) | `~/.autohand/skills/` or `.autohand/skills/` |
 | Antigravity | [Antigravity Setup](docs/antigravity.md) | `.agent/skills/` ([docs](https://codelabs.developers.google.com/getting-started-with-antigravity-skills)) |
 | Kilocode | [Kilocode Setup](docs/kilocode.md) | `.kilocode/skills/` ([docs](https://kilo.ai/docs/agent-behavior/skills)) |
 | AdaL CLI (Sylph AI) | [AdaL Setup](docs/adal.md) | `.adal/skills/` ([docs](https://docs.sylph.ai/features/plugins-and-skills)) |
@@ -250,7 +251,7 @@ npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zht -g
 
 </details>
 
-Works with Claude Code, Cursor, Codex, Gemini CLI, and 40+ agents supporting the [Agent Skills](https://agentskills.io) spec.
+Works with Claude Code, Cursor, Codex, Gemini CLI, Autohand Code, and 40+ agents supporting the [Agent Skills](https://agentskills.io) spec.
 
 <details>
 <summary><strong>🔧 Claude Code Plugin (Advanced Features)</strong></summary>
