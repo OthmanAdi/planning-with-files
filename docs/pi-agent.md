@@ -35,10 +35,11 @@ cp -r .pi/skills/planning-with-files/* ~/.pi/agent/skills/planning-with-files/
 Pi integration provides Claude-style lifecycle behavior via extension events:
 
 - Session catchup on `session_start`
-- Plan context reminder/injection on `before_agent_start`
-- Pre-tool plan recitation equivalent on `tool_call`
-- Post-write reminders on `tool_result`
-- Auto-continue guard on `agent_end` (limit: 3)
+- Passive plan status before approval
+- Plan context reminder/injection on `before_agent_start` after `/plan-execute`
+- Pre-tool plan recitation equivalent on `tool_call` after `/plan-execute`
+- Post-write reminders on `tool_result` after `/plan-execute`
+- Auto-continue guard on `agent_end` after `/plan-execute` (limit: 3)
 - Pre-compaction reminder on `session_before_compact`
 - Plan attestation guard (`[PLAN TAMPERED — injection blocked]`)
 
@@ -84,6 +85,8 @@ After installation, these extension commands are available:
 
 - `/plan-status` — show current plan counts and paths
 - `/plan-attest [--show|--clear]` — manage plan SHA-256 attestation
+- `/plan-execute` — approve the active plan and enable hook activation
+- `/plan-execute reset` — return the active plan to passive review mode
 - `/plan-goal <text|default|clear>` — set/clear continuation goal text
 - `/plan-loop [10m] [prompt...]` — periodic planning tick; use `stop` to cancel
 
@@ -102,7 +105,18 @@ Then ask Pi to create/update:
 - `findings.md`
 - `progress.md`
 
-For long tasks, keep `task_plan.md` as the source of truth and let hooks/extension events enforce the loop.
+Review and edit the plan until it matches your intent. During this review
+stage, the extension stays passive: it may show plan status, but it does not
+inject plan context, recite the plan before tools, or auto-continue.
+
+When you are ready to execute, run:
+
+```text
+/plan-execute
+```
+
+For long tasks, keep `task_plan.md` as the source of truth and let the activated
+hooks/extension events enforce the loop.
 
 ---
 

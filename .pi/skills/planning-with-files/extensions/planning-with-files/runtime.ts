@@ -40,6 +40,7 @@ interface RuntimeState {
 	loopTimersBySession: Map<string, ReturnType<typeof setInterval>>;
 	goalBySession: Map<string, string>;
 	preToolQueuedByLeaf: Set<string>;
+	executionApprovedBySessionPlan: Set<string>;
 }
 
 interface ExecResult {
@@ -116,6 +117,14 @@ function clearSessionPrefixMap(state: RuntimeState, sessionId: string): void {
 	for (const key of Array.from(state.preToolQueuedByLeaf)) {
 		if (key.startsWith(`${sessionId}:`)) {
 			state.preToolQueuedByLeaf.delete(key);
+		}
+	}
+}
+
+function clearSessionExecutionApprovals(state: RuntimeState, sessionId: string): void {
+	for (const key of state.executionApprovedBySessionPlan.keys()) {
+		if (key.startsWith(`${sessionId}:`)) {
+			state.executionApprovedBySessionPlan.delete(key);
 		}
 	}
 }
@@ -257,6 +266,14 @@ function buildPreToolParityRecitation(status: PlanStatus): string {
 	].join("\n");
 }
 
+function isExecutionApproved(state: RuntimeState, ctx: ExtensionContext, status: PlanStatus): boolean {
+	return state.executionApprovedBySessionPlan.has(getPlanSessionKey(ctx, status));
+}
+
+function setPassivePlanStatus(ctx: ExtensionContext, status: PlanStatus): void {
+	ctx.ui.setStatus(PKG_NAME, `${summarizePlan(status)} — run /plan-execute to activate hooks`);
+}
+
 // Word-boundary regex check so legitimate commands like
 // `git push origin feature/draft-notification` don't trigger the warning, but
 // destructive variants like `git push --force` or `git push --mirror` still do.
@@ -329,6 +346,42 @@ function registerCommands(pi: ExtensionAPI, state: RuntimeState): void {
 		},
 	});
 
+	pi.registerCommand("plan-execute", {
+		description: "Approve the active plan and enable planning-with-files hook activation",
+		handler: async (args, ctx) => {
+			const status = readPlanStatus(ctx.cwd);
+			if (!status.exists) {
+				ctx.ui.notify("No active plan (task_plan.md not found)", "warning");
+				return;
+			}
+
+			const planKey = getPlanSessionKey(ctx, status);
+			const normalized = args.trim().toLowerCase();
+			if (["clear", "off", "reset", "disable"].includes(normalized)) {
+				state.executionApprovedBySessionPlan.delete(planKey);
+				ctx.ui.notify(`Plan execution approval cleared: ${summarizePlan(status)}`, "info");
+				setPassivePlanStatus(ctx, status);
+				return;
+			}
+
+			const attestation = checkPlanAttestation(status);
+			if (attestation.tampered) {
+				ctx.ui.notify(buildTamperMessage(status), "error");
+				return;
+			}
+
+			state.executionApprovedBySessionPlan.add(planKey);
+			ctx.ui.notify(
+				[
+					`Plan execution approved: ${summarizePlan(status)}`,
+					`Plan path: ${status.planPath}`,
+					"planning-with-files hooks are now active for this session and plan.",
+				].join("\n"),
+				"info",
+			);
+		},
+	});
+
 	pi.registerCommand("plan-loop", {
 		description: "Start/stop planning loop ticks (default: 10m)",
 		handler: async (args, ctx: ExtensionCommandContext) => {
@@ -387,6 +440,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		loopTimersBySession: new Map(),
 		goalBySession: new Map(),
 		preToolQueuedByLeaf: new Set(),
+		executionApprovedBySessionPlan: new Set(),
 	};
 
 	registerCommands(pi, state);
@@ -394,6 +448,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 	pi.on("session_start", async (event, ctx) => {
 		const sessionId = getSessionId(ctx);
 		clearSessionPrefixMap(state, sessionId);
+		clearSessionExecutionApprovals(state, sessionId);
 
 		if (!isAttachedSession(ctx)) {
 			ctx.ui.setStatus(PKG_NAME, "session not attached to planning context");
@@ -406,7 +461,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 
 		const status = readPlanStatus(ctx.cwd);
 		if (status.exists) {
-			ctx.ui.setStatus(PKG_NAME, summarizePlan(status));
+			setPassivePlanStatus(ctx, status);
 		}
 	});
 
@@ -416,6 +471,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		if (timer) clearInterval(timer);
 		state.loopTimersBySession.delete(sessionId);
 		clearSessionPrefixMap(state, sessionId);
+		clearSessionExecutionApprovals(state, sessionId);
 	});
 
 	pi.on("input", async (event, ctx) => {
@@ -428,6 +484,11 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 
 		const status = readPlanStatus(ctx.cwd);
 		if (!status.exists) return;
+
+		if (!isExecutionApproved(state, ctx, status)) {
+			setPassivePlanStatus(ctx, status);
+			return;
+		}
 
 		const mode = deriveEffectiveMode(resolveConfiguredMode(ctx.cwd), ctx);
 		const attestation = checkPlanAttestation(status);
@@ -467,7 +528,12 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		const leafKey = `${sessionId}:${leafId}`;
 
 		const trackableTools = new Set(["write", "edit", "bash", "read", "grep", "find", "ls"]);
-		if (status.exists && trackableTools.has(event.toolName) && !state.preToolQueuedByLeaf.has(leafKey)) {
+		if (
+			status.exists &&
+			isExecutionApproved(state, ctx, status) &&
+			trackableTools.has(event.toolName) &&
+			!state.preToolQueuedByLeaf.has(leafKey)
+		) {
 			state.preToolQueuedByLeaf.add(leafKey);
 			const attestation = checkPlanAttestation(status);
 			if (attestation.tampered) {
@@ -518,6 +584,10 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 
 		const status = readPlanStatus(ctx.cwd);
 		if (!status.exists) return;
+		if (!isExecutionApproved(state, ctx, status)) {
+			setPassivePlanStatus(ctx, status);
+			return;
+		}
 
 		const mode = deriveEffectiveMode(resolveConfiguredMode(ctx.cwd), ctx);
 		if (mode === "parity") {
@@ -549,6 +619,15 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		}
 
 		if (!isPlanIncomplete(status)) return;
+
+		if (!isExecutionApproved(state, ctx, status)) {
+			ctx.ui.notify(
+				`[planning-with-files] Task incomplete (${status.completePhases}/${status.totalPhases}). Run /plan-execute to activate hooks.`,
+				"warning",
+			);
+			setPassivePlanStatus(ctx, status);
+			return;
+		}
 
 		if (mode === "notify") {
 			ctx.ui.notify(
@@ -582,6 +661,12 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 
 		const status = readPlanStatus(ctx.cwd);
 		if (!status.exists) return;
+
+		if (!isExecutionApproved(state, ctx, status)) {
+			ctx.ui.notify("[planning-with-files] PreCompact: flush progress.md and task_plan.md updates.", "info");
+			setPassivePlanStatus(ctx, status);
+			return;
+		}
 
 		const attestation = checkPlanAttestation(status);
 		const reminder = [

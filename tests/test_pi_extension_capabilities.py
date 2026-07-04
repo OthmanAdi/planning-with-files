@@ -52,6 +52,10 @@ class PiExtensionCapabilitiesTests(unittest.TestCase):
         text = self._read(CONSTANTS_TS)
         self.assertRegex(text, r"AUTO_CONTINUE_LIMIT\s*=\s*3")
 
+    def test_plan_execute_command_is_registered(self) -> None:
+        text = self._read(RUNTIME_TS)
+        self.assertIn('pi.registerCommand("plan-execute"', text)
+
     def test_tampered_blocking_message_exists(self) -> None:
         text = self._read(CONSTANTS_TS)
         self.assertIn("PLAN TAMPERED", text)

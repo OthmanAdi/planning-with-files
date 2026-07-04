@@ -53,10 +53,11 @@ Or:
 The bundled extension maps Claude-style behavior onto Pi events:
 
 - `session_start` - session catchup
-- `before_agent_start` - plan reminder/injection
-- `tool_call` - pre-tool recitation equivalent
-- `tool_result` - post-write reminder
-- `agent_end` - incomplete-task auto-continue (limit 3)
+- passive plan status before approval
+- `before_agent_start` - plan reminder/injection after `/plan-execute`
+- `tool_call` - pre-tool recitation equivalent after `/plan-execute`
+- `tool_result` - post-write reminder after `/plan-execute`
+- `agent_end` - incomplete-task auto-continue after `/plan-execute` (limit 3)
 - `session_before_compact` - pre-compaction reminder
 
 Attestation is supported. If `task_plan.md` differs from approved hash, plan injection is blocked with:
@@ -98,8 +99,15 @@ Or settings:
 
 - `/plan-status`
 - `/plan-attest [--show|--clear]`
+- `/plan-execute`
+- `/plan-execute reset`
 - `/plan-goal <text|default|clear>`
 - `/plan-loop [interval] [prompt]` (`stop` to cancel)
+
+Draft and review `task_plan.md` first. The extension stays passive until you
+approve the active plan with `/plan-execute`; after that, plan injection,
+pre-tool reminders, post-write reminders, and auto-continue are enabled for the
+current session and plan.
 
 ---
 

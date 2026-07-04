@@ -32,6 +32,14 @@ class PiDocsHookSupportTests(unittest.TestCase):
         self.assertIn("cache-safe", text)
         self.assertIn("parity", text)
 
+    def test_docs_describe_plan_execute_confirmation(self) -> None:
+        text = PI_DOC.read_text(encoding="utf-8")
+        readme = PI_SKILL_README.read_text(encoding="utf-8")
+        self.assertIn("/plan-execute", text)
+        self.assertIn("/plan-execute", readme)
+        self.assertIn("passive", text)
+        self.assertIn("passive", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
