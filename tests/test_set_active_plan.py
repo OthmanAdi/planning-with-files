@@ -6,6 +6,8 @@ init-session.sh for parallel multi-task workflows (#148).
 """
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -14,6 +16,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SET_ACTIVE_SH = REPO_ROOT / "scripts" / "set-active-plan.sh"
+SET_ACTIVE_PS1 = REPO_ROOT / "scripts" / "set-active-plan.ps1"
+RESOLVE_SH = REPO_ROOT / "scripts" / "resolve-plan-dir.sh"
+POWERSHELL = shutil.which("powershell.exe") or shutil.which("powershell")
+SH = shutil.which("sh")
 
 
 def run_set_active(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -31,6 +37,68 @@ class SetActivePlanTests(unittest.TestCase):
 
     def test_script_exists(self) -> None:
         self.assertTrue(SET_ACTIVE_SH.exists(), "scripts/set-active-plan.sh missing")
+
+    def test_powershell_script_is_ascii_safe_for_windows_powershell_5(self) -> None:
+        """UTF-8 without a BOM must not become invalid Windows PowerShell syntax."""
+        self.assertTrue(SET_ACTIVE_PS1.exists(), "scripts/set-active-plan.ps1 missing")
+        try:
+            SET_ACTIVE_PS1.read_bytes().decode("ascii")
+        except UnicodeDecodeError as error:
+            self.fail(
+                "set-active-plan.ps1 must stay ASCII-safe because Windows PowerShell 5.1 "
+                f"can decode BOM-less UTF-8 as the active ANSI code page: {error}"
+            )
+
+    @unittest.skipUnless(
+        POWERSHELL and SH,
+        "requires Windows PowerShell and sh for the cross-shell regression test",
+    )
+    def test_powershell_pointer_is_utf8_without_bom_and_resolves(self) -> None:
+        """The PS 5.1 writer must not add a BOM that the shell resolver rejects."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selected = root / ".planning" / "selected"
+            newest = root / ".planning" / "newest"
+            selected.mkdir(parents=True)
+            newest.mkdir(parents=True)
+            (selected / "task_plan.md").write_text("# Selected\n", encoding="utf-8")
+            (newest / "task_plan.md").write_text("# Newest\n", encoding="utf-8")
+            selected_mtime = selected.stat().st_mtime
+            os.utime(newest, (selected_mtime + 10, selected_mtime + 10))
+
+            written = subprocess.run(
+                [
+                    POWERSHELL,
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(SET_ACTIVE_PS1),
+                    "selected",
+                ],
+                cwd=str(root),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(0, written.returncode, written.stderr)
+            self.assertEqual(
+                b"selected",
+                (root / ".planning" / ".active_plan").read_bytes(),
+            )
+
+            resolved = subprocess.run(
+                [SH, str(RESOLVE_SH)],
+                cwd=str(root),
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(0, resolved.returncode, resolved.stderr)
+            self.assertTrue(resolved.stdout.strip().endswith("selected"))
 
     def test_no_args_no_active_plan_prints_none(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
