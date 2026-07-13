@@ -59,7 +59,7 @@ def is_session_attached(root: Path, session_id: str | None) -> bool:
 def emit_json(payload: dict[str, Any]) -> None:
     if not payload:
         return
-    json.dump(payload, sys.stdout, ensure_ascii=False)
+    json.dump(payload, sys.stdout, ensure_ascii=True)
     sys.stdout.write("\n")
 
 
@@ -107,7 +107,7 @@ def _windows_git_bash() -> tuple[str | None, list[str]]:
     return None, []
 
 
-def run_shell_script(script_name: str, cwd: Path) -> tuple[str, str]:
+def run_shell_script(script_name: str, cwd: Path, *args: str) -> tuple[str, str]:
     sh_cmd = "sh"
     env = None
     if os.name == "nt":
@@ -126,9 +126,11 @@ def run_shell_script(script_name: str, cwd: Path) -> tuple[str, str]:
         env.setdefault("PYTHON_BIN", sys.executable)
 
     result = subprocess.run(
-        [sh_cmd, str(HOOK_DIR / script_name)],
+        [sh_cmd, str(HOOK_DIR / script_name), *args],
         cwd=str(cwd),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
         env=env,

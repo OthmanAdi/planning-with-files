@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import subprocess
@@ -6,6 +7,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +66,10 @@ class CodexHooksTests(unittest.TestCase):
             },
             set(payload["hooks"]),
         )
+        self.assertEqual(
+            "startup|resume|clear|compact",
+            payload["hooks"]["SessionStart"][0]["matcher"],
+        )
 
     def test_permission_request_adapter_emits_plan_reminder(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -96,6 +102,24 @@ class CodexHooksTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", result.stdout.strip())
 
+    def test_permission_request_resolves_scoped_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            plan_dir = root / ".planning" / "task-a"
+            plan_dir.mkdir(parents=True)
+            plan_dir.joinpath("task_plan.md").write_text("# Scoped Plan\n", encoding="utf-8")
+            root.joinpath(".planning", ".active_plan").write_text("task-a\n", encoding="utf-8")
+
+            result = self.run_python_hook(
+                "permission_request.py",
+                {"cwd": str(root), "tool_name": "Bash"},
+                root,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIn("Active plan", payload["systemMessage"])
+
     def test_session_start_reuses_plan_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as home:
             root = Path(tmpdir)
@@ -121,7 +145,7 @@ class CodexHooksTests(unittest.TestCase):
         self.assertIn("Ship Codex hooks", result.stdout)
         self.assertIn("Finished adapter draft", result.stdout)
 
-    def test_pre_tool_use_adapter_emits_system_message(self) -> None:
+    def test_pre_tool_use_adapter_emits_additional_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             root.joinpath("task_plan.md").write_text(
@@ -143,8 +167,25 @@ class CodexHooksTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         payload = json.loads(result.stdout)
-        self.assertIn("systemMessage", payload)
-        self.assertIn("# Task Plan", payload["systemMessage"])
+        hook_output = payload["hookSpecificOutput"]
+        self.assertEqual("PreToolUse", hook_output["hookEventName"])
+        self.assertIn("# Task Plan", hook_output["additionalContext"])
+
+    def test_pre_tool_use_adapter_preserves_unicode_as_ascii_safe_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            root.joinpath("task_plan.md").write_text("# \u4efb\u52a1\u8ba1\u5212\n", encoding="utf-8")
+
+            result = self.run_python_hook(
+                "pre_tool_use.py",
+                {"cwd": str(root), "tool_input": {"command": "pwd"}},
+                root,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(result.stdout.isascii())
+        payload = json.loads(result.stdout)
+        self.assertIn("\u4efb\u52a1\u8ba1\u5212", payload["hookSpecificOutput"]["additionalContext"])
 
     def test_post_tool_use_adapter_emits_progress_reminder(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -240,9 +281,45 @@ class CodexHooksTests(unittest.TestCase):
                     for bad in ("$HOME", "2>/dev/null", "|| true", "python3 "):
                         self.assertNotIn(bad, cw, f"{event} commandWindows still contains POSIX-ism {bad!r}")
 
+    def test_adapter_uses_explicit_utf8_for_shell_output(self) -> None:
+        sys.path.insert(0, str(HOOKS_DIR))
+        try:
+            import codex_hook_adapter as adapter
+
+            completed = subprocess.CompletedProcess(["sh"], 0, "ok\n", "")
+            with mock.patch.object(adapter, "_windows_git_bash", return_value=("sh", [])), mock.patch.object(
+                adapter.subprocess, "run", return_value=completed
+            ) as run:
+                stdout, stderr = adapter.run_shell_script("user-prompt-submit.sh", Path.cwd())
+        finally:
+            sys.path.pop(0)
+
+        self.assertEqual("ok", stdout)
+        self.assertEqual("", stderr)
+        self.assertEqual("utf-8", run.call_args.kwargs["encoding"])
+        self.assertEqual("replace", run.call_args.kwargs["errors"])
+
+    def test_emit_json_is_ascii_safe_and_round_trips_unicode(self) -> None:
+        sys.path.insert(0, str(HOOKS_DIR))
+        try:
+            import codex_hook_adapter as adapter
+
+            buffer = io.BytesIO()
+            stream = io.TextIOWrapper(buffer, encoding="ascii")
+            with mock.patch.object(adapter.sys, "stdout", stream):
+                adapter.emit_json({"message": "\u4e2d\u6587"})
+                stream.flush()
+            raw = buffer.getvalue().decode("ascii")
+            stream.detach()
+        finally:
+            sys.path.pop(0)
+
+        self.assertTrue(raw.isascii())
+        self.assertEqual("\u4e2d\u6587", json.loads(raw)["message"])
+
     @unittest.skipUnless(os.name == "nt", "commandWindows path is Windows-only")
-    def test_run_sh_front_door_injects_plan_on_windows(self) -> None:
-        """End-to-end Windows path: run_sh.py -> adapter git-bash resolver -> .sh."""
+    def test_run_sh_front_door_serializes_shell_events_on_windows(self) -> None:
+        """End-to-end Windows path emits event-appropriate Codex JSON."""
         sys.path.insert(0, str(HOOKS_DIR))
         try:
             import codex_hook_adapter as adapter
@@ -255,13 +332,30 @@ class CodexHooksTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             root.joinpath("task_plan.md").write_text(
-                "# Task Plan\n\n## Goal\nWindows hook parity\n", encoding="utf-8"
+                "# \u4efb\u52a1\u8ba1\u5212\n\n## Goal\nWindows hook parity\n", encoding="utf-8"
             )
-            result = self.run_windows_front_door("user-prompt-submit.sh", {"cwd": str(root)}, root)
+            root.joinpath("progress.md").write_text("# Progress\n", encoding="utf-8")
 
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("ACTIVE PLAN", result.stdout)
-        self.assertIn("Windows hook parity", result.stdout)
+            user_prompt = self.run_windows_front_door("user-prompt-submit.sh", {"cwd": str(root)}, root)
+            session_start = self.run_windows_front_door("session-start.sh", {"cwd": str(root)}, root)
+            pre_compact = self.run_windows_front_door("pre-compact.sh", {"cwd": str(root)}, root)
+
+        for result in (user_prompt, session_start, pre_compact):
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(result.stdout.isascii())
+
+        user_payload = json.loads(user_prompt.stdout)
+        self.assertEqual("UserPromptSubmit", user_payload["hookSpecificOutput"]["hookEventName"])
+        self.assertIn("Windows hook parity", user_payload["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("\u4efb\u52a1\u8ba1\u5212", user_payload["hookSpecificOutput"]["additionalContext"])
+
+        session_payload = json.loads(session_start.stdout)
+        self.assertEqual("SessionStart", session_payload["hookSpecificOutput"]["hookEventName"])
+        self.assertIn("Windows hook parity", session_payload["hookSpecificOutput"]["additionalContext"])
+
+        compact_payload = json.loads(pre_compact.stdout)
+        self.assertTrue(compact_payload["continue"])
+        self.assertIn("PreCompact", compact_payload["systemMessage"])
 
 
 if __name__ == "__main__":

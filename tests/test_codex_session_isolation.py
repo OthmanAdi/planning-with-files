@@ -121,11 +121,7 @@ class CodexSessionIsolationTests(unittest.TestCase):
             payload = {"cwd": str(root), "session_id": "sess-B"}
             result = self.run_python_hook("pre_tool_use.py", payload, root)
             self.assertEqual(0, result.returncode, result.stderr)
-            # No systemMessage payload should be emitted
-            stdout = result.stdout.strip()
-            if stdout:
-                emitted = json.loads(stdout)
-                self.assertNotIn("systemMessage", emitted)
+            self.assertEqual("", result.stdout.strip())
 
     def test_stop_does_not_block_unattached_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

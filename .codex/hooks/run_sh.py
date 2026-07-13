@@ -13,6 +13,7 @@ hook runs and print its stdout. Never used on unix. Always exits 0.
 """
 from __future__ import annotations
 
+import json
 import sys
 
 import codex_hook_adapter as adapter
@@ -25,8 +26,32 @@ def main() -> None:
     payload = adapter.load_payload()
     root = adapter.cwd_from_payload(payload)
     stdout, _ = adapter.run_shell_script(script_name, root)
-    if stdout:
-        sys.stdout.write(stdout + "\n")
+    if not stdout:
+        return
+
+    context_events = {
+        "session-start.sh": "SessionStart",
+        "user-prompt-submit.sh": "UserPromptSubmit",
+    }
+    if script_name in context_events:
+        result = {
+            "hookSpecificOutput": {
+                "hookEventName": context_events[script_name],
+                "additionalContext": stdout,
+            }
+        }
+        sys.stdout.write(json.dumps(result, ensure_ascii=True) + "\n")
+        return
+
+    if script_name == "pre-compact.sh":
+        result = {
+            "continue": True,
+            "systemMessage": stdout,
+        }
+        sys.stdout.write(json.dumps(result, ensure_ascii=True) + "\n")
+        return
+
+    sys.stdout.write(stdout + "\n")
 
 
 if __name__ == "__main__":

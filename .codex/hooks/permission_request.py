@@ -17,7 +17,10 @@ def main() -> None:
     if not adapter.is_session_attached(root, adapter.session_id_from_payload(payload)):
         return
 
-    plan = root / "task_plan.md"
+    # Pass a relative plan root so the shell resolver returns a path that is
+    # valid in both Git Bash and native Windows Python.
+    plan_dir, _ = adapter.run_shell_script("resolve-plan-dir.sh", root, ".planning")
+    plan = root / plan_dir / "task_plan.md" if plan_dir else root / "task_plan.md"
     if not plan.exists():
         return
 
