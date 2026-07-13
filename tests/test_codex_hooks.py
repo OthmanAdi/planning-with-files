@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,13 +30,32 @@ class CodexHooksTests(unittest.TestCase):
         )
 
     def run_shell_hook(self, script_name: str, cwd: Path, env: dict | None = None) -> subprocess.CompletedProcess[str]:
+        shell_env = (env or os.environ).copy()
+        shell = shutil.which("sh", path=shell_env.get("PATH"))
+        if os.name == "nt":
+            sys.path.insert(0, str(HOOKS_DIR))
+            try:
+                import codex_hook_adapter as adapter
+
+                shell, extra_path_dirs = adapter._windows_git_bash()
+            finally:
+                sys.path.pop(0)
+            if shell is None:
+                raise unittest.SkipTest("Git for Windows sh.exe is unavailable")
+            if extra_path_dirs:
+                shell_env["PATH"] = os.pathsep.join(
+                    [*extra_path_dirs, shell_env.get("PATH", "")]
+                )
+            shell_env.setdefault("PYTHON_BIN", sys.executable)
+        elif shell is None:
+            raise unittest.SkipTest("POSIX sh is unavailable")
         return subprocess.run(
-            ["sh", str(HOOKS_DIR / script_name)],
+            [shell, str(HOOKS_DIR / script_name)],
             text=True,
             encoding="utf-8",
             capture_output=True,
             cwd=str(cwd),
-            env=env,
+            env=shell_env,
             check=False,
         )
 

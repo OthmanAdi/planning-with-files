@@ -72,7 +72,9 @@ is_within_root() {
     root_real="$(canonicalize "${PWD}")" || root_real=""
     cand_real="$(canonicalize "${candidate}")" || cand_real=""
     if [ -z "${root_real}" ] || [ -z "${cand_real}" ]; then
-        return 0
+        # Slug validation blocks textual traversal, but only successful
+        # canonicalization can rule out a symlink/junction escape.
+        return 1
     fi
     case "${cand_real}" in
         "${root_real}"|"${root_real}"/*) return 0 ;;
@@ -119,6 +121,12 @@ resolve_from_env() {
 resolve_from_active_file() {
     [ -f "${ACTIVE_FILE}" ] || return 1
     plan_id="$(tr -d '\r\n[:space:]' < "${ACTIVE_FILE}")"
+    # UTF-8 BOM is not part of the plan id. POSIX printf octal escapes keep
+    # this portable across GNU/BSD sed variants and Git-for-Windows sh.
+    utf8_bom="$(printf '\357\273\277')"
+    case "${plan_id}" in
+        "${utf8_bom}"*) plan_id="${plan_id#"${utf8_bom}"}" ;;
+    esac
     slug_is_valid "${plan_id}" || return 1
     candidate="${PLAN_ROOT}/${plan_id}"
     if [ -d "${candidate}" ] && is_within_root "${candidate}"; then

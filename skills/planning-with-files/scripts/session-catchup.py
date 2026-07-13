@@ -14,6 +14,30 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+
+def configure_utf8_stdio() -> None:
+    """Make catchup output deterministic on Windows legacy code pages.
+
+    Codex sessions and planning files are UTF-8 and can contain arbitrary
+    Unicode. Windows PowerShell may nevertheless launch Python with a cp1252
+    (or another OEM/ANSI) stdout codec. A report containing Chinese text then
+    used to fail at the first ``print`` with ``UnicodeEncodeError``. Configure
+    both streams before any report is emitted; ``errors='replace'`` also keeps
+    this advisory hook fail-safe if a malformed surrogate reaches the output.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding='utf-8', errors='replace')
+            except (OSError, ValueError):
+                # Replaced/captured streams may not permit reconfiguration.
+                # The hook remains advisory, so retain the existing stream.
+                pass
+
+
+configure_utf8_stdio()
+
 try:
     import orjson
 except ImportError:

@@ -3,6 +3,8 @@ import io
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -237,6 +239,50 @@ class SessionCatchupCodexTests(unittest.TestCase):
         self.assertIn("Runtime: codex", output)
         self.assertIn("Last planning update: task_plan.md", output)
         self.assertIn("CODEX: Codex summary after planning update", output)
+
+    def test_codex_cli_prints_unicode_when_parent_requests_cp1252(self):
+        for filename in self.module.PLANNING_FILES:
+            (self.project_dir / filename).write_text("# test\n", encoding="utf-8")
+        self.write_codex_session(
+            "rollout-2026-04-07T00-00-00-unicode-thread.jsonl",
+            records=[
+                {
+                    "timestamp": "2026-04-07T00:00:02.000Z",
+                    "type": "event_msg",
+                    "payload": {
+                        "type": "patch_apply_end",
+                        "success": True,
+                        "changes": {"task_plan.md": {"operation": "modified"}},
+                    },
+                },
+                {
+                    "timestamp": "2026-04-07T00:00:03.000Z",
+                    "type": "response_item",
+                    "payload": {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [
+                            {"type": "output_text", "text": "继续完成中文计划"},
+                        ],
+                    },
+                },
+            ],
+        )
+        env = os.environ.copy()
+        env["CODEX_SESSIONS_DIR"] = str(self.sessions_dir)
+        env["PYTHONIOENCODING"] = "cp1252"
+        env.pop("CODEX_THREAD_ID", None)
+
+        result = subprocess.run(
+            [sys.executable, str(self.codex_script), self.project_path],
+            capture_output=True,
+            encoding="utf-8",
+            env=env,
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("继续完成中文计划", result.stdout)
 
 
 if __name__ == "__main__":
