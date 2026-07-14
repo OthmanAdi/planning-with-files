@@ -9,14 +9,21 @@ invoked directly as ``sh <script>.sh`` on macOS/Linux. On Windows their
 
 We reuse the adapter's shell resolver, which locates the git-for-windows
 ``sh.exe`` and puts its coreutils on PATH, then run the same ``.sh`` the unix
-hook runs and print its stdout. Never used on unix. Always exits 0.
+hook runs. Codex requires SessionStart and UserPromptSubmit command hooks to
+return event-specific JSON, so shell stdout is wrapped before it is emitted.
+Never used on unix. Always exits 0.
 """
 from __future__ import annotations
 
-import json
 import sys
 
 import codex_hook_adapter as adapter
+
+
+CONTEXT_EVENTS = {
+    "session-start.sh": "SessionStart",
+    "user-prompt-submit.sh": "UserPromptSubmit",
+}
 
 
 def main() -> None:
@@ -26,32 +33,19 @@ def main() -> None:
     payload = adapter.load_payload()
     root = adapter.cwd_from_payload(payload)
     stdout, _ = adapter.run_shell_script(script_name, root)
-    if not stdout:
-        return
-
-    context_events = {
-        "session-start.sh": "SessionStart",
-        "user-prompt-submit.sh": "UserPromptSubmit",
-    }
-    if script_name in context_events:
-        result = {
-            "hookSpecificOutput": {
-                "hookEventName": context_events[script_name],
-                "additionalContext": stdout,
+    event_name = CONTEXT_EVENTS.get(script_name)
+    if stdout and event_name:
+        adapter.emit_json(
+            {
+                "continue": True,
+                "hookSpecificOutput": {
+                    "hookEventName": event_name,
+                    "additionalContext": stdout,
+                },
             }
-        }
-        sys.stdout.write(json.dumps(result, ensure_ascii=True) + "\n")
-        return
-
-    if script_name == "pre-compact.sh":
-        result = {
-            "continue": True,
-            "systemMessage": stdout,
-        }
-        sys.stdout.write(json.dumps(result, ensure_ascii=True) + "\n")
-        return
-
-    sys.stdout.write(stdout + "\n")
+        )
+    elif stdout and script_name == "pre-compact.sh":
+        adapter.emit_json({"continue": True, "systemMessage": stdout})
 
 
 if __name__ == "__main__":

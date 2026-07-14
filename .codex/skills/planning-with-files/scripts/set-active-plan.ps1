@@ -1,8 +1,8 @@
 # planning-with-files: set or display the active plan pointer (PowerShell).
 #
 # Usage:
-#   .\set-active-plan.ps1 <plan_id>   - pin .planning\.active_plan to plan_id
-#   .\set-active-plan.ps1             - print the current active plan (if any)
+#   .\set-active-plan.ps1 <plan_id>   — pin .planning\.active_plan to plan_id
+#   .\set-active-plan.ps1             — print the current active plan (if any)
 
 param(
     [string]$PlanId = ""
@@ -19,7 +19,7 @@ if ($PlanId -eq "") {
             Write-Output "Active plan: $current"
             Write-Output "Path: $planDir"
         } elseif ($current -ne "") {
-            Write-Output "Active plan pointer: $current (directory not found - stale pointer)"
+            Write-Output "Active plan pointer: $current (directory not found — stale pointer)"
         } else {
             Write-Output "No active plan set."
         }
@@ -41,8 +41,7 @@ if (-not (Test-Path $PlanRoot)) {
     New-Item -ItemType Directory -Path $PlanRoot -Force | Out-Null
 }
 
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($ActiveFile, $PlanId, $utf8NoBom)
+Set-Content -Path $ActiveFile -Value $PlanId -Encoding UTF8 -NoNewline
 
 Write-Output "Active plan set to: $PlanId"
 Write-Output "Path: $PlanDir"

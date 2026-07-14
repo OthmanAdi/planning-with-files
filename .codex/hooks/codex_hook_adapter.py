@@ -59,7 +59,7 @@ def is_session_attached(root: Path, session_id: str | None) -> bool:
 def emit_json(payload: dict[str, Any]) -> None:
     if not payload:
         return
-    json.dump(payload, sys.stdout, ensure_ascii=True)
+    json.dump(payload, sys.stdout, ensure_ascii=False)
     sys.stdout.write("\n")
 
 
@@ -83,10 +83,16 @@ def _windows_git_bash() -> tuple[str | None, list[str]]:
     and probe for sh.exe and its sibling bin dirs. This is exactly issue #201:
     the reporter had git bash installed but its usr\\bin was not on PATH.
     """
+    system32 = (Path(os.environ.get("SystemRoot", r"C:\\Windows")) / "System32").resolve()
     for exe in ("sh", "bash"):
         found = shutil.which(exe)
         if found:
-            return found, [str(Path(found).parent)]
+            candidate = Path(found).resolve()
+            # Windows' bash.exe is a WSL launcher, not a POSIX shell. Selecting
+            # it before Git Bash makes every shell hook fail when WSL has no
+            # installed distro (the common Git-for-Windows-only setup).
+            if candidate.parent != system32:
+                return str(candidate), [str(candidate.parent)]
 
     roots: list[Path] = []
     git = shutil.which("git")
@@ -107,7 +113,7 @@ def _windows_git_bash() -> tuple[str | None, list[str]]:
     return None, []
 
 
-def run_shell_script(script_name: str, cwd: Path, *args: str) -> tuple[str, str]:
+def run_shell_script(script_name: str, cwd: Path) -> tuple[str, str]:
     sh_cmd = "sh"
     env = None
     if os.name == "nt":
@@ -126,11 +132,9 @@ def run_shell_script(script_name: str, cwd: Path, *args: str) -> tuple[str, str]
         env.setdefault("PYTHON_BIN", sys.executable)
 
     result = subprocess.run(
-        [sh_cmd, str(HOOK_DIR / script_name), *args],
+        [sh_cmd, str(HOOK_DIR / script_name)],
         cwd=str(cwd),
         text=True,
-        encoding="utf-8",
-        errors="replace",
         capture_output=True,
         check=False,
         env=env,
@@ -145,4 +149,3 @@ def main_guard(func) -> int:
         print(f"[planning-with-files hook] {exc}", file=sys.stderr)
         return 0
     return 0
-

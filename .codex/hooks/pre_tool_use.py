@@ -9,6 +9,7 @@ def main() -> None:
     root = adapter.cwd_from_payload(payload)
 
     if not adapter.is_session_attached(root, adapter.session_id_from_payload(payload)):
+        adapter.emit_json({"decision": "allow"})
         return
 
     stdout, stderr = adapter.run_shell_script("pre-tool-use.sh", root)
@@ -20,12 +21,7 @@ def main() -> None:
         return
 
     if stderr:
-        adapter.emit_json({
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "additionalContext": stderr,
-            }
-        })
+        adapter.emit_json({"systemMessage": stderr})
 
 
 if __name__ == "__main__":
