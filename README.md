@@ -605,6 +605,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 | [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
 | [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
 | [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
+| [javimosch/memgraph](https://github.com/javimosch/memgraph) | Knowledge graph CLI that indexes task_plan.md/findings.md/progress.md as graph nodes; `recommend --include-plans` returns past plans alongside skill recommendations for cross-session memory |
 
 ### Skill Registries & Hubs
 
