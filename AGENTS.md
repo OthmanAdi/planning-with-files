@@ -22,7 +22,7 @@ This file is the canonical, session-portable reference for how every agent worki
 4. Merge preserving contributor authorship: `git fetch origin pull/N/head:pr-N && git cherry-pick <pr-head-sha>`, or `gh pr merge --rebase`. Do NOT use `git merge --squash` — it collapses the contributor's commit and reassigns the `Author:` field to whoever runs the local commit, destroying their credit in `git log`.
 5. CHANGELOG — new version entry at top, `### Fixed`/`### Added`/`### Changed`, sachlich, no em-dashes.
 6. CONTRIBUTORS.md — add reporter/contributor, bump "Total Contributors: N+", update "Last updated" date.
-7. Version bump across all 19 files (see table below).
+7. Version bump across all 14 files (see table below).
 8. README — update version badge and add row to releases table.
 9. `git commit`, `git tag vX.Y.Z`, `git push origin master`, `git push origin vX.Y.Z`.
 10. `gh release create vX.Y.Z --title "vX.Y.Z - <short description>" --notes "<release notes>"`.
@@ -33,16 +33,11 @@ This file is the canonical, session-portable reference for how every agent worki
 
 ## Version bump scope
 
-All 19 files must be bumped to the same version string every release.
+All 14 files must be bumped to the same version string every release. All locales are served by the single canonical skill via the `/plan-ar`/`/plan-de`/`/plan-es`/`/plan-zh`/`/plan-zht` commands (issue #130) — there is no separate per-language SKILL.md to bump.
 
 | File | Notes |
 |------|-------|
-| `skills/planning-with-files/SKILL.md` | Primary English |
-| `skills/planning-with-files-ar/SKILL.md` | Arabic |
-| `skills/planning-with-files-de/SKILL.md` | German |
-| `skills/planning-with-files-es/SKILL.md` | Spanish |
-| `skills/planning-with-files-zh/SKILL.md` | Simplified Chinese |
-| `skills/planning-with-files-zht/SKILL.md` | Traditional Chinese |
+| `skills/planning-with-files/SKILL.md` | Canonical; serves every language via the `/plan-*` commands |
 | `.codebuddy/skills/planning-with-files/SKILL.md` | CodeBuddy IDE |
 | `.codex/skills/planning-with-files/SKILL.md` | Codex IDE |
 | `.cursor/skills/planning-with-files/SKILL.md` | Cursor IDE |

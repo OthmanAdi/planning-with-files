@@ -200,30 +200,15 @@ Install acting up? Open your agent and say: *"Read docs/installation.md and docs
 <details>
 <summary><strong>🌐 Available in 5 other languages</strong></summary>
 
-**🇸🇦 العربية / Arabic**
-```bash
-npx skills add OthmanAdi/planning-with-files --skill planning-with-files-ar -g
-```
+The skill above is the only skill to install — it plans and responds in whatever language you ask it to. On Claude Code, the `/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh`, and `/plan-zht` commands (installed with the plugin route) are a shortcut that starts planning directly in one of these languages without asking:
 
-**🇩🇪 Deutsch / German**
-```bash
-npx skills add OthmanAdi/planning-with-files --skill planning-with-files-de -g
-```
+**🇸🇦 العربية / Arabic** — `/plan-ar`
+**🇩🇪 Deutsch / German** — `/plan-de`
+**🇪🇸 Español / Spanish** — `/plan-es`
+**🇨🇳 中文版 / Chinese (Simplified)** — `/plan-zh`
+**🇹🇼 正體中文版 / Chinese (Traditional)** — `/plan-zht`
 
-**🇪🇸 Español / Spanish**
-```bash
-npx skills add OthmanAdi/planning-with-files --skill planning-with-files-es -g
-```
-
-**🇨🇳 中文版 / Chinese (Simplified)**
-```bash
-npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zh -g
-```
-
-**🇹🇼 正體中文版 / Chinese (Traditional)**
-```bash
-npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zht -g
-```
+On other agents, just ask in your language, or tell it "plan and respond in Arabic" (or German, Spanish, Chinese, or any other language) — the same skill handles it.
 
 </details>
 
@@ -286,7 +271,7 @@ On Pi there is no `/plan` command to create the files; the skill creates them, t
 | Pi | bare form, no prefix | `/plan-status`, `/plan-execute`, `/plan-goal` |
 | Continue.dev | `/planning-with-files` | |
 
-The model-invocable SKILLS are named `planning-with-files:planning-with-files` (and `-ar`, `-de`, `-es`, `-zh`, `-zht`); the doubled form is the skill id, not a command you type. There is no `/pwf-de` and no `/planning-with-files:planning-with-files-goal`; `/pwf` is just a short alias for `/plan`.
+The model-invocable SKILL is named `planning-with-files:planning-with-files`; the doubled form is the skill id, not a command you type. `/plan-de` (and `-ar`/`-es`/`-zh`/`-zht`) are commands, not skill ids — they invoke that one skill with an instruction to plan and respond in that language. There is no `/pwf-de` and no `/planning-with-files:planning-with-files-goal`; `/pwf` is just a short alias for `/plan`.
 
 ## Works across 18+ platforms
 
@@ -465,8 +450,7 @@ What the skill writes into your project is three markdown files (see [the 3-file
 
 ```
 planning-with-files/
-├── skills/planning-with-files/   # canonical skill: SKILL.md, scripts/, templates/, reference.md, examples.md
-│   └── ...-ar / -de / -es / -zh / -zht    # 5 translated variants
+├── skills/planning-with-files/   # canonical skill: SKILL.md, scripts/, templates/, reference.md, examples.md — serves every language via the /plan-* commands
 ├── .agents/skills/planning-with-files/   # Agent Skills standard path, full surface (v3.7.0+)
 ├── commands/                     # 13 slash commands (plugin route only)
 ├── scripts/ · templates/        # root-level copies for CLAUDE_PLUGIN_ROOT
