@@ -2,7 +2,7 @@
 name: planning-with-files
 description: "Manus-style persistent file-based planning for AI coding agents: keeps task_plan.md, findings.md, and progress.md on disk so work survives context loss and /clear. Use when asked to plan out, break down, or organize a multi-step project, research task, or any work requiring 5+ tool calls. Hermes adaptation with minimal notes."
 metadata:
-  version: "3.9.0"
+  version: "3.10.0"
 ---
 
 > Hermes note: lifecycle automation for this skill is provided by the Hermes adapter plugin in `.hermes/plugins/planning-with-files/`.

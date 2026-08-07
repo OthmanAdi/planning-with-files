@@ -38,15 +38,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_SKILL = REPO_ROOT / "skills" / "planning-with-files" / "SKILL.md"
 SKILL_DIR = REPO_ROOT / "skills" / "planning-with-files"
 
-# Every SKILL.md that carries a Stop scalar (canonical + language variants +
-# IDE mirrors). Kept in sync with the parity surfaces.
+# Every SKILL.md that carries a Stop scalar (canonical + IDE mirrors; the
+# five language variants were removed in favor of the single canonical skill,
+# see issue #130). Kept in sync with the parity surfaces.
 ALL_STOP_SKILL_FILES = [
     REPO_ROOT / "skills" / "planning-with-files" / "SKILL.md",
-    REPO_ROOT / "skills" / "planning-with-files-ar" / "SKILL.md",
-    REPO_ROOT / "skills" / "planning-with-files-de" / "SKILL.md",
-    REPO_ROOT / "skills" / "planning-with-files-es" / "SKILL.md",
-    REPO_ROOT / "skills" / "planning-with-files-zh" / "SKILL.md",
-    REPO_ROOT / "skills" / "planning-with-files-zht" / "SKILL.md",
     REPO_ROOT / ".agents" / "skills" / "planning-with-files" / "SKILL.md",
     REPO_ROOT / ".codebuddy" / "skills" / "planning-with-files" / "SKILL.md",
     REPO_ROOT / ".codex" / "skills" / "planning-with-files" / "SKILL.md",

@@ -1,6 +1,6 @@
 {
   "name": "planning-with-files",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "description": "Manus-style file-based planning for Pi Coding Agent",
   "keywords": [
     "pi-package",

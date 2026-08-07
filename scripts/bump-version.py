@@ -11,9 +11,9 @@ Run before tagging a release:
     python scripts/bump-version.py 2.37.0
     python scripts/bump-version.py 2.37.0 --dry-run
 
-Files touched (parity set, 19 entries):
-    skills/planning-with-files/SKILL.md            (canonical)
-    skills/planning-with-files-{ar,de,es,zh,zht}/SKILL.md
+Files touched (parity set, 14 entries):
+    skills/planning-with-files/SKILL.md            (canonical; single skill,
+                                                     no per-language variants)
     .{codebuddy,codex,cursor,factory,hermes,mastracode,opencode}/skills/planning-with-files/SKILL.md
     .agents/skills/planning-with-files/SKILL.md    (Agent Skills standard layout)
     clawhub-upload/SKILL.md
@@ -42,11 +42,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # kind: "skill_md", "plugin_json", "marketplace_json", "citation_cff"
 PARITY_FILES = [
     ("skills/planning-with-files/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-ar/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-de/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-es/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-zh/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-zht/SKILL.md", "skill_md"),
     (".codebuddy/skills/planning-with-files/SKILL.md", "skill_md"),
     (".codex/skills/planning-with-files/SKILL.md", "skill_md"),
     (".cursor/skills/planning-with-files/SKILL.md", "skill_md"),

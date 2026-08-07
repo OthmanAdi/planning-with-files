@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.10.0] - 2026-08-07
+
+### Changed
+
+- **BREAKING: removed the `-ar`/`-de`/`-es`/`-zh`/`-zht` language-variant skills (closes #130).** The plugin registered 6 separate skills purely to vary the natural-language prose in `SKILL.md`, when the assistant already responds in the user's language regardless of the skill's source language. Worse, the 5 variants had quietly drifted out of feature parity with the canonical skill: they were missing 12 script files (`attest-plan`, `gate-stop`, `ledger-append`, `ledger-summary.ps1`, `phase-status`, `plan-doctor`, `resolve-plan-dir.ps1`, `set-active-plan`) and the v3.2.0 fix for a Windows encoding bug in `session-catchup.py`, so non-English users on Windows were still exposed to a bug English users had fixed under them. `skills/planning-with-files-{ar,de,es,zh,zht}/` are gone; only `skills/planning-with-files/` remains.
+- **`/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh`, and `/plan-zht` are unaffected** — they now invoke the single canonical skill directly with an inline instruction to plan and respond in that language, instead of invoking a dedicated skill. Everyone using these commands keeps the same experience.
+- If you installed a language skill directly by its id (e.g. `npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zht`) rather than through a `/plan-*` command, reinstall the base skill: `npx skills add OthmanAdi/planning-with-files --skill planning-with-files -g`.
+
 ## [3.9.0] - 2026-08-01
 
 ### Fixed
