@@ -229,7 +229,13 @@ def _all_commands(hooks_block):
 
 
 def _is_loop_dispatch(skill_md):
-    """True for the eleven variants that carry the generated loop dispatch."""
+    """True for the six IDE-mirror variants that carry the generated loop dispatch.
+
+    The second condition (any skills/<name> other than the canonical skill)
+    is defensive: no such directory exists today (the 5 per-language variants
+    it once matched were removed, issue #130), but it fails safe if a future
+    skills/planning-with-files-* directory reappears without updating this test.
+    """
     rel = skill_md.relative_to(REPO_ROOT).parts
     if rel[0] in LOOP_DISPATCH_HOSTS:
         return True
@@ -239,10 +245,11 @@ def _is_loop_dispatch(skill_md):
 def _expected_probes(skill_md):
     """Documented install-path fragments this variant's scalars must probe.
 
-    IDE mirrors get the per-host documented set from HOST_EXPECTED_PROBES;
-    language variants install under $HOME/.claude/skills/<variant-name>. The
+    IDE mirrors get the per-host documented set from HOST_EXPECTED_PROBES. The
     canonical skill and the .agents standard mirror have no install dir beyond
-    the canonical two-path fallback and return an empty tuple.
+    the canonical two-path fallback and return an empty tuple. The third branch
+    (any skills/<name> other than canonical) is the same defensive fallback as
+    _is_loop_dispatch above, unreachable today.
     """
     rel = skill_md.relative_to(REPO_ROOT).parts
     if rel[0] in HOST_EXPECTED_PROBES:

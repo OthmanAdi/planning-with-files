@@ -43,10 +43,9 @@ All 14 files must be bumped to the same version string every release. All locale
 | `.cursor/skills/planning-with-files/SKILL.md` | Cursor IDE |
 | `.factory/skills/planning-with-files/SKILL.md` | Factory IDE |
 | `.hermes/skills/planning-with-files/SKILL.md` | Hermes adapter |
-| `.kiro/skills/planning-with-files/SKILL.md` | Kiro IDE |
 | `.mastracode/skills/planning-with-files/SKILL.md` | Mastra Code |
 | `.opencode/skills/planning-with-files/SKILL.md` | OpenCode IDE |
-| `.pi/skills/planning-with-files/SKILL.md` | Pi IDE |
+| `.pi/skills/planning-with-files/package.json` | Pi npm channel (its `SKILL.md` carries no version field — see note below) |
 | `.agents/skills/planning-with-files/SKILL.md` | Agent Skills standard layout (Zed, Amp, Warp, Devin, Antigravity, Gemini CLI read this path natively; added v3.7.0) |
 | `clawhub-upload/SKILL.md` | ClawHub marketplace upload |
 | `.claude-plugin/plugin.json` | Plugin manifest |

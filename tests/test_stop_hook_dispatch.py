@@ -259,8 +259,8 @@ class StopScalarBehaviorTests(unittest.TestCase):
         )
 
     def test_variant_scalar_fires_end_to_end(self) -> None:
-        # Group-B scalars (language variants + IDE mirrors) dispatch to
-        # check-complete.sh; one representative execution proves the shape.
+        # Group-B scalars (IDE mirrors) dispatch to check-complete.sh; one
+        # representative execution proves the shape.
         # (.codebuddy ships its own scripts/; .cursor relies on the install-path
         # fallback and cannot be executed hermetically here.)
         variant = REPO_ROOT / ".codebuddy" / "skills" / "planning-with-files" / "SKILL.md"
