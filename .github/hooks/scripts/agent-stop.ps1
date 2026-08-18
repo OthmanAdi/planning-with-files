@@ -32,6 +32,11 @@ if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0 -and $PENDING -eq 0) {
     $PENDING = ([regex]::Matches($content, "\[pending\]")).Count
 }
 
+if ($TOTAL -eq 0) {
+    Write-Output '{}'
+    exit 0
+}
+
 if ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
     $msg = "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL). If the user has additional work, add new phases to task_plan.md before starting."
     $output = @{
