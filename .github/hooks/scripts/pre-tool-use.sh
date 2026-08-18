@@ -7,6 +7,11 @@
 # Read stdin (required — Copilot pipes JSON to stdin)
 INPUT=$(cat)
 
+[ "${PLANNING_DISABLED:-}" = "1" ] && {
+    echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
+    exit 0
+}
+
 PLAN_FILE="task_plan.md"
 
 if [ ! -f "$PLAN_FILE" ]; then

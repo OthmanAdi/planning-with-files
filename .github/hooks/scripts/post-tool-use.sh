@@ -6,5 +6,7 @@
 # Read stdin (required — Copilot pipes JSON to stdin)
 INPUT=$(cat)
 
+[ "${PLANNING_DISABLED:-}" = "1" ] && { echo '{}'; exit 0; }
+
 echo '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."}}'
 exit 0

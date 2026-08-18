@@ -8,7 +8,9 @@ attachment path the issue reports) with and without the env var.
 """
 from __future__ import annotations
 
+import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,12 +19,20 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 CODEX_HOOKS = REPO / ".codex" / "hooks"
+COPILOT_HOOKS = REPO / ".github" / "hooks" / "scripts"
 SCRIPTS = REPO / "scripts"
+POWERSHELL = (
+    shutil.which("pwsh")
+    or shutil.which("powershell.exe")
+    or shutil.which("powershell")
+)
 
 PLAN = "# Test Plan\n### Phase 1: something\n**Status:** in_progress\n"
 
 
-def run_sh(script: Path, cwd: Path, disabled: bool) -> subprocess.CompletedProcess:
+def run_sh(
+    script: Path, cwd: Path, disabled: bool, input_data: str = ""
+) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env.pop("PLANNING_DISABLED", None)
     if disabled:
@@ -31,6 +41,34 @@ def run_sh(script: Path, cwd: Path, disabled: bool) -> subprocess.CompletedProce
         ["sh", str(script)],
         cwd=str(cwd),
         env=env,
+        input=input_data,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+
+
+def run_powershell(
+    script: Path, cwd: Path, disabled: bool
+) -> subprocess.CompletedProcess:
+    env = dict(os.environ)
+    env.pop("PLANNING_DISABLED", None)
+    if disabled:
+        env["PLANNING_DISABLED"] = "1"
+    return subprocess.run(
+        [
+            str(POWERSHELL),
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script),
+        ],
+        cwd=str(cwd),
+        env=env,
+        input='{"error":{"message":"fixture failure"}}',
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -137,6 +175,30 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
             (self.cwd / "progress.md").read_text(encoding="utf-8"), "progress line\n"
         )
 
+    def test_copilot_shell_hooks_skip_context_when_disabled(self) -> None:
+        for name in (
+            "session-start.sh",
+            "pre-tool-use.sh",
+            "post-tool-use.sh",
+            "agent-stop.sh",
+            "error-occurred.sh",
+        ):
+            with self.subTest(hook=name):
+                result = run_sh(
+                    COPILOT_HOOKS / name,
+                    self.cwd,
+                    disabled=True,
+                    input_data='{"error":{"message":"fixture failure"}}',
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                payload = json.loads(result.stdout.lstrip("\ufeff"))
+                hook_output = payload.get("hookSpecificOutput", {})
+                self.assertNotIn("additionalContext", hook_output)
+                if name == "pre-tool-use.sh":
+                    self.assertEqual("allow", hook_output.get("permissionDecision"))
+                else:
+                    self.assertEqual({}, payload)
+
     # --- Every distributed copy carries the guard ---
 
     def test_all_check_complete_copies_carry_the_guard(self) -> None:
@@ -153,6 +215,39 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
                 text,
                 f"missing opt-out guard: {copy.relative_to(REPO)}",
             )
+
+
+@unittest.skipUnless(POWERSHELL, "PowerShell is not available")
+class CopilotPowerShellPlanningDisabledTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.cwd = Path(self._tmp.name)
+        (self.cwd / "task_plan.md").write_text(PLAN, encoding="utf-8")
+        (self.cwd / "progress.md").write_text("progress line\n", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_copilot_powershell_hooks_skip_context_when_disabled(self) -> None:
+        for name in (
+            "session-start.ps1",
+            "pre-tool-use.ps1",
+            "post-tool-use.ps1",
+            "agent-stop.ps1",
+            "error-occurred.ps1",
+        ):
+            with self.subTest(hook=name):
+                result = run_powershell(
+                    COPILOT_HOOKS / name, self.cwd, disabled=True
+                )
+                self.assertEqual(0, result.returncode, result.stderr)
+                payload = json.loads(result.stdout.lstrip("\ufeff"))
+                hook_output = payload.get("hookSpecificOutput", {})
+                self.assertNotIn("additionalContext", hook_output)
+                if name == "pre-tool-use.ps1":
+                    self.assertEqual("allow", hook_output.get("permissionDecision"))
+                else:
+                    self.assertEqual({}, payload)
 
 
 if __name__ == "__main__":

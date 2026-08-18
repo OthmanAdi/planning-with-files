@@ -7,6 +7,11 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $InputData = [Console]::In.ReadToEnd()
 
+if ($env:PLANNING_DISABLED -eq '1') {
+    Write-Output '{}'
+    exit 0
+}
+
 $output = @{
     hookSpecificOutput = @{
         hookEventName = "PostToolUse"

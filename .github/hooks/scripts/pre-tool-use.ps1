@@ -8,6 +8,11 @@ $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $InputData = [Console]::In.ReadToEnd()
 
+if ($env:PLANNING_DISABLED -eq '1') {
+    Write-Output '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
+    exit 0
+}
+
 $PlanFile = "task_plan.md"
 
 if (-not (Test-Path $PlanFile)) {
