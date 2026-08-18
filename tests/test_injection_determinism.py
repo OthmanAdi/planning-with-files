@@ -33,6 +33,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -373,7 +374,7 @@ class NoRawWallClockTests(unittest.TestCase):
         # so it never received the v2.40 sed pass. Same contract, same fixture.
         # Its package directory name contains a dash, so it cannot be imported
         # by name; load it under a synthetic package instead.
-        result = self._run(["python", "-c", _HERMES_PROBE])
+        result = self._run([sys.executable, "-c", _HERMES_PROBE])
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("ACTIVE PLAN", result.stdout)
         self._assert_normalized(result.stdout, ".hermes/plugins/planning-with-files")
