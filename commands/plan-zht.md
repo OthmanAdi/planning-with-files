@@ -5,7 +5,7 @@ description: "啟動 Manus 風格的檔案規劃。為複雜任務建立 task_pl
 從以下路徑中第一個存在的檔案讀取繁體中文技能正文，並嚴格按照其指示執行：
 
 - `$HOME/.claude/skills/planning-with-files-zht/SKILL.md`
-- `$HOME/.claude/plugins/marketplaces/planning-with-files/skills/i18n/planning-with-files-zht/SKILL.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/i18n/planning-with-files-zht/SKILL.md`
 
 如果兩個路徑都不存在，請調用 planning-with-files:planning-with-files 技能，並繼續以繁體中文工作。
 

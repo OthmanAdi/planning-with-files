@@ -5,7 +5,7 @@ description: "Starte Manus-artige Dateiplanung. Erstelle task_plan.md, findings.
 Lies den deutschen Skill-Text aus dem ersten dieser Pfade, der existiert, und folge ihm genau:
 
 - `$HOME/.claude/skills/planning-with-files-de/SKILL.md`
-- `$HOME/.claude/plugins/marketplaces/planning-with-files/skills/i18n/planning-with-files-de/SKILL.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/i18n/planning-with-files-de/SKILL.md`
 
 Existiert keiner der beiden Pfade, rufe die planning-with-files:planning-with-files Skill auf und arbeite auf Deutsch weiter.
 

@@ -5,7 +5,7 @@ description: "Iniciar planificación de archivos estilo Manus. Crear task_plan.m
 Lee el texto de la habilidad en español desde la primera de estas rutas que exista y síguelo estrictamente:
 
 - `$HOME/.claude/skills/planning-with-files-es/SKILL.md`
-- `$HOME/.claude/plugins/marketplaces/planning-with-files/skills/i18n/planning-with-files-es/SKILL.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/i18n/planning-with-files-es/SKILL.md`
 
 Si ninguna de las dos rutas existe, invoca la habilidad planning-with-files:planning-with-files y continúa trabajando en español.
 

@@ -5,7 +5,7 @@ description: "بدء تخطيط الملفات بنمط Manus. إنشاء task_p
 اقرأ نص المهارة العربية من أول مسار موجود من هذين المسارين ونفّذ تعليماته بدقة:
 
 - `$HOME/.claude/skills/planning-with-files-ar/SKILL.md`
-- `$HOME/.claude/plugins/marketplaces/planning-with-files/skills/i18n/planning-with-files-ar/SKILL.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/i18n/planning-with-files-ar/SKILL.md`
 
 إذا لم يكن أي من المسارين موجودًا، استدعِ مهارة planning-with-files:planning-with-files وتابع العمل باللغة العربية.
 
