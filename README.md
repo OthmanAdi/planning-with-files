@@ -219,6 +219,8 @@ These are real translations, not an English body with a translated description: 
 
 Since v3.10.0 the variants also ship the full script surface: attestation, the Stop gate, the ledger, phase status and plan-doctor used to be canonical-only, which quietly made every non-English install a subset install. See [issue #130](https://github.com/OthmanAdi/planning-with-files/issues/130) for why they stay separate skills rather than collapsing into one.
 
+They live under `skills/i18n/`, one directory deeper than the canonical skill. The install commands above are unchanged, because `npx skills add` resolves `--skill` by skill name across the whole repository. The Claude Code plugin scan reads `skills/*/SKILL.md` without recursing, so the plugin route registers the canonical skill alone and no longer carries five extra descriptions in every session's system prompt. On that route the `/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh` and `/plan-zht` commands read the translated skill from disk instead of invoking it by name.
+
 </details>
 
 <details>
@@ -461,7 +463,7 @@ What the skill writes into your project is three markdown files (see [the 3-file
 ```
 planning-with-files/
 ├── skills/planning-with-files/   # canonical skill: SKILL.md, scripts/, templates/, reference.md, examples.md
-│   └── ...-ar / -de / -es / -zh / -zht    # 5 translated variants
+├── skills/i18n/                  # 5 translated variants: -ar / -de / -es / -zh / -zht
 ├── .agents/skills/planning-with-files/   # Agent Skills standard path, full surface (v3.7.0+)
 ├── commands/                     # 13 slash commands (plugin route only)
 ├── scripts/ · templates/        # root-level copies for CLAUDE_PLUGIN_ROOT

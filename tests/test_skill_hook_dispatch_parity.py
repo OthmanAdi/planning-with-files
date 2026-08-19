@@ -144,11 +144,11 @@ EXPECTED_LOOP_DISPATCH_FILES = {
     ".factory/skills/planning-with-files/SKILL.md",
     ".mastracode/skills/planning-with-files/SKILL.md",
     ".opencode/skills/planning-with-files/SKILL.md",
-    "skills/planning-with-files-ar/SKILL.md",
-    "skills/planning-with-files-de/SKILL.md",
-    "skills/planning-with-files-es/SKILL.md",
-    "skills/planning-with-files-zh/SKILL.md",
-    "skills/planning-with-files-zht/SKILL.md",
+    "skills/i18n/planning-with-files-ar/SKILL.md",
+    "skills/i18n/planning-with-files-de/SKILL.md",
+    "skills/i18n/planning-with-files-es/SKILL.md",
+    "skills/i18n/planning-with-files-zh/SKILL.md",
+    "skills/i18n/planning-with-files-zht/SKILL.md",
 }
 
 # The first-match-wins discovery loop (single line, POSIX sh).
@@ -239,7 +239,10 @@ def _is_loop_dispatch(skill_md):
     rel = skill_md.relative_to(REPO_ROOT).parts
     if rel[0] in LOOP_DISPATCH_HOSTS:
         return True
-    return rel[0] == "skills" and rel[1] != "planning-with-files"
+    # Language variants live under skills/i18n/ so the Claude Code plugin
+    # scan, which reads skills/*/SKILL.md and does not recurse, registers the
+    # canonical skill alone. Identify them by directory name, not by depth.
+    return rel[0] == "skills" and skill_md.parent.name != "planning-with-files"
 
 
 def _expected_probes(skill_md):
@@ -253,8 +256,10 @@ def _expected_probes(skill_md):
     rel = skill_md.relative_to(REPO_ROOT).parts
     if rel[0] in HOST_EXPECTED_PROBES:
         return HOST_EXPECTED_PROBES[rel[0]]
-    if rel[0] == "skills" and rel[1] != "planning-with-files":
-        return (f"$HOME/.claude/skills/{rel[1]}/scripts/",)
+    if rel[0] == "skills" and skill_md.parent.name != "planning-with-files":
+        # `npx skills add` installs by skill name, so the install dir keeps its
+        # flat $HOME/.claude/skills/<variant-name>/ shape after the i18n move.
+        return (f"$HOME/.claude/skills/{skill_md.parent.name}/scripts/",)
     return ()
 
 

@@ -273,13 +273,13 @@ LANG_EXTRA_SCRIPTS = HOOK_DISPATCH_SCRIPTS + [
     "scripts/set-active-plan.ps1",
 ]
 
-# Language variants (skills/planning-with-files-<lang>/): SKILL.md, templates
+# Language variants (skills/i18n/planning-with-files-<lang>/): SKILL.md, templates
 # and references are real translations and must NEVER be overwritten with the
 # English canonical. Same for LANG_TRANSLATED_SCRIPTS above. The rest of the
 # canonical script surface is synced so non-English installs get the same
 # features, not a subset (issue #212 covered only the 3 dispatch targets).
 for _lang in ("ar", "de", "es", "zh", "zht"):
-    _base = f"skills/planning-with-files-{_lang}"
+    _base = f"skills/i18n/planning-with-files-{_lang}"
     IDE_MANIFESTS[_base] = _build_manifest(
         _base,
         ref_style="skip",

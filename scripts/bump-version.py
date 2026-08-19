@@ -13,7 +13,7 @@ Run before tagging a release:
 
 Maintained targets (19 entries: 18 tracked files plus optional local staging):
     skills/planning-with-files/SKILL.md            (canonical)
-    skills/planning-with-files-{ar,de,es,zh,zht}/SKILL.md
+    skills/i18n/planning-with-files-{ar,de,es,zh,zht}/SKILL.md
     .{codebuddy,codex,cursor,factory,hermes,mastracode,opencode}/skills/planning-with-files/SKILL.md
     .agents/skills/planning-with-files/SKILL.md    (Agent Skills standard layout)
     clawhub-upload/SKILL.md                        (gitignored; bumped when present)
@@ -42,11 +42,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # kind: "skill_md", "plugin_json", "marketplace_json", "citation_cff"
 PARITY_FILES = [
     ("skills/planning-with-files/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-ar/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-de/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-es/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-zh/SKILL.md", "skill_md"),
-    ("skills/planning-with-files-zht/SKILL.md", "skill_md"),
+    ("skills/i18n/planning-with-files-ar/SKILL.md", "skill_md"),
+    ("skills/i18n/planning-with-files-de/SKILL.md", "skill_md"),
+    ("skills/i18n/planning-with-files-es/SKILL.md", "skill_md"),
+    ("skills/i18n/planning-with-files-zh/SKILL.md", "skill_md"),
+    ("skills/i18n/planning-with-files-zht/SKILL.md", "skill_md"),
     (".codebuddy/skills/planning-with-files/SKILL.md", "skill_md"),
     (".codex/skills/planning-with-files/SKILL.md", "skill_md"),
     (".cursor/skills/planning-with-files/SKILL.md", "skill_md"),

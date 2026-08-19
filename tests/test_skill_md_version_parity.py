@@ -28,11 +28,11 @@ CANONICAL_SKILL = REPO_ROOT / "skills" / "planning-with-files" / "SKILL.md"
 
 PARITY_SKILL_MD = [
     "skills/planning-with-files/SKILL.md",
-    "skills/planning-with-files-ar/SKILL.md",
-    "skills/planning-with-files-de/SKILL.md",
-    "skills/planning-with-files-es/SKILL.md",
-    "skills/planning-with-files-zh/SKILL.md",
-    "skills/planning-with-files-zht/SKILL.md",
+    "skills/i18n/planning-with-files-ar/SKILL.md",
+    "skills/i18n/planning-with-files-de/SKILL.md",
+    "skills/i18n/planning-with-files-es/SKILL.md",
+    "skills/i18n/planning-with-files-zh/SKILL.md",
+    "skills/i18n/planning-with-files-zht/SKILL.md",
     ".codebuddy/skills/planning-with-files/SKILL.md",
     ".codex/skills/planning-with-files/SKILL.md",
     ".cursor/skills/planning-with-files/SKILL.md",
