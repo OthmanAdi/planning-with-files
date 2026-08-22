@@ -46,6 +46,17 @@ EXPECTED_VARIANTS = {
 # has to start with the copy verb and the glob has to end the path segment.
 WHOLESALE_COPY_RE = re.compile(r"^\s*(?:cp\s|Copy-Item\b).*skills[\\/]\*(?:\s|$)")
 
+MANUAL_SKILL_COPY_COMMANDS = {
+    "docs/installation.md": (
+        "mkdir -p ~/.claude/skills",
+        "cp -r planning-with-files/skills/planning-with-files ~/.claude/skills/",
+    ),
+    "docs/windows.md": (
+        r'New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\skills" | Out-Null',
+        r"Copy-Item -Recurse planning-with-files\skills\planning-with-files",
+    ),
+}
+
 
 def _plugin_registered_skills():
     """Directory names the Claude Code plugin scan registers (skills/*/SKILL.md)."""
@@ -54,16 +65,19 @@ def _plugin_registered_skills():
 
 def _tracked_markdown():
     """Every tracked .md file, via git; glob fallback for non-git checkouts."""
-    proc = subprocess.run(
-        ["git", "ls-files", "*.md"],
-        cwd=str(REPO_ROOT),
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        check=False,
-    )
-    if proc.returncode == 0 and proc.stdout.strip():
-        return [REPO_ROOT / line for line in proc.stdout.splitlines() if line]
+    try:
+        proc = subprocess.run(
+            ["git", "-c", "core.quotepath=off", "ls-files", "--", "*.md"],
+            cwd=str(REPO_ROOT),
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return [REPO_ROOT / line for line in proc.stdout.splitlines() if line]
+    except OSError:
+        pass
     return [
         p
         for p in REPO_ROOT.rglob("*.md")
@@ -114,6 +128,19 @@ class PluginSkillSurfaceTests(unittest.TestCase):
             "commands look; name skills/planning-with-files instead: "
             + "; ".join(offenders),
         )
+
+    def test_manual_skill_copies_create_destination_first(self):
+        for rel, (create_destination, copy_skill) in MANUAL_SKILL_COPY_COMMANDS.items():
+            with self.subTest(doc=rel):
+                text = (REPO_ROOT / rel).read_text(encoding="utf-8")
+                self.assertIn(create_destination, text)
+                self.assertIn(copy_skill, text)
+                self.assertLess(
+                    text.index(create_destination),
+                    text.index(copy_skill),
+                    "the skills directory must exist before the canonical skill "
+                    "directory is copied into it",
+                )
 
 
 if __name__ == "__main__":
