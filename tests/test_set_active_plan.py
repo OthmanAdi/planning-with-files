@@ -124,6 +124,47 @@ class SetActivePlanTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertIn("2026-01-10-my-task", result.stdout)
 
+    def test_list_plans_shows_available_plans_status_and_active_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            active = planning / "2026-01-10-active"
+            other = planning / "2026-01-11-other"
+            hidden = planning / ".scratch"
+            active.mkdir(parents=True)
+            other.mkdir(parents=True)
+            hidden.mkdir(parents=True)
+            (active / "task_plan.md").write_text(
+                "# Active\n\n"
+                "### Phase 1\n- **Status:** complete\n"
+                "### Phase 2\n- **Status:** in_progress\n",
+                encoding="utf-8",
+            )
+            (other / "task_plan.md").write_text(
+                "# Other\n\n"
+                "### Phase 1 [complete]\n"
+                "### Phase 2 [pending]\n",
+                encoding="utf-8",
+            )
+            (hidden / "task_plan.md").write_text("# Hidden\n", encoding="utf-8")
+            (planning / ".active_plan").write_text("2026-01-10-active\n", encoding="utf-8")
+
+            result = run_set_active(root, "--list")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("Available plans:", result.stdout)
+            self.assertIn("2026-01-10-active [active]", result.stdout)
+            self.assertIn("1/2 complete, 1 in_progress, 0 pending", result.stdout)
+            self.assertIn("2026-01-11-other", result.stdout)
+            self.assertIn("1/2 complete, 0 in_progress, 1 pending", result.stdout)
+            self.assertNotIn(".scratch", result.stdout)
+
+    def test_list_plans_without_planning_dir_is_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_set_active(Path(tmp), "--list")
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("No planning directory found", result.stdout)
+
     def test_sets_active_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
