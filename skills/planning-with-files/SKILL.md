@@ -223,7 +223,7 @@ Copy these templates to start:
 Helper scripts for automation:
 
 - `scripts/init-session.sh` — Initialize planning files. With a name arg, creates an isolated plan under `.planning/YYYY-MM-DD-<slug>/` for parallel task workflows. Without args, writes `task_plan.md` at project root (legacy mode, backward-compatible).
-- `scripts/set-active-plan.sh` — Switch the active plan pointer (`.planning/.active_plan`). Run with a plan ID to switch; run without args to show which plan is current.
+- `scripts/set-active-plan.sh` — Switch or inspect the active plan pointer (`.planning/.active_plan`). Run with `--list` to show named plans and phase counts, with a plan ID to switch, or without args to show which plan is current.
 - `scripts/resolve-plan-dir.sh` — Resolve the active plan directory. A set `$PLAN_ID` is a binding: it resolves or resolution stops, never another plan (issue #237). With no `$PLAN_ID`, multiple named plans refuse selection. A single named plan may use `.planning/.active_plan` or discovery by mtime; otherwise resolution falls back to the project root (legacy). Used internally by hooks.
 - `scripts/check-complete.sh` — Verify all phases in the active plan are complete.
 - `scripts/session-catchup.py`: Explicit same-project session-record aggregation or bounded replay (`--metadata` / `--replay`); bare invocation does not access host history.
