@@ -106,6 +106,9 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[@Dphoshoba](https://github.com/Dphoshoba)**, [PR #242](https://github.com/OthmanAdi/planning-with-files/pull/242)
+  - Proposed and implemented named-plan listing with phase counts and a shared active-pointer marker.
+
 - **[@sunznx](https://github.com/sunznx)**, [Issue #240](https://github.com/OthmanAdi/planning-with-files/issues/240), [Issue #241](https://github.com/OthmanAdi/planning-with-files/issues/241)
   - Reported and reproduced named-plan crossover between Codex sessions sharing a working directory after compaction.
   - Reported the 13 duplicate Codex command skills, traced the legacy command fallback, and proposed the native manifest setting that disables it.
@@ -425,6 +428,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 59+ and growing!
+**Total Contributors:** 60+ and growing!
 
-*Last updated: 2026-09-09*
+*Last updated: 2026-09-13*

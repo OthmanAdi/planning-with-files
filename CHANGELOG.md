@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.18.0] - 2026-09-13
+
+### Added
+- List saved named plans with `set-active-plan.sh --list` or PowerShell `set-active-plan.ps1 -List`. The output shows plan IDs, phase counts, and the shared default pointer without selecting a plan or attaching a session (#242).
+- The canonical helpers and usage instructions ship across the supported IDE and language bundles, including OpenCode, Mastracode, and Hermes. Kiro's separate `.kiro/plan` layout is documented as outside this inventory.
+
+### Fixed
+- Count each phase once across mixed inline and explicit status formats, including the shipped translated templates. Ignore fenced examples, indented status examples, and unrelated sections.
+- Support native PowerShell file invocation, empty files, and Windows PowerShell 5.1 startup from project paths containing brackets.
+
+### Security
+- Validate plan IDs and canonicalize the planning directory, listed directories, plan files, and pointer before reading. Symlink and junction paths outside the current project are rejected.
+- Replace the shared pointer atomically, preserving external hardlinked files. A failed write returns an error without reporting that the plan was selected.
+
+### Thanks
+- @Dphoshoba, for the original implementation and plan-listing proposal in #242.
+
 ## [3.17.2] - 2026-09-09
 
 ### Fixed
