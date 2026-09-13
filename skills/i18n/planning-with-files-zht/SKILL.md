@@ -233,6 +233,12 @@ if 操作失敗:
 - `scripts/check-complete.sh` — 驗證所有階段是否完成
 - `scripts/session-catchup.py`：依明確選擇輸出本機同一專案的中繼資料或有界重播內容
 
+### 列出已儲存的計畫
+
+恢復任務前，可執行 `sh "<skill-dir>/scripts/set-active-plan.sh" --list` 尋找計畫；在 Windows PowerShell 中執行 `& "<skill-dir>/scripts/set-active-plan.ps1" -List`。將 `<skill-dir>` 替換為此技能的安裝目錄，並將目前工作目錄保持在專案根目錄。
+
+此命令僅執行讀取，列出目前目錄下 `.planning/` 中的具名計畫及階段進度。`[active]` 表示共用的預設指標，不會將工作階段綁定至計畫。平行任務仍需為每個宿主設定 `PLAN_ID`，或使用獨立的工作樹。
+
 ## 安全邊界
 
 此技能使用 PreToolUse 鉤子在每次工具呼叫前重新讀取 `task_plan.md`。寫入 `task_plan.md` 的內容會被反覆注入上下文，使其成為間接提示注入的高價值目標。

@@ -208,6 +208,14 @@ Helper scripts bundled with this Hermes skill:
 
 The adapter plugin does not need any other script: plan resolution, injection, attestation checks, the completion gate and the `/pwf` initialization run in Python inside the plugin. The full canonical script surface (attestation helper, ledger, phase status, plan-doctor) ships with the canonical skill for hosts that dispatch shell hooks.
 
+### List saved plans
+
+To find a task before resuming it, run `sh "<skill-dir>/scripts/set-active-plan.sh" --list` or, in Windows PowerShell, `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Replace `<skill-dir>` with this installed skill directory and keep your current directory at the project root.
+
+This read-only command lists named plans and phase progress under the current directory's `.planning/`. `[active]` marks the shared default pointer; it does not bind a session. Concurrent tasks still require each host's `PLAN_ID` or separate worktrees.
+
+If your Hermes hub installation omits `.ps1` files, use `--list` with a POSIX shell or obtain the helper from the repository's `.hermes/skills/planning-with-files/scripts/` directory. The Hermes adapter itself does not depend on this helper.
+
 ## Advanced Topics
 
 - **Manus Principles:** See [reference.md](reference.md)

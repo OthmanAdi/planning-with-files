@@ -187,6 +187,8 @@ AFTER 3 FAILURES: Escalate to User
 
 ## Scripts
 
+Kiro keeps its plan in `.kiro/plan/`. The canonical `set-active-plan` listing helper reads named plans under `.planning/` and does not list or switch this Kiro plan.
+
 Helper scripts (under `assets/scripts/`):
 
 - `assets/scripts/bootstrap.sh` — Idempotent workspace bootstrap. Creates `.kiro/plan/` and `.kiro/steering/planning-context.md`.

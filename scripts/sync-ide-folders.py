@@ -58,6 +58,14 @@ SCRIPTS = [
     "scripts/plan-doctor.sh",
 ]
 
+# Standalone plan inventory and selection helpers are also useful in hosts
+# whose adapters do not consume the shared script bundle. Keep this small
+# surface explicit so adding it never replaces their host-specific behavior.
+LISTING_SCRIPTS = [
+    "scripts/set-active-plan.sh",
+    "scripts/set-active-plan.ps1",
+]
+
 # Every hook-bearing SKILL.md dispatches through skill-hook.sh. Its sibling
 # injector needs ledger-summary.sh and resolve-plan-dir.sh; Stop also needs
 # gate-stop.sh and the shared check-complete.sh. Ship the complete dependency
@@ -225,17 +233,27 @@ IDE_MANIFESTS = {
         ".opencode/skills/planning-with-files",
         ref_style="flat",
         include_scripts=False,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS,
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS,
     ),
 
     # Mastracode: templates/references maintained under .mastracode/; only the
-    # hook dispatch targets are synced from canonical.
+    # hook dispatch targets and standalone plan listing helpers are synced.
     ".mastracode": _build_manifest(
         ".mastracode/skills/planning-with-files",
         ref_style="skip",
         template_dirs=[],
         include_scripts=False,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS,
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS,
+    ),
+
+    # Hermes owns its Python lifecycle adapter and its skill bundle. Only
+    # this standalone helper pair is added to its canonical sync inventory.
+    ".hermes": _build_manifest(
+        ".hermes/skills/planning-with-files",
+        ref_style="skip",
+        template_dirs=[],
+        include_scripts=False,
+        extra_scripts=LISTING_SCRIPTS,
     ),
 
     # Kiro: maintained under .kiro/ (skill + wrappers); not synced from canonical scripts/.
@@ -320,6 +338,7 @@ IDE_MANIFESTS["."] = {
     "scripts/inject-plan.py": "scripts/inject-plan.py",
     "scripts/skill-hook.sh": "scripts/skill-hook.sh",
     "templates/loop.md": "templates/loop.md",
+    **{script: script for script in LISTING_SCRIPTS},
 }
 
 

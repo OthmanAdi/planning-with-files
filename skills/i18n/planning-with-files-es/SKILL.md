@@ -237,6 +237,12 @@ Scripts auxiliares de automatización:
 - `scripts/check-complete.sh` — Verifica si todas las fases están completas
 - `scripts/session-catchup.py`: sin opciones no accede al historial; `--metadata` inspecciona solo metadatos locales del mismo proyecto y `--replay` reproduce extractos limitados y enmarcados cuando el usuario lo solicita de forma explícita
 
+### Listar planes guardados
+
+Para encontrar una tarea antes de retomarla, ejecuta `sh "<skill-dir>/scripts/set-active-plan.sh" --list` o, en Windows PowerShell, `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Sustituye `<skill-dir>` por el directorio de instalación de este skill y mantén la raíz del proyecto como directorio de trabajo actual.
+
+Este comando de solo lectura muestra los planes con nombre y el progreso de sus fases en `.planning/` del directorio actual. `[active]` marca el puntero predeterminado compartido; no vincula una sesión a un plan. Las tareas simultáneas siguen necesitando una `PLAN_ID` por host o árboles de trabajo separados.
+
 ## Límites de seguridad
 
 Este skill usa un hook PreToolUse para releer `task_plan.md` antes de cada llamada a herramienta. El contenido escrito en `task_plan.md` se inyecta repetidamente en el contexto, lo que lo convierte en un objetivo de alto valor para inyección indirecta de prompts.

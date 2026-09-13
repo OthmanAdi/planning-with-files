@@ -230,6 +230,12 @@ Automatisierungshilfsskripte:
 - `scripts/check-complete.sh` — Prüfen, ob alle Phasen abgeschlossen sind
 - `scripts/session-catchup.py`: Auf ausdrückliche Anforderung Metadaten oder begrenzte Auszüge desselben Projekts prüfen
 
+### Gespeicherte Pläne auflisten
+
+Um eine Aufgabe vor dem Fortsetzen zu finden, führe `sh "<skill-dir>/scripts/set-active-plan.sh" --list` aus, unter Windows PowerShell `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Ersetze `<skill-dir>` durch das Installationsverzeichnis dieses Skills und bleibe im Projektstamm als aktuellem Arbeitsverzeichnis.
+
+Der Befehl liest nur und zeigt benannte Pläne samt Phasenfortschritt unter `.planning/` im aktuellen Arbeitsverzeichnis. `[active]` kennzeichnet den gemeinsamen Standardzeiger; er bindet keine Sitzung an einen Plan. Parallele Aufgaben benötigen weiterhin eine eigene `PLAN_ID` pro Host oder getrennte Worktrees.
+
 ## Sicherheitsgrenzen
 
 Dieser Skill verwendet einen PreToolUse-Hook, der `task_plan.md` vor jedem Tool-Aufruf neu einliest. In `task_plan.md` geschriebene Inhalte werden wiederholt in den Kontext eingespeist, was sie zu einem lohnenden Ziel für indirekte Prompt-Injektion macht.

@@ -182,32 +182,36 @@ Helper scripts for automation:
 
 - `scripts/init-session.sh` — Initialize planning files. With a name arg, creates an isolated plan under `.planning/YYYY-MM-DD-<slug>/` for parallel task workflows. Without args, writes `task_plan.md` at project root (legacy mode, backward-compatible).
 - `scripts/set-active-plan.sh` — Switch the active plan pointer (`.planning/.active_plan`). Run with a plan ID to switch; run without args to show which plan is current.
-- `scripts/resolve-plan-dir.sh` — Resolve the active plan directory. A set `$PLAN_ID` is a binding: it resolves or resolution stops, never another plan (issue #237). With no `$PLAN_ID`, checks `.planning/.active_plan`, then newest plan dir by mtime, then falls back to project root (legacy). Used internally by hooks.
+- `scripts/resolve-plan-dir.sh` — Resolve the active plan directory. A set `$PLAN_ID` is a binding: it resolves or resolution stops, never another plan (issue #237). With no `$PLAN_ID`, multiple named plans refuse selection. A single named plan may use `.planning/.active_plan` or discovery by mtime; otherwise resolution falls back to the project root (legacy). Used internally by hooks.
 - `scripts/check-complete.sh` — Verify all phases in the active plan are complete.
 - `scripts/session-catchup.py`: Explicit same-project session-record aggregation or bounded replay (`--metadata` / `--replay`); bare invocation does not access host history. OpenCode uses its read-only SQLite store.
 - `scripts/attest-plan.sh` (and `.ps1`) — Lock the current `task_plan.md` content with a SHA-256 attestation (v2.37.0). Use `--show` to print the stored hash, `--clear` to remove the attestation.
 
+### List saved plans
+
+To find a task before resuming it, run `sh "<skill-dir>/scripts/set-active-plan.sh" --list` or, in Windows PowerShell, `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Replace `<skill-dir>` with this installed skill directory and keep your current directory at the project root.
+
+This read-only command lists named plans and phase progress under the current directory's `.planning/`. `[active]` marks the shared default pointer; it does not bind a session. Concurrent tasks still require each host's `PLAN_ID` or separate worktrees.
+
 ### Parallel task workflow
 
-When working on multiple tasks in the same repo simultaneously:
+For concurrent tasks, initialize a named plan and pin each host before starting it. Set `SKILL_DIR` to the installed skill directory in each terminal and keep your current directory at the project root:
 
 ```bash
-# Start task A
-./scripts/init-session.sh "Backend Refactor"
-# → .planning/2026-01-10-backend-refactor/task_plan.md
+# Terminal A: use the exact PLAN_ID printed by initialization.
+sh "$SKILL_DIR/scripts/init-session.sh" "Backend Refactor"
+export PLAN_ID=2026-09-13-backend-refactor
+# Start the first agent from this terminal after setting PLAN_ID.
 
-# Start task B in a second terminal
-./scripts/init-session.sh "Incident Investigation"
-# → .planning/2026-01-10-incident-investigation/task_plan.md
-
-# Switch active plan
-./scripts/set-active-plan.sh 2026-01-10-backend-refactor
-
-# Or pin a terminal to a specific plan
-export PLAN_ID=2026-01-10-backend-refactor
+# Terminal B: use the different PLAN_ID printed for this task.
+sh "$SKILL_DIR/scripts/init-session.sh" "Incident Investigation"
+export PLAN_ID=2026-09-13-incident-investigation
+# Start the second agent from this terminal after setting PLAN_ID.
 ```
 
-Each session reads from its own isolated plan directory.
+The IDs are examples; use the IDs printed by your initialization commands. In PowerShell, set `$env:PLAN_ID` before starting the host. Setting it inside an already-running agent's tool subprocess does not change the parent host's environment. Use separate worktrees if the host cannot be pinned per task.
+
+Use `set-active-plan` for sequential switching of the shared default pointer. Concurrent sessions need their own `PLAN_ID` even when the listing shows `[active]`.
 
 ## Advanced Topics
 

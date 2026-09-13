@@ -233,6 +233,12 @@ if 操作失败:
 - `scripts/check-complete.sh` — 验证所有阶段是否完成
 - `scripts/session-catchup.py`：显式查看同项目会话元数据或有限摘录；无参数运行不会访问会话存储
 
+### 列出已保存的计划
+
+恢复任务前，可运行 `sh "<skill-dir>/scripts/set-active-plan.sh" --list` 查找计划；在 Windows PowerShell 中运行 `& "<skill-dir>/scripts/set-active-plan.ps1" -List`。将 `<skill-dir>` 替换为此技能的安装目录，并将当前工作目录保持在项目根目录。
+
+此命令仅执行读取，列出当前目录下 `.planning/` 中的命名计划及阶段进度。`[active]` 表示共享的默认指针，不会将会话绑定到计划。并行任务仍需为每个宿主设置 `PLAN_ID`，或使用独立的工作树。
+
 ## 安全边界
 
 此技能使用 PreToolUse 钩子在每次工具调用前重新读取 `task_plan.md`。写入 `task_plan.md` 的内容会被反复注入上下文，使其成为间接提示注入的高价值目标。
