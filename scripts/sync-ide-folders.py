@@ -433,7 +433,11 @@ def main(argv=None):
                 # Verify mode: just check for drift
                 src_hash = file_hash(src)
                 dst_hash = file_hash(dst)
-                if src_hash and dst_hash and src_hash != dst_hash:
+                if src_hash is None:
+                    print(f"    MISSING SOURCE: {src}")
+                    stats["missing_src"] += 1
+                    ide_changes += 1
+                elif src_hash and dst_hash and src_hash != dst_hash:
                     print(f"    DRIFT: {dst}")
                     stats["drift"] += 1
                     ide_changes += 1
@@ -454,6 +458,11 @@ def main(argv=None):
     # Summary
     print(f"\n{'-' * 50}")
     if verify:
+        if stats["missing_src"] > 0:
+            print(f"MISSING SOURCES: {stats['missing_src']} sync entry/entries "
+                  "have no canonical source.")
+            print("Restore the missing canonical files, then rerun --verify.")
+            sys.exit(1)
         total_drift = stats["drift"]
         if total_drift > 0:
             print(f"DRIFT DETECTED: {total_drift} file(s) out of sync.")
