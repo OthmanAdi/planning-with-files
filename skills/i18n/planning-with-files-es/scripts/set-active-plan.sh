@@ -223,6 +223,12 @@ phase_status() {
 current_active() {
     if [ -f "${ACTIVE_FILE}" ] && is_within_root "${ACTIVE_FILE}"; then
         _current="$(tr '\r' '\n' < "${ACTIVE_FILE}")"
+        # Windows editors and older PowerShell defaults can leave a UTF-8 BOM.
+        # Treat it as an encoding marker, not part of the shared plan slug.
+        _utf8_bom="$(printf '\357\273\277')"
+        case "${_current}" in
+            "${_utf8_bom}"*) _current="${_current#"${_utf8_bom}"}" ;;
+        esac
         slug_is_valid "${_current}" && printf '%s\n' "${_current}"
     fi
     return 0

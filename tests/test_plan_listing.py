@@ -210,8 +210,10 @@ def test_empty_planning_directory_and_pointer_are_read_only(runtime, tmp_path):
 
 
 @pytest.mark.parametrize("pointer_bytes,active", [
-    (b"alpha\r\n", True), (b"missing\n", False),
-    (b"../alpha\n", False), (b"", False),
+    (b"alpha" + bytes((13, 10)), True),
+    (bytes((239, 187, 191)) + b"alpha" + bytes((10,)), True),
+    (b"missing" + bytes((10,)), False),
+    (b"../alpha" + bytes((10,)), False), (b"", False),
 ])
 def test_listing_preserves_read_only_pointer(runtime, tmp_path, pointer_bytes, active):
     plan_file = plan(tmp_path, "alpha", "### Phase 1: Work [pending]\n")
