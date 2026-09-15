@@ -21,7 +21,7 @@ if [ -f "$PLAN_FILE" ]; then
     # Plan exists: keep catchup zero-history, then read the plan header.
     CATCHUP=""
     if [ -n "$PYTHON" ] && [ -f "$SKILL_DIR/scripts/session-catchup.py" ]; then
-        CATCHUP=$($PYTHON "$SKILL_DIR/scripts/session-catchup.py" --no-history "$(pwd)" 2>/dev/null | head -100)
+        CATCHUP=$($PYTHON -I "$SKILL_DIR/scripts/session-catchup.py" --no-history "$(pwd)" 2>/dev/null | head -100)
     fi
 
     if [ -n "$CATCHUP" ]; then
@@ -43,7 +43,7 @@ if [ -z "$CONTEXT" ]; then
 fi
 
 # Escape context for JSON
-ESCAPED=$(echo "$CONTEXT" | $PYTHON -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" 2>/dev/null || echo "\"\"")
+ESCAPED=$(echo "$CONTEXT" | $PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" 2>/dev/null || echo "\"\"")
 
 printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":$ESCAPED}}"
 exit 0
