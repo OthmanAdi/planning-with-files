@@ -37,10 +37,10 @@ if [ -f "$PLAN_FILE" ]; then
     if [ -n "$PWF_PYTHON" ] && [ -f "$PWF_PYTHON" ] && [ -f "${HOOK_DIR}/context_frame.py" ]; then
         if [ -n "$PLAN_DIR" ]; then ATTEST_FILE="${PLAN_DIR}/.attestation"; else ATTEST_FILE=".plan-attestation"; fi
         if [ -n "$PLAN_DIR" ]; then MODE_FILE="${PLAN_DIR}/.mode"; else MODE_FILE=".mode"; fi
-        PWF_MODE=$("$PWF_PYTHON" -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import context_frame as c; raw=c.read_optional_regular_bytes(Path(sys.argv[2]), max_source_bytes=256); tokens=[] if raw is None else raw.decode("ascii", errors="strict").split(); allowed={"autonomous", "gate", "inject-smart"}; print("unsafe" if any(t not in allowed for t in tokens) else ("gated" if "gate" in tokens else ("autonomous" if "autonomous" in tokens else "legacy")))' "$HOOK_DIR" "$MODE_FILE" 2>/dev/null) || PWF_MODE="unsafe"
+        PWF_MODE=$("$PWF_PYTHON" -I -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import context_frame as c; raw=c.read_optional_regular_bytes(Path(sys.argv[2]), max_source_bytes=256); tokens=[] if raw is None else raw.decode("ascii", errors="strict").split(); allowed={"autonomous", "gate", "inject-smart"}; print("unsafe" if any(t not in allowed for t in tokens) else ("gated" if "gate" in tokens else ("autonomous" if "autonomous" in tokens else "legacy")))' "$HOOK_DIR" "$MODE_FILE" 2>/dev/null) || PWF_MODE="unsafe"
         case "$PWF_MODE" in
             autonomous|gated) echo '{"decision": "allow"}'; exit 0 ;;
-            legacy) "$PWF_PYTHON" "${HOOK_DIR}/context_frame.py" plan "$PLAN_FILE" --head 30 --attestation "$ATTEST_FILE" --mode "$MODE_FILE" >&2 ;;
+            legacy) "$PWF_PYTHON" -I "${HOOK_DIR}/context_frame.py" plan "$PLAN_FILE" --head 30 --attestation "$ATTEST_FILE" --mode "$MODE_FILE" >&2 ;;
             *) : ;;
         esac
     fi

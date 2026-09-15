@@ -12,7 +12,7 @@ SKILL_DIR="$CODEX_ROOT/skills/planning-with-files"
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
 
 if [ -n "$PYTHON_BIN" ] && [ -f "$SKILL_DIR/scripts/session-catchup.py" ]; then
-    "$PYTHON_BIN" "$SKILL_DIR/scripts/session-catchup.py" --no-history "$(pwd)"
+    "$PYTHON_BIN" -I "$SKILL_DIR/scripts/session-catchup.py" --no-history "$(pwd)"
 fi
 
 sh "$SCRIPT_DIR/user-prompt-submit.sh"

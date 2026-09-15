@@ -18,7 +18,7 @@ CURRENT_PHASE=$(grep -m1 "^## Current Phase" "$PLAN_FILE" 2>/dev/null || grep -m
 
 if [ -n "$CURRENT_PHASE" ]; then
     PYTHON=$(command -v python3 || command -v python)
-    ESCAPED=$($PYTHON -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "[planning-with-files] Current: $CURRENT_PHASE" 2>/dev/null || echo "\"\"")
+    ESCAPED=$($PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "[planning-with-files] Current: $CURRENT_PHASE" 2>/dev/null || echo "\"\"")
     printf '%s\n' "{\"additionalContext\":$ESCAPED}"
 else
     echo '{}'
