@@ -172,11 +172,11 @@ Neither failure printed anything. A user running this on Windows would see no ca
 
 Session init, phase-status counting, attestation lock/show/clear, tamper detection logic itself (once the injection guard reaches it), and parallel-plan directory resolution (`$PLAN_ID` env var, `.active_plan` file, newest-mtime fallback) all produced correct output in both Git Bash and PowerShell, including the v3 autonomous-mode chain (nonce-framed delimiters, unattested-plan refusal, per-tool-call injection suppression).
 
-One asymmetry noted but not a bug: `init-session.ps1` has no slug mode (it always writes to the project root), only `init-session.sh` creates `.planning/<slug>/` directories. And there is no `inject-plan.ps1`; the injection and tamper-enforcement hook body is sh-only, so a pure-PowerShell host without Git Bash gets no plan injection or tamper enforcement at all.
+At the time of this v3.2.0 evaluation, `init-session.ps1` had no slug mode (it always wrote to the project root), while `init-session.sh` created `.planning/<slug>/` directories. The canonical/shared English PowerShell initializer now supports the same named-plan and `-PlanDir` isolation flow, including active-plan selection and v3 mode inheritance. There is still no `inject-plan.ps1`; the injection and tamper-enforcement hook body is sh-only, so a pure-PowerShell host without Git Bash gets no plan injection or tamper enforcement at all.
 
 ### Fixed in v3.2.0
 
-Both `session-catchup.py` and `inject-plan.sh` were fixed (see CHANGELOG). Re-running the same sequence after the fix confirmed session-catchup now produces a correct catchup report from real session logs, and plan injection now reaches the tamper-check branch under the same aliased-path conditions that previously went silent. The PowerShell-only injection gap and the `init-session.ps1` slug-mode asymmetry are open follow-ups, not addressed in this cycle.
+Both `session-catchup.py` and `inject-plan.sh` were fixed (see CHANGELOG). Re-running the same sequence after the fix confirmed session-catchup now produces a correct catchup report from real session logs, and plan injection now reaches the tamper-check branch under the same aliased-path conditions that previously went silent. The PowerShell-only injection gap remains an open follow-up; the `init-session.ps1` slug-mode asymmetry described above was corrected later and is covered by Windows PowerShell regression tests.
 
 ### Current session-catchup boundary
 

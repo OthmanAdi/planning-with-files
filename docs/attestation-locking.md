@@ -77,6 +77,13 @@ Use slug-mode for parallel sessions:
 ./scripts/init-session.sh "Incident Investigation"
 ```
 
+On Windows PowerShell, the equivalent named-plan flow is:
+
+```powershell
+.\scripts\init-session.ps1 "Backend Refactor"
+.\scripts\init-session.ps1 "Incident Investigation"
+```
+
 Each slug gets its own isolated files:
 
 ```text
@@ -92,6 +99,11 @@ Pin a terminal to one plan when needed:
 ```bash
 export PLAN_ID=2026-01-10-backend-refactor
 sh scripts/attest-plan.sh
+```
+
+```powershell
+$env:PLAN_ID = "2026-01-10-backend-refactor"
+.\scripts\attest-plan.ps1
 ```
 
 Slug-mode avoids same-file contention by giving each session its own
