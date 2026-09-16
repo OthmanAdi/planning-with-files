@@ -303,13 +303,42 @@ if ($Mode -ne "") {
     Set-Content -LiteralPath (Join-Path $PlanDirPwf ".mode") -Value $MarkerText -Encoding ascii
 
     # (c) auto-attest (attestation default-on in v3 modes, security strand rec 1).
-    $AttestPs1 = Join-Path $ScriptDir "attest-plan.ps1"
+    # attest-plan.ps1 intentionally refuses non-Windows hosts because its secure
+    # no-follow implementation uses Win32 handles. On Unix, use the POSIX
+    # attester instead. Bind slug mode to the plan we just created so an
+    # inherited PLAN_ID cannot redirect attestation to another plan.
     $PlanFilePwf = Join-Path $PlanDirPwf "task_plan.md"
-    if ((Test-Path -LiteralPath $AttestPs1) -and (Test-Path -LiteralPath $PlanFilePwf)) {
+    if (Test-Path -LiteralPath $PlanFilePwf) {
+        $HadPlanId = Test-Path Env:PLAN_ID
+        $PreviousPlanId = $env:PLAN_ID
         try {
-            & $AttestPs1 *> $null
+            if ($UsePlanDir) {
+                $env:PLAN_ID = $PlanId
+            } else {
+                Remove-Item Env:PLAN_ID -ErrorAction SilentlyContinue
+            }
+
+            $IsWindowsHost = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
+            if ($IsWindowsHost) {
+                $AttestPs1 = Join-Path $ScriptDir "attest-plan.ps1"
+                if (Test-Path -LiteralPath $AttestPs1) {
+                    & $AttestPs1 *> $null
+                }
+            } else {
+                $AttestSh = Join-Path $ScriptDir "attest-plan.sh"
+                $Sh = Get-Command sh -ErrorAction SilentlyContinue
+                if ($Sh -and (Test-Path -LiteralPath $AttestSh)) {
+                    & $Sh.Path $AttestSh *> $null
+                }
+            }
         } catch {
             # attestation failure must not abort init; the mode marker still stands.
+        } finally {
+            if ($HadPlanId) {
+                $env:PLAN_ID = $PreviousPlanId
+            } else {
+                Remove-Item Env:PLAN_ID -ErrorAction SilentlyContinue
+            }
         }
     }
 

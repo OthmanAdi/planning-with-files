@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import os
 from datetime import date
 from pathlib import Path
 
@@ -127,6 +128,23 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
                 "autonomous",
                 (plan_dir / ".mode").read_text(encoding="ascii").strip(),
             )
+            self.assertTrue((plan_dir / ".attestation").is_file())
+
+    def test_named_autonomous_plan_attests_new_plan_despite_stale_plan_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            previous = os.environ.get("PLAN_ID")
+            os.environ["PLAN_ID"] = "stale-plan-id"
+            try:
+                result = self.run_init(root, "-Autonomous", "Bound Plan")
+            finally:
+                if previous is None:
+                    os.environ.pop("PLAN_ID", None)
+                else:
+                    os.environ["PLAN_ID"] = previous
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            plan_dir = root / ".planning" / f"{date.today().isoformat()}-bound-plan"
             self.assertTrue((plan_dir / ".attestation").is_file())
 
 
