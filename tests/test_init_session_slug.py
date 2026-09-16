@@ -103,6 +103,71 @@ class InitSessionSlugTests(unittest.TestCase):
             self.assertTrue((root / "task_plan.md").exists())
             self.assertFalse((root / ".planning").exists())
 
+    def test_slug_init_replaces_hardlinked_pointer_without_mutating_peer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            planning.mkdir()
+            sentinel = root / "sentinel.txt"
+            sentinel.write_bytes(b"KEEP-ME")
+            pointer = planning / ".active_plan"
+            os.link(sentinel, pointer)
+
+            result = self.run_init(root, "Hardlink Test")
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(b"KEEP-ME", sentinel.read_bytes())
+            expected = f"{date.today().isoformat()}-hardlink-test"
+            self.assertEqual(expected, pointer.read_text(encoding="utf-8").strip())
+
+    def test_slug_init_rejects_symlink_pointer_without_following_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            planning.mkdir()
+            sentinel = root / "sentinel.txt"
+            sentinel.write_bytes(b"KEEP-ME")
+            pointer = planning / ".active_plan"
+            try:
+                pointer.symlink_to(sentinel)
+            except (OSError, NotImplementedError) as error:
+                self.skipTest(f"file symlinks unavailable: {error}")
+
+            result = self.run_init(root, "Symlink Test")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(b"KEEP-ME", sentinel.read_bytes())
+            self.assertTrue(pointer.is_symlink())
+            self.assertIn("active plan pointer", result.stderr)
+
+    def test_slug_init_rejects_external_planning_directory_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp)
+            planning = root / ".planning"
+            try:
+                planning.symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError) as error:
+                if os.name != "nt":
+                    self.skipTest(f"directory symlinks unavailable: {error}")
+                junction = subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(planning), str(outside)],
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    capture_output=True,
+                    check=False,
+                )
+                if junction.returncode != 0:
+                    self.skipTest(
+                        f"directory links unavailable: {error}; {junction.stdout}{junction.stderr}"
+                    )
+
+            result = self.run_init(root, "Escaped Plan")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual([], list(outside.iterdir()))
+            self.assertIn("outside the project", result.stderr)
 
 if __name__ == "__main__":
     unittest.main()
