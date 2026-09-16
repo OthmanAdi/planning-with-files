@@ -1,5 +1,6 @@
 # Initialize planning files for a new session
 # Usage: .\init-session.ps1 [-Template TYPE] [project-name]
+#        .\init-session.ps1 -PlanDir             # isolated plan with generated slug
 #        .\init-session.ps1 -Autonomous        # v3 autonomous mode (opt-in)
 #        .\init-session.ps1 -Gated             # v3 gated mode (opt-in, implies autonomous)
 # Templates: default, analytics
@@ -12,6 +13,7 @@
 param(
     [string]$ProjectName = "project",
     [string]$Template = "default",
+    [switch]$PlanDir,
     [switch]$Autonomous,
     [switch]$Gated
 )
@@ -38,7 +40,38 @@ function Get-Nonce {
     ($bytes | ForEach-Object { $_.ToString("x2") }) -join ""
 }
 
-Write-Host "Initializing planning files for: $ProjectName (template: $Template)"
+function Get-PlanSlug([string]$Name) {
+    $slug = $Name.ToLowerInvariant() -replace '[^a-z0-9]', '-'
+    $slug = $slug -replace '-{2,}', '-'
+    $slug = $slug.Trim('-')
+    if ($slug.Length -gt 40) {
+        $slug = $slug.Substring(0, 40).TrimEnd('-')
+    }
+    return $slug
+}
+
+function Get-ShortId {
+    return ([Guid]::NewGuid().ToString('N')).Substring(0, 8)
+}
+
+function Get-InheritedMode([string]$CurrentMode) {
+    $RootModePath = Join-Path (Get-Location).Path ".mode"
+    if (-not (Test-Path -LiteralPath $RootModePath)) {
+        return $CurrentMode
+    }
+    if ($CurrentMode -eq "gated") {
+        return $CurrentMode
+    }
+
+    $RootMode = Get-Content -LiteralPath $RootModePath -Raw -ErrorAction SilentlyContinue
+    if ($RootMode -match 'gate') {
+        return "gated"
+    }
+    if ($RootMode -match 'autonomous') {
+        return "autonomous"
+    }
+    return $CurrentMode
+}
 
 # Validate template
 if ($Template -ne "default" -and $Template -ne "analytics") {
@@ -46,11 +79,60 @@ if ($Template -ne "default" -and $Template -ne "analytics") {
     $Template = "default"
 }
 
+# Match init-session.sh: zero args preserve legacy root mode. A positional
+# project name or -PlanDir creates an isolated .planning/<date>-<slug>/ plan.
+$UsePlanDir = $PlanDir -or $PSBoundParameters.ContainsKey("ProjectName")
+if ($UsePlanDir) {
+    $PlanningRoot = Join-Path (Get-Location).Path ".planning"
+    New-Item -ItemType Directory -Path $PlanningRoot -Force | Out-Null
+
+    if ($PSBoundParameters.ContainsKey("ProjectName")) {
+        $Slug = Get-PlanSlug $ProjectName
+    } else {
+        $Slug = ""
+    }
+    if ([string]::IsNullOrEmpty($Slug)) {
+        $Slug = "untitled-$(Get-ShortId)"
+    }
+
+    $BaseId = "$DATE-$Slug"
+    $PlanId = $BaseId
+    $Counter = 2
+    while (Test-Path -LiteralPath (Join-Path $PlanningRoot $PlanId)) {
+        $PlanId = "$BaseId-$Counter"
+        $Counter++
+    }
+    $TargetDir = Join-Path $PlanningRoot $PlanId
+    New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $PlanningRoot ".active_plan") -Value $PlanId -Encoding ascii
+    $Mode = Get-InheritedMode $Mode
+} else {
+    $TargetDir = (Get-Location).Path
+}
+
+$TaskPlanPath = Join-Path $TargetDir "task_plan.md"
+$FindingsPath = Join-Path $TargetDir "findings.md"
+$ProgressPath = Join-Path $TargetDir "progress.md"
+if ($UsePlanDir) {
+    $TaskPlanDisplay = $TaskPlanPath
+    $FindingsDisplay = $FindingsPath
+    $ProgressDisplay = $ProgressPath
+} else {
+    $TaskPlanDisplay = "task_plan.md"
+    $FindingsDisplay = "findings.md"
+    $ProgressDisplay = "progress.md"
+}
+
+Write-Host "Initializing planning files for: $ProjectName (template: $Template)"
+if ($UsePlanDir) {
+    Write-Host "PLAN_ID=$PlanId"
+}
+
 # Create task_plan.md if it doesn't exist
-if (-not (Test-Path "task_plan.md")) {
+if (-not (Test-Path -LiteralPath $TaskPlanPath)) {
     $AnalyticsPlan = Join-Path $TemplateDir "analytics_task_plan.md"
     if ($Template -eq "analytics" -and (Test-Path $AnalyticsPlan)) {
-        Copy-Item $AnalyticsPlan "task_plan.md"
+        Copy-Item -LiteralPath $AnalyticsPlan -Destination $TaskPlanPath
     } else {
         @"
 # Task Plan: [Brief Description]
@@ -99,18 +181,18 @@ Phase 1
 ## Errors Encountered
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath "task_plan.md" -Encoding UTF8
+"@ | Out-File -FilePath $TaskPlanPath -Encoding UTF8
     }
-    Write-Host "Created task_plan.md"
+    Write-Host "Created $TaskPlanDisplay"
 } else {
-    Write-Host "task_plan.md already exists, skipping"
+    Write-Host "$TaskPlanDisplay already exists, skipping"
 }
 
 # Create findings.md if it doesn't exist
-if (-not (Test-Path "findings.md")) {
+if (-not (Test-Path -LiteralPath $FindingsPath)) {
     $AnalyticsFindings = Join-Path $TemplateDir "analytics_findings.md"
     if ($Template -eq "analytics" -and (Test-Path $AnalyticsFindings)) {
-        Copy-Item $AnalyticsFindings "findings.md"
+        Copy-Item -LiteralPath $AnalyticsFindings -Destination $FindingsPath
     } else {
         @"
 # Findings & Decisions
@@ -131,15 +213,15 @@ if (-not (Test-Path "findings.md")) {
 
 ## Resources
 -
-"@ | Out-File -FilePath "findings.md" -Encoding UTF8
+"@ | Out-File -FilePath $FindingsPath -Encoding UTF8
     }
-    Write-Host "Created findings.md"
+    Write-Host "Created $FindingsDisplay"
 } else {
-    Write-Host "findings.md already exists, skipping"
+    Write-Host "$FindingsDisplay already exists, skipping"
 }
 
 # Create progress.md if it doesn't exist
-if (-not (Test-Path "progress.md")) {
+if (-not (Test-Path -LiteralPath $ProgressPath)) {
     if ($Template -eq "analytics") {
         @"
 # Progress Log
@@ -160,7 +242,7 @@ if (-not (Test-Path "progress.md")) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath "progress.md" -Encoding UTF8
+"@ | Out-File -FilePath $ProgressPath -Encoding UTF8
     } else {
         @"
 # Progress Log
@@ -181,23 +263,28 @@ if (-not (Test-Path "progress.md")) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath "progress.md" -Encoding UTF8
+"@ | Out-File -FilePath $ProgressPath -Encoding UTF8
     }
-    Write-Host "Created progress.md"
+    Write-Host "Created $ProgressDisplay"
 } else {
-    Write-Host "progress.md already exists, skipping"
+    Write-Host "$ProgressDisplay already exists, skipping"
 }
 
 Write-Host ""
 Write-Host "Planning files initialized!"
-Write-Host "Files: task_plan.md, findings.md, progress.md"
+if ($UsePlanDir) {
+    Write-Host "Active plan recorded: $(Join-Path $PlanningRoot '.active_plan')"
+    Write-Host "Pin this terminal to the plan for parallel sessions:"
+    Write-Host "  `$env:PLAN_ID='$PlanId'"
+} else {
+    Write-Host "Files: task_plan.md, findings.md, progress.md"
+}
 
 # v3 opt-in mode side effects. No-op when -Autonomous/-Gated were not passed, so
-# the default path stays byte-equivalent to v2.43.0. PS1 init writes in CWD, so
-# dotfiles live in CWD and attest-plan.ps1 falls back to the legacy
-# .plan-attestation at the project root.
+# the default path stays byte-equivalent to v2.43.0. Dotfiles live beside the
+# selected plan; root mode therefore retains the legacy project-root behavior.
 if ($Mode -ne "") {
-    $PlanDirPwf = (Get-Location).Path
+    $PlanDirPwf = $TargetDir
 
     # (a) reset gate block counter, drop stale gate ledger.
     Set-Content -LiteralPath (Join-Path $PlanDirPwf ".stop_blocks") -Value "0" -Encoding ascii
