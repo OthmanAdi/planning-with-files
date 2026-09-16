@@ -382,6 +382,18 @@ if [ "$SLUG_MODE" -eq 1 ]; then
     BASE_ID="${DATE}-${SLUG}"
     PLAN_ID="$BASE_ID"
     PLAN_ROOT="${PWD}/.planning"
+    PLAN_SELECTOR="${SCRIPT_DIR}/set-active-plan.sh"
+    if [ ! -f "${PLAN_SELECTOR}" ]; then
+        echo "Error: set-active-plan.sh is required to create a named plan safely." >&2
+        exit 1
+    fi
+    mkdir -p "${PLAN_ROOT}"
+    # Validate the physical planning root before creating a plan below it. A
+    # symlink or junction that escapes the project must not redirect init writes.
+    if ! sh "${PLAN_SELECTOR}" --list >/dev/null; then
+        echo "Error: planning directory is outside the project or cannot be verified." >&2
+        exit 1
+    fi
     counter=2
     while [ -d "${PLAN_ROOT}/${PLAN_ID}" ]; do
         PLAN_ID="${BASE_ID}-${counter}"
@@ -393,7 +405,13 @@ if [ "$SLUG_MODE" -eq 1 ]; then
     echo "Initializing planning files for: ${PROJECT_NAME:-untitled} (template: $TEMPLATE)"
     echo "PLAN_ID=$PLAN_ID"
     create_files_in "$PLAN_DIR"
-    printf "%s\n" "$PLAN_ID" > "${PLAN_ROOT}/.active_plan"
+    # Reuse the selector's contained, atomic pointer replacement. Direct shell
+    # redirection would truncate a pre-existing hardlink and could overwrite a
+    # different file that shares the same inode.
+    if ! sh "${PLAN_SELECTOR}" "${PLAN_ID}" >/dev/null; then
+        echo "Error: could not safely update ${PLAN_ROOT}/.active_plan." >&2
+        exit 1
+    fi
     inherit_root_mode
     apply_v3_mode "$PLAN_DIR" "${PLAN_DIR}/task_plan.md"
     echo ""
