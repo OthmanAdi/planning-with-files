@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.18.2] - 2026-09-16
+
+### Fixed
+- IDE sync verification now fails when an enabled mapping has no canonical source, reports every affected entry, and continues checking the remaining mappings. Verification remains read-only (#244).
+
+### Security
+- Run Python in isolated mode in the Codex, Gemini, and GitHub Copilot shell adapters. Project-local modules and Python environment overrides can no longer shadow standard-library imports in these calls. Explicit UTF-8 mode preserves Unicode project paths and error messages on Windows (#245).
+
+### Thanks
+- @kuei51307-hub, for missing-source detection and CLI regression coverage in #244.
+- @ShaunLinTW, for isolating adapter Python calls and adding import-shadowing regression coverage in #245.
+
 ## [3.18.1] - 2026-09-15
 
 ### Fixed

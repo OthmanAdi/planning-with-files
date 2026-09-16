@@ -106,8 +106,12 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
-- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243)
+- **[Shaun Lin](https://github.com/ShaunLinTW)**, [PR #245](https://github.com/OthmanAdi/planning-with-files/pull/245)
+  - Isolated Python calls in the Codex, Gemini, and GitHub Copilot shell adapters and added regression coverage for project-local import shadowing.
+
+- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243), [PR #244](https://github.com/OthmanAdi/planning-with-files/pull/244)
   - Fixed active-plan display and listing for UTF-8 BOM-prefixed pointers, with regression coverage across the synchronized shell helpers.
+  - Made IDE sync verification report missing canonical sources, with subprocess tests for read-only verification and unchanged sync behavior.
 
 - **[@Dphoshoba](https://github.com/Dphoshoba)**, [PR #242](https://github.com/OthmanAdi/planning-with-files/pull/242)
   - Proposed and implemented named-plan listing with phase counts and a shared active-pointer marker.
@@ -431,6 +435,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 61+ and growing!
+**Total Contributors:** 62+ and growing!
 
-*Last updated: 2026-09-15*
+*Last updated: 2026-09-16*

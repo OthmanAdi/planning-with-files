@@ -356,6 +356,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.18.2** | Isolates Python in Codex, Gemini, and Copilot shell adapters and makes IDE sync verification fail on missing canonical sources (#244, #245). |
 | **v3.18.1** | Fixes active-plan display and listing for UTF-8 BOM-prefixed pointers from Windows editors and PowerShell workflows across the canonical shell helpers (#243). |
 | **v3.18.0** | Lists saved plans and phase counts with `--list` or PowerShell `-List` (#242). Supports the shipped translated templates, checks project containment, and delivers the canonical helpers across IDE bundles. |
 | **v3.17.2** | Fixes #241: the native Codex manifest disables legacy command migration, removing 13 redundant `source-command-*` skills from plugin installs. The canonical planning skill, Codex hooks, and Claude commands remain available. |
