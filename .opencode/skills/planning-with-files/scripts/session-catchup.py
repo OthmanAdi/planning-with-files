@@ -383,9 +383,6 @@ def get_session_candidates(
     return 'claude', []
 
 
-PLANNING_LIKE_SQL = ('%task_plan.md', '%findings.md', '%progress.md')
-
-
 def get_opencode_db_path() -> Optional[Path]:
     """Resolve OpenCode SQLite path. Same on all OS per xdg-basedir."""
     xdg = os.environ.get('XDG_DATA_HOME')
@@ -504,28 +501,39 @@ def opencode_catchup(project_path: str, mode: str = 'no-history') -> None:
     update_time = None
     update_idx = -1
     for idx, (sid, _) in enumerate(previous_sessions):
-        params = (sid,) + PLANNING_LIKE_SQL
         cur.execute(
             """
-            SELECT time_created FROM part
+            SELECT time_created, data FROM part
             WHERE session_id = ?
               AND json_extract(data, '$.type') = 'tool'
               AND lower(json_extract(data, '$.tool')) IN ('write', 'edit', 'patch')
               AND (
-                json_extract(data, '$.state.input.filePath') LIKE ?
-                OR json_extract(data, '$.state.input.filePath') LIKE ?
-                OR json_extract(data, '$.state.input.filePath') LIKE ?
+                  replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      IN ('task_plan.md', 'findings.md', 'progress.md')
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/task_plan.md'
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/findings.md'
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/progress.md'
               )
-            ORDER BY time_created DESC
-            LIMIT 1
+            ORDER BY time_created DESC, id DESC
             """,
-            params,
+            (sid,),
         )
-        row = cur.fetchone()
-        if row:
-            update_sid = sid
-            update_time = row[0]
-            update_idx = idx
+        for candidate_time, data_str in cur.fetchall():
+            data = json_loads(data_str)
+            if not isinstance(data, dict):
+                continue
+            state = data.get('state')
+            input_ = state.get('input') if isinstance(state, dict) else None
+            file_path = input_.get('filePath') if isinstance(input_, dict) else None
+            if planning_file_from_path(file_path):
+                update_sid = sid
+                update_time = candidate_time
+                update_idx = idx
+                break
+        if update_sid:
             break
 
     if not update_sid:
@@ -613,12 +621,17 @@ def parse_session_messages(session_file: Path) -> List[Dict[str, Any]]:
 
 
 def planning_file_from_path(path_value: Any) -> Optional[str]:
+    """Return a planning filename only when it is the path's exact basename.
+
+    A suffix check treats lookalikes such as ``draft_task_plan.md`` as real
+    planning updates and can anchor catchup at unrelated transcript content.
+    Normalize separators so the same boundary rule works for Unix and Windows
+    session records.
+    """
     if not isinstance(path_value, str):
         return None
-    for pf in PLANNING_FILES:
-        if path_value.endswith(pf):
-            return pf
-    return None
+    basename = path_value.replace(chr(92), '/').rsplit('/', 1)[-1]
+    return basename if basename in PLANNING_FILES else None
 
 
 def planning_file_from_paths(paths: Iterable[Any]) -> Optional[str]:

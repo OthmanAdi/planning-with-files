@@ -145,6 +145,39 @@ class SessionCatchupCodexTests(unittest.TestCase):
         self.assertEqual("codex", runtime)
         self.assertEqual([valid], sessions)
 
+    def test_planning_file_match_requires_exact_basename(self):
+        self.assertEqual(
+            "task_plan.md",
+            self.module.planning_file_from_path("nested/task_plan.md"),
+        )
+        self.assertEqual(
+            "progress.md",
+            self.module.planning_file_from_path("nested" + chr(92) + "progress.md"),
+        )
+        for lookalike in (
+            "draft_task_plan.md",
+            "archive-progress.md",
+            "findings.md.bak",
+            "task_plan.md/child",
+        ):
+            with self.subTest(path=lookalike):
+                self.assertIsNone(self.module.planning_file_from_path(lookalike))
+
+    def test_codex_lookalike_change_is_not_a_planning_update(self):
+        messages = [
+            {
+                "_line_num": 7,
+                "type": "event_msg",
+                "payload": {
+                    "type": "patch_apply_end",
+                    "success": True,
+                    "changes": {"draft_task_plan.md": {"operation": "modified"}},
+                },
+            }
+        ]
+
+        self.assertEqual((-1, None), self.module.find_last_planning_update(messages))
+
     def test_codex_structured_patch_event_marks_planning_update(self):
         messages = [
             {

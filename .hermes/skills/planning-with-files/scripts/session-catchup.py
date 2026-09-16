@@ -27,6 +27,14 @@ from typing import List, Dict, Optional, Tuple
 PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
+def planning_file_from_path(path_value: object) -> Optional[str]:
+    """Return a planning filename only when it is the path's exact basename."""
+    if not isinstance(path_value, str):
+        return None
+    basename = path_value.replace(chr(92), '/').rsplit('/', 1)[-1]
+    return basename if basename in PLANNING_FILES else None
+
+
 def detect_ide() -> str:
     """
     Detect which IDE is being used based on environment and file structure.
@@ -369,11 +377,10 @@ def scan_for_planning_update(session_file: Path) -> Tuple[int, Optional[str]]:
                             continue
 
                         file_path = item.get('input', {}).get('file_path', '')
-                        for pf in PLANNING_FILES:
-                            if file_path.endswith(pf):
-                                last_update_line = line_num
-                                last_update_file = pf
-                                break
+                        planning_file = planning_file_from_path(file_path)
+                        if planning_file:
+                            last_update_line = line_num
+                            last_update_file = planning_file
                 except json.JSONDecodeError:
                     continue
     except Exception:

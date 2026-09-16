@@ -186,6 +186,64 @@ class OpenCodeCatchupTests(unittest.TestCase):
             self.module.opencode_catchup(str(self.project_dir), mode="metadata")
         self.assertEqual("", buf.getvalue().strip())
 
+    def test_lookalike_planning_filename_does_not_anchor_catchup(self) -> None:
+        self.seed.close()
+        self.db_path.unlink()
+        self.seed = OpenCodeSchemaSeed(self.db_path)
+        project_abs = str(self.project_dir.resolve())
+        self.seed.add_session("ses_a", project_abs, 1_000_000)
+        self.seed.add_part(
+            "prt_x",
+            "ses_a",
+            1_000_010,
+            {
+                "type": "tool",
+                "tool": "write",
+                "state": {
+                    "input": {"filePath": f"{project_abs}/draft_task_plan.md"}
+                },
+            },
+        )
+        self.seed.add_session("ses_b", project_abs, 1_000_100)
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            self.module.opencode_catchup(str(self.project_dir), mode="metadata")
+        self.assertEqual("", buf.getvalue().strip())
+
+    def test_windows_separator_planning_path_anchors_catchup(self) -> None:
+        self.seed.close()
+        self.db_path.unlink()
+        self.seed = OpenCodeSchemaSeed(self.db_path)
+        project_abs = str(self.project_dir.resolve())
+        windows_plan = project_abs.replace("/", chr(92)) + chr(92) + "progress.md"
+        self.seed.add_session("ses_a", project_abs, 1_000_000)
+        self.seed.add_part(
+            "prt_x",
+            "ses_a",
+            1_000_010,
+            {
+                "type": "tool",
+                "tool": "edit",
+                "state": {"input": {"filePath": windows_plan}},
+            },
+        )
+        self.seed.add_part(
+            "prt_y",
+            "ses_a",
+            1_000_020,
+            {
+                "type": "tool",
+                "tool": "edit",
+                "state": {"input": {"filePath": "src/after.py"}},
+            },
+        )
+        self.seed.add_session("ses_b", project_abs, 1_000_100)
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            self.module.opencode_catchup(str(self.project_dir), mode="metadata")
+        self.assertIn("SESSION CATCHUP AVAILABLE", buf.getvalue())
     def test_catchup_silent_when_db_missing(self) -> None:
         os.environ["XDG_DATA_HOME"] = str(self.tmp / "nonexistent")
         # Reload module to pick up the new env path.
