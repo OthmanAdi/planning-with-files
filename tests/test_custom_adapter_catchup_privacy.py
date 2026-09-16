@@ -98,6 +98,176 @@ class CustomAdapterNoHistoryTests(unittest.TestCase):
                     module.parse_cli_args(["session-catchup.py", "--unknown"])
 
 
+class CustomAdapterPlanningPathTests(unittest.TestCase):
+    def test_adapters_require_exact_normalized_planning_basenames(self) -> None:
+        backslash = chr(92)
+        accepted = (
+            ("nested/task_plan.md", "task_plan.md"),
+            (f"nested{backslash}progress.md", "progress.md"),
+            ("findings.md", "findings.md"),
+        )
+        rejected = (
+            "draft_task_plan.md",
+            "archive-progress.md",
+            "findings.md.bak",
+            "task_plan.md/child",
+            None,
+        )
+        for name in ADAPTERS:
+            module = load_adapter(name)
+            with self.subTest(adapter=name):
+                for path_value, expected in accepted:
+                    self.assertEqual(
+                        expected,
+                        module.planning_file_from_path(path_value),
+                    )
+                for path_value in rejected:
+                    self.assertIsNone(module.planning_file_from_path(path_value))
+
+    def test_hermes_scanner_ignores_lookalikes_and_accepts_windows_paths(self) -> None:
+        module = load_adapter("hermes")
+        with tempfile.TemporaryDirectory() as tmp:
+            session = Path(tmp) / "session.jsonl"
+            lookalike = {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Write",
+                            "input": {"file_path": "nested/draft_task_plan.md"},
+                        }
+                    ]
+                },
+            }
+            exact = {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Edit",
+                            "input": {"file_path": f"nested{chr(92)}progress.md"},
+                        }
+                    ]
+                },
+            }
+            session.write_text(json.dumps(lookalike) + "\n", encoding="utf-8")
+            self.assertEqual((-1, None), module.scan_for_planning_update(session))
+            session.write_text(
+                json.dumps(lookalike) + "\n" + json.dumps(exact) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                (1, "progress.md"),
+                module.scan_for_planning_update(session),
+            )
+
+    def test_mastracode_scanner_ignores_lookalikes_and_accepts_windows_paths(self) -> None:
+        module = load_adapter("mastracode")
+
+        def message(line: int, path_value: str) -> dict:
+            return {
+                "_line_num": line,
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Edit",
+                            "input": {"file_path": path_value},
+                        }
+                    ]
+                },
+            }
+
+        self.assertEqual(
+            (-1, None),
+            module.find_last_planning_update(
+                [message(0, "draft_task_plan.md")]
+            ),
+        )
+        self.assertEqual(
+            (1, "findings.md"),
+            module.find_last_planning_update(
+                [
+                    message(0, "draft_task_plan.md"),
+                    message(1, f"nested{chr(92)}findings.md"),
+                ]
+            ),
+        )
+
+    def _run_opencode_metadata(self, plan_path: str) -> str:
+        module = load_adapter("opencode")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "task_plan.md").write_text("# Plan\n", encoding="utf-8")
+            data_home = root / "data"
+            db_dir = data_home / "opencode"
+            db_dir.mkdir(parents=True)
+            connection = sqlite3.connect(db_dir / "opencode.db")
+            connection.executescript(
+                """
+                CREATE TABLE session (id TEXT, directory TEXT, time_created INTEGER);
+                CREATE TABLE part (
+                    id TEXT,
+                    session_id TEXT,
+                    time_created INTEGER,
+                    data TEXT
+                );
+                """
+            )
+            project_abs = module.normalize_for_compare(str(project))
+            connection.executemany(
+                "INSERT INTO session VALUES (?, ?, ?)",
+                [("current", project_abs, 200), ("previous", project_abs, 100)],
+            )
+            connection.executemany(
+                "INSERT INTO part VALUES (?, ?, ?, ?)",
+                [
+                    (
+                        "p1",
+                        "previous",
+                        110,
+                        json.dumps(
+                            {
+                                "type": "tool",
+                                "tool": "edit",
+                                "state": {"input": {"filePath": plan_path}},
+                            }
+                        ),
+                    ),
+                    (
+                        "p2",
+                        "previous",
+                        120,
+                        json.dumps({"type": "text", "text": "follow-up"}),
+                    ),
+                ],
+            )
+            connection.commit()
+            connection.close()
+            stdout = io.StringIO()
+            with mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(data_home)}):
+                with contextlib.redirect_stdout(stdout):
+                    module.opencode_catchup(str(project), mode="metadata")
+            return stdout.getvalue()
+
+    def test_opencode_sqlite_ignores_lookalikes(self) -> None:
+        self.assertEqual(
+            "",
+            self._run_opencode_metadata("nested/draft_task_plan.md"),
+        )
+
+    def test_opencode_sqlite_accepts_exact_windows_paths(self) -> None:
+        output = self._run_opencode_metadata(
+            f"nested{chr(92)}task_plan.md"
+        )
+        self.assertIn("SESSION CATCHUP AVAILABLE", output)
+
+
 class CustomAdapterMetadataTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()

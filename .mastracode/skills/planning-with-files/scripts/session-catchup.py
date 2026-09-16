@@ -22,6 +22,14 @@ from typing import List, Dict, Optional, Tuple
 PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
+def planning_file_from_path(path_value: object) -> Optional[str]:
+    """Return a planning filename only when it is the path's exact basename."""
+    if not isinstance(path_value, str):
+        return None
+    basename = path_value.replace(chr(92), '/').rsplit('/', 1)[-1]
+    return basename if basename in PLANNING_FILES else None
+
+
 def normalize_project_path(project_path: str) -> str:
     """Absolute, platform-native spelling of a project path.
 
@@ -306,10 +314,10 @@ def find_last_planning_update(messages: List[Dict]) -> Tuple[int, Optional[str]]
 
                         if tool_name in ('Write', 'Edit'):
                             file_path = tool_input.get('file_path', '')
-                            for pf in PLANNING_FILES:
-                                if file_path.endswith(pf):
-                                    last_update_line = msg['_line_num']
-                                    last_update_file = pf
+                            planning_file = planning_file_from_path(file_path)
+                            if planning_file:
+                                last_update_line = msg['_line_num']
+                                last_update_file = planning_file
 
     return last_update_line, last_update_file
 
