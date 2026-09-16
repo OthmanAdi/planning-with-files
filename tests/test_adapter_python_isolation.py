@@ -13,6 +13,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SH = shutil.which("sh")
+# Use the same Git for Windows installation, not a WSL bash launcher.
+BASH = shutil.which("bash", path=str(Path(SH).parent)) if os.name == "nt" and SH else shutil.which("bash")
 CODEX_HOOKS = REPO / ".codex" / "hooks"
 GEMINI_HOOKS = REPO / ".gemini" / "hooks"
 COPILOT_HOOKS = REPO / ".github" / "hooks" / "scripts"
@@ -35,11 +37,11 @@ CODEX_PYTHON_SHELL_HOOKS = (
 
 
 def shell_python_is_usable() -> bool:
-    if not SH:
+    if not BASH:
         return False
     result = subprocess.run(
         [
-            str(SH),
+            str(BASH),
             "-c",
             'PY=$(command -v python3 || command -v python); [ -n "$PY" ] && "$PY" -I -c "import json"',
         ],
@@ -70,9 +72,11 @@ class AdapterPythonIsolationTests(unittest.TestCase):
 
     def run_hook(self, script: Path, input_data: str = "{}") -> dict:
         result = subprocess.run(
-            [str(SH), str(script)],
+            # Gemini executes Bash-shebang scripts directly; Copilot declares
+            # these hooks in its "bash" field. POSIX sh can be dash on Linux.
+            [str(BASH), str(script)],
             cwd=str(self.cwd),
-            env=dict(os.environ),
+            env=dict(os.environ, PYTHONUTF8="1"),
             input=input_data,
             capture_output=True,
             text=True,
@@ -106,6 +110,17 @@ class AdapterPythonIsolationTests(unittest.TestCase):
                 self.assertFalse(marker.exists(), f"{name} imported project json.py")
                 self.assertIn("additionalContext", payload.get("hookSpecificOutput", {}))
 
+    def test_copilot_unicode_error_survives_isolated_python(self) -> None:
+        message = "中文 العربية русский Grüße"
+        # Escaped JSON becomes real Unicode inside the Python parser. Isolated
+        # mode ignores PYTHONUTF8, so a Windows locale encoding loses this event.
+        payload = self.run_hook(
+            COPILOT_HOOKS / "error-occurred.sh",
+            json.dumps({"error": {"message": message}}, ensure_ascii=True),
+        )
+        context = payload.get("hookSpecificOutput", {}).get("additionalContext", "")
+        self.assertIn(message, context)
+
 
 @unittest.skipUnless(SH, "sh is not available")
 class CodexPythonIsolationTests(unittest.TestCase):
@@ -125,13 +140,14 @@ class CodexPythonIsolationTests(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def run_hook(self, name: str) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
+    def run_hook(self, name: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        hook_cwd = self.cwd if cwd is None else cwd
+        env = dict(os.environ, PYTHONUTF8="1")
         env["PYTHON_BIN"] = sys.executable
-        env["PWF_PLAN_ROOT"] = str(self.cwd)
+        env["PWF_PLAN_ROOT"] = str(hook_cwd)
         return subprocess.run(
             [str(SH), str(CODEX_HOOKS / name)],
-            cwd=str(self.cwd),
+            cwd=str(hook_cwd),
             env=env,
             capture_output=True,
             text=True,
@@ -155,6 +171,17 @@ class CodexPythonIsolationTests(unittest.TestCase):
                 self.assertFalse(marker.exists(), f"{name} imported project hashlib.py")
                 self.assertIn(expected, getattr(result, stream))
 
+    def test_codex_unicode_plan_root_survives_isolated_python(self) -> None:
+        project = self.cwd / "中文"
+        project.mkdir()
+        shutil.copyfile(self.cwd / "task_plan.md", project / "task_plan.md")
+        for name in ("user-prompt-submit.sh", "session-start.sh"):
+            with self.subTest(hook=name):
+                result = self.run_hook(name, cwd=project)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertIn("ACTIVE PLAN", result.stdout)
+                self.assertIn("# Task Plan", result.stdout)
+
 
 class AdapterPythonIsolationContractTests(unittest.TestCase):
     def test_every_adapter_python_invocation_uses_isolated_mode(self) -> None:
@@ -169,7 +196,7 @@ class AdapterPythonIsolationContractTests(unittest.TestCase):
                 self.assertTrue(invocations, f"no Python invocation found in {script}")
                 for line in invocations:
                     self.assertIn(
-                        "$PYTHON -I",
+                        "$PYTHON -I -X utf8 ",
                         line,
                         f"non-isolated Python invocation in {script.relative_to(REPO)}: {line}",
                     )
@@ -188,7 +215,7 @@ class AdapterPythonIsolationContractTests(unittest.TestCase):
                 self.assertTrue(invocations, f"no Python invocation found in {script}")
                 for line in invocations:
                     self.assertIn(
-                        " -I ",
+                        " -I -X utf8 ",
                         line,
                         f"non-isolated Python invocation in {script.relative_to(REPO)}: {line}",
                     )

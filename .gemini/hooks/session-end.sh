@@ -18,7 +18,7 @@ if [ -f "$SCRIPT_DIR/check-complete.sh" ]; then
     RESULT=$(sh "$SCRIPT_DIR/check-complete.sh" 2>/dev/null || true)
     if [ -n "$RESULT" ]; then
         PYTHON=$(command -v python3 || command -v python)
-        ESCAPED=$($PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$RESULT" 2>/dev/null || echo "\"\"")
+        ESCAPED=$($PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$RESULT" 2>/dev/null || echo "\"\"")
         printf '%s\n' "{\"systemMessage\":$ESCAPED}"
         exit 0
     fi

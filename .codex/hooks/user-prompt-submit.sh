@@ -23,7 +23,7 @@ validate_python_candidate() {
     case "$_tp_lower" in
         */microsoft/windowsapps/*) return 1 ;;
     esac
-    "$_tp_candidate" -I -c 'import sys' >/dev/null 2>&1 || return 1
+    "$_tp_candidate" -I -X utf8 -c 'import sys' >/dev/null 2>&1 || return 1
     printf '%s\n' "$_tp_candidate"
 }
 
@@ -61,7 +61,7 @@ if [ -n "${PWF_PLAN_ROOT:-}" ]; then
     esac
     PIN_PYTHON="$(trusted_python explicit 2>/dev/null)" || PIN_PYTHON=""
     [ -n "$PIN_PYTHON" ] || { echo "[planning-with-files] PWF_PLAN_ROOT could not be validated; nothing injected."; exit 0; }
-    PIN_REAL=$("$PIN_PYTHON" -I -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import codex_hook_adapter as a; root=a.effective_plan_root(Path.cwd()); print(root or "")' "$HOOK_DIR" 2>/dev/null) || PIN_REAL=""
+    PIN_REAL=$("$PIN_PYTHON" -I -X utf8 -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import codex_hook_adapter as a; root=a.effective_plan_root(Path.cwd()); print(root or "")' "$HOOK_DIR" 2>/dev/null) || PIN_REAL=""
     [ -n "$PIN_REAL" ] || { echo "[planning-with-files] PWF_PLAN_ROOT must stay within the current workspace; nothing injected."; exit 0; }
     if [ -n "$PIN_REAL" ] && [ -d "$PIN_REAL" ]; then
         PWF_PLAN_ROOT="$PIN_REAL"
@@ -145,7 +145,7 @@ else
     if [ -z "$PWF_PYTHON" ]; then
         PWF_SESSION_ADMISSION="refused"
     else
-        PWF_SESSION_ADMISSION=$("$PWF_PYTHON" -I -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import codex_hook_adapter as a; root=a.effective_plan_root(Path.cwd());
+        PWF_SESSION_ADMISSION=$("$PWF_PYTHON" -I -X utf8 -c 'import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]); import codex_hook_adapter as a; root=a.effective_plan_root(Path.cwd());
 if root is None: print("refused")
 else:
     try: (root / ".planning" / "sessions").lstat(); armed=True
@@ -253,13 +253,13 @@ if [ -f "$PLAN_FILE" ]; then
     if [ -z "$PWF_PYTHON" ] || [ ! -f "${HOOK_DIR}/context_frame.py" ]; then exit 0; fi
     if [ -n "$PLAN_DIR" ]; then ATTEST_FILE="${PLAN_DIR}/.attestation"; else ATTEST_FILE="${PLAN_PREFIX}.plan-attestation"; fi
     if [ -n "$PLAN_DIR" ]; then MODE_FILE="${PLAN_DIR}/.mode"; else MODE_FILE="${PLAN_PREFIX}.mode"; fi
-    PLAN_CONTEXT=$("$PWF_PYTHON" -I "${HOOK_DIR}/context_frame.py" plan "$PLAN_FILE" --head 50 --attestation "$ATTEST_FILE" --mode "$MODE_FILE" 2>&1)
+    PLAN_CONTEXT=$("$PWF_PYTHON" -I -X utf8 "${HOOK_DIR}/context_frame.py" plan "$PLAN_FILE" --head 50 --attestation "$ATTEST_FILE" --mode "$MODE_FILE" 2>&1)
     if [ $? -ne 0 ]; then printf '%s\n' "$PLAN_CONTEXT"; exit 0; fi
     echo "[planning-with-files] ACTIVE PLAN — current state:"
     printf '%s\n' "$PLAN_CONTEXT"
     echo ""
     if [ -f "$PROGRESS_FILE" ]; then
-        PROGRESS_CONTEXT=$("$PWF_PYTHON" -I "${HOOK_DIR}/context_frame.py" progress "$PROGRESS_FILE" --tail 20 2>&1)
+        PROGRESS_CONTEXT=$("$PWF_PYTHON" -I -X utf8 "${HOOK_DIR}/context_frame.py" progress "$PROGRESS_FILE" --tail 20 2>&1)
         [ $? -eq 0 ] && printf '%s\n' "$PROGRESS_CONTEXT"
     fi
     echo ""

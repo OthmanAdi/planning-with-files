@@ -21,7 +21,7 @@ for _p in /usr/bin/python3 /usr/local/bin/python3 /opt/homebrew/bin/python3; do
     [ -x "$_p" ] && { PYTHON="$_p"; break; }
 done
 [ -z "$PYTHON" ] && PYTHON=$(command -v python3 2>/dev/null || command -v python 2>/dev/null)
-ERROR_MSG=$(printf '%s\n' "$INPUT" | $PYTHON -I -c "
+ERROR_MSG=$(printf '%s\n' "$INPUT" | $PYTHON -I -X utf8 -c "
 import sys, json
 try:
     data = json.load(sys.stdin)
@@ -33,7 +33,7 @@ except:
 
 if [ -n "$ERROR_MSG" ]; then
     CONTEXT="[planning-with-files] Error detected: ${ERROR_MSG}. Log this error in task_plan.md under Errors Encountered with the attempt number and resolution."
-    ESCAPED=$(printf '%s\n' "$CONTEXT" | $PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" 2>/dev/null || echo "\"\"")
+    ESCAPED=$(printf '%s\n' "$CONTEXT" | $PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" 2>/dev/null || echo "\"\"")
     printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"ErrorOccurred\",\"additionalContext\":$ESCAPED}}"
 else
     echo '{}'

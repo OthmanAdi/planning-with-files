@@ -19,11 +19,11 @@ fi
 PYTHON=$(command -v python3 || command -v python)
 CATCHUP=""
 if [ -n "$PYTHON" ] && [ -f "$SCRIPT_DIR/session-catchup.py" ]; then
-    CATCHUP=$($PYTHON -I "$SCRIPT_DIR/session-catchup.py" --no-history "$(pwd)" 2>/dev/null || true)
+    CATCHUP=$($PYTHON -I -X utf8 "$SCRIPT_DIR/session-catchup.py" --no-history "$(pwd)" 2>/dev/null || true)
 fi
 
 if [ -n "$CATCHUP" ]; then
-    ESCAPED=$($PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$CATCHUP" 2>/dev/null || echo "\"[planning-with-files] Session recovery data available. Read task_plan.md, progress.md, and findings.md.\"")
+    ESCAPED=$($PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$CATCHUP" 2>/dev/null || echo "\"[planning-with-files] Session recovery data available. Read task_plan.md, progress.md, and findings.md.\"")
     printf '%s\n' "{\"hookSpecificOutput\":{\"additionalContext\":$ESCAPED}}"
 else
     echo '{"hookSpecificOutput":{"additionalContext":"[planning-with-files] Active plan detected. Read task_plan.md, progress.md, and findings.md before proceeding."}}'

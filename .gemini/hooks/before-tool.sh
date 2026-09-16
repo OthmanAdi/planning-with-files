@@ -21,7 +21,7 @@ fi
 
 PYTHON=$(command -v python3 || command -v python)
 if [ -n "$PYTHON" ]; then
-    ESCAPED=$($PYTHON -I -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$CONTEXT" 2>/dev/null)
+    ESCAPED=$($PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$CONTEXT" 2>/dev/null)
     if [ -n "$ESCAPED" ] && [ "$ESCAPED" != "\"\"" ]; then
         printf '%s\n' "{\"systemMessage\":$ESCAPED}"
         exit 0
