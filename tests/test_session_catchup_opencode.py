@@ -204,6 +204,18 @@ class OpenCodeCatchupTests(unittest.TestCase):
                 },
             },
         )
+        # A later part makes the case discriminating: suffix matching would
+        # anchor on the lookalike and report this part as unsynced context.
+        self.seed.add_part(
+            "prt_y",
+            "ses_a",
+            1_000_020,
+            {
+                "type": "tool",
+                "tool": "edit",
+                "state": {"input": {"filePath": "src/after.py"}},
+            },
+        )
         self.seed.add_session("ses_b", project_abs, 1_000_100)
 
         buf = StringIO()

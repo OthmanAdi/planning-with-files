@@ -521,7 +521,10 @@ def opencode_catchup(project_path: str, mode: str = 'no-history') -> None:
             """,
             (sid,),
         )
-        for candidate_time, data_str in cur.fetchall():
+        # Iterate lazily: write parts carry whole file bodies, and fetchall
+        # would materialize every planning write of the session before the
+        # first validated row ends the loop.
+        for candidate_time, data_str in cur:
             data = json_loads(data_str)
             if not isinstance(data, dict):
                 continue
