@@ -49,6 +49,13 @@ or a link fails closed. Each refusal prints one notice naming the cause.
 The bash hooks (`hooks.json`) read only the root `task_plan.md`; a plan created
 with `init-session.sh <name>` is not injected on that route.
 
+Two differences from the Claude Code and Codex routes are deliberate. Session
+isolation (`.planning/sessions/` with `.attached` markers) is not implemented on
+Cursor, which has no session identity to attach; an armed project injects the
+selected plan as if isolation were off. The stop hook answers only in JSON, so
+an explicit `PLAN_ID` or `PWF_PLAN_ROOT` that resolves to no plan lets the agent
+stop silently where `check-complete.sh` would print a notice.
+
 ### How the Stop Hook Works
 
 The stop hook is the most powerful feature. When the agent tries to stop:
