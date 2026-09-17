@@ -69,3 +69,7 @@ media/v3-banner-large.png
 .opencode/package-lock.json
 .opencode/bun.lock
 .opencode/packages/*/dist/
+
+# DeepSeek Harness: the plugin package keeps its own tracked package-lock.json
+# and builds to dist/, which npm publish ships and git never tracks.
+.dsh/packages/*/dist/
