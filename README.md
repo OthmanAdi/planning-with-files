@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Pi and Hermes Agent.
+Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ Persistent file-based planning for AI coding agents and long-running agent tasks
   <a href="#before-and-after-clear"><strong>See it survive /clear</strong></a> ·
   <a href="#quick-install"><strong>Install</strong></a> ·
   <a href="#built-for-long-running-agent-tasks">Long-running tasks</a> ·
-  <a href="#hermes-agent-first-class-support-cli-and-desktop">Hermes Agent</a> ·
+  <a href="#first-class-hosts-native-plugins">First-class hosts</a> ·
   <a href="#multi-agent-runs-orchestrators-workers-and-subagents">Multi-agent</a> ·
   <a href="#benchmark-results">The numbers</a>
 </p>
@@ -92,26 +92,13 @@ The transcript is illustrative; the `===BEGIN PLAN DATA===` block is the skill's
 
 Everything in that table is opt-in per plan and byte-identical to the previous behavior when no mode marker is set. Details: [v3 Long-Running Agent Features](#v3-long-running-agent-features) and [docs/long-running-agent-tasks.md](docs/long-running-agent-tasks.md).
 
-## The Problem
+<a id="the-problem"></a>
+<a id="the-solution-3-file-pattern"></a>
+<a id="the-core-principle"></a>
+<a id="why-this-skill"></a>
+<a id="the-manus-principles"></a>
 
-Claude Code and most AI agents suffer from:
-
-- **Volatile memory**: the TodoWrite list disappears on context reset
-- **Goal drift**: after 50+ tool calls, the original goals get crowded out
-- **Hidden errors**: failures are not tracked, so the same mistakes repeat
-- **Context stuffing**: everything crammed into the window instead of stored
-
-## The Solution: 3-File Pattern
-
-For every complex task, create THREE files:
-
-```
-task_plan.md      → Track phases and progress
-findings.md       → Store research and findings
-progress.md       → Session log and test results
-```
-
-### The Core Principle
+## The 3-file pattern
 
 ```
 Context Window = RAM (volatile, limited)
@@ -120,7 +107,7 @@ Filesystem = Disk (persistent, unlimited)
 → Anything important gets written to disk.
 ```
 
-In your project, exactly this lands on disk and nothing else:
+For every complex task the skill keeps exactly this in your project, and nothing else:
 
 ```
 your-project/
@@ -131,16 +118,10 @@ your-project/
 
 Parallel tasks get isolated directories instead: `.planning/YYYY-MM-DD-slug/` with the same three files, selected via `.active_plan` (v2.36.0+). Plain markdown, gitignored by default, no runtime state anywhere else.
 
-## Why This Skill?
-
-On December 29, 2025, [Meta acquired Manus for $2 billion](https://techcrunch.com/2025/12/29/meta-just-bought-manus-an-ai-startup-everyone-has-been-talking-about/). In just 8 months, Manus went from launch to $100M+ revenue. Their secret? **Context engineering.**
+The pattern is the one Manus described before [Meta acquired it for $2 billion on December 29, 2025](https://techcrunch.com/2025/12/29/meta-just-bought-manus-an-ai-startup-everyone-has-been-talking-about/), eight months and $100M+ of revenue after launch:
 
 > "Markdown is my 'working memory' on disk. Since I process information iteratively and my active context has limits, Markdown files serve as scratch pads for notes, checkpoints for progress, building blocks for final deliverables."
 > — Manus AI
-
-This skill packages that exact pattern for your coding agent.
-
-### The Manus Principles
 
 | Principle | Implementation |
 |-----------|----------------|
@@ -195,6 +176,14 @@ hermes plugins enable planning-with-files
 
 in `opencode.json` or `~/.config/opencode/opencode.json`; OpenCode installs it on the next start.
 
+**DeepSeek Harness (DSH)**, native plugin plus the skill (the `npx skills add` command above lands in `~/.agents/skills/`, which DSH reads):
+
+```bash
+dsh plugin --profile web add dsh-planning-with-files
+```
+
+then restart `dsh web`; the same command works for the `headless`, `sdk` and `acp` profiles.
+
 Under a minute. Safe to re-run. Trigger it by typing `/plan` (plugin) or asking the agent to "plan this task"; the skill also self-triggers on multi-step tasks.
 
 What each route actually ships:
@@ -207,6 +196,7 @@ What each route actually ships:
 | `pi install npm:` | yes | **yes**, Pi commands | **yes**, via the Pi extension |
 | `hermes plugins install` | yes, with the skill bundle | **yes**, `/pwf`, `/pwf-status` | **yes**, plugin hooks incl. the gate |
 | OpenCode `opencode.json` plugin | yes, with the skill | **yes**, `/pwf`, `/pwf-status` (two copied command files) | **yes**, plugin hooks incl. the gate |
+| DeepSeek Harness `dsh plugin add` | yes, with the skill | **yes**, `/pwf`, `/pwf-status` | **yes**, plugin hooks incl. the gate |
 | ClawHub / manual copy | yes | no | frontmatter hooks, see note |
 
 Skill-route installs can end up silently hook-less (project trust not accepted, or frontmatter hooks not registering on project-level installs). The hooks are the differentiating mechanism, so if they matter to you, use the plugin route, then verify with `/plan-doctor`. Full matrix and the two silent killers: [docs/installation.md](docs/installation.md#what-each-install-route-actually-ships).
@@ -282,6 +272,7 @@ Copy-Item -Recurse -Path "$env:USERPROFILE\.claude\plugins\cache\planning-with-f
 | CodeBuddy | [CodeBuddy Setup](docs/codebuddy.md) | [Skills + Hooks](https://www.codebuddy.ai/docs/cli/skills) |
 | FactoryAI Droid | [Factory Setup](docs/factory.md) | [Skills + Hooks](https://docs.factory.ai/cli/configuration/skills) |
 | OpenCode | [OpenCode Setup](docs/opencode.md) | Native plugin `opencode-planning-with-files` (`chat.message` injection, write reminders, compaction flush, `session.idle` gate, `pwf_*` tools, `/pwf` commands) + skill |
+| DeepSeek Harness | [DeepSeek Harness Setup](docs/deepseek-harness.md) | Native plugin `dsh-planning-with-files` (`agent/pre-step` injection, write reminders, post-compaction restore, `agent/turn-stopping` gate, `pwf_*` tools, `/pwf` commands) + skill |
 
 </details>
 
@@ -480,40 +471,36 @@ Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBU
 
 All install methods: [docs/installation.md](docs/installation.md).
 
-## Works across 18+ platforms
+<a id="works-across-18-platforms"></a>
+
+## Works across 19+ platforms
 
 One skill, three integration tiers. Know what your agent gets before you install:
 
 | Tier | Platforms | What you get |
 |------|-----------|--------------|
-| **Enhanced** (hooks + lifecycle automation) | Claude Code, Cursor, GitHub Copilot, Mastra Code, Gemini CLI, Kiro, Codex, Hermes Agent, CodeBuddy, Factory Droid, OpenCode | Plan injection every turn, progress reminders, completion check |
+| **Enhanced** (hooks + lifecycle automation) | Claude Code, Cursor, GitHub Copilot, Mastra Code, Gemini CLI, Kiro, Codex, Hermes Agent, CodeBuddy, Factory Droid, OpenCode, DeepSeek Harness | Plan injection every turn, progress reminders, completion check |
 | **Standard Agent Skills** | Continue, Pi, OpenClaw, Autohand Code, Antigravity, Kilocode, AdaL CLI | SKILL.md discovery via `npx skills add`; the pattern without lifecycle hooks |
 | **Agent Skills standard path** (in-tree since v3.7.0) | Zed, Amp, Warp, Devin, Antigravity, Gemini CLI, Cursor | `.agents/skills/planning-with-files/` discovered from a plain `git clone`, no per-tool setup |
 
 Per-platform setup guides, discovery paths and sandbox runtimes are in the collapsible sections under [Quick Install](#quick-install).
 
-## Hermes Agent: first-class support (CLI and Desktop)
+<a id="hermes-agent-first-class-support-cli-and-desktop"></a>
+
+## First-class hosts: native plugins
 
 > [!TIP]
-> **[Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research runs planning-with-files as a native plugin: tools, `/pwf` slash commands, per-turn plan injection, progress reminders and the completion gate, in the Hermes CLI, the gateway sessions, and Hermes Desktop.** Verified against Hermes v0.19.1 source and a live install, on Windows included.
+> **On these hosts planning-with-files runs as a native plugin: per-turn plan injection, progress reminders, the completion gate, `/pwf` commands and model-callable tools, with no shell hooks to register.** Every other platform gets the skill through the Agent Skills standard and, where the host supports it, the frontmatter or config-file hooks listed in the tables above.
 
-```bash
-hermes skills install OthmanAdi/planning-with-files/.hermes/skills/planning-with-files --yes
-hermes plugins install OthmanAdi/planning-with-files/.hermes/plugins/planning-with-files
-hermes plugins enable planning-with-files
-```
+| Host | Install | What runs natively | Guide |
+|---|---|---|---|
+| Claude Code | `/plugin install planning-with-files@planning-with-files` | 6 lifecycle hooks, 13 slash commands, `/plan-doctor` | [docs/installation.md](docs/installation.md) |
+| Pi Coding Agent | `pi install npm:planning-with-files` | 8 Pi events via the bundled extension, `/plan-execute` approval gate, status bar | [docs/pi-agent.md](docs/pi-agent.md) |
+| Hermes Agent (CLI and Desktop) | `hermes plugins install OthmanAdi/planning-with-files/.hermes/plugins/planning-with-files` then `hermes plugins enable planning-with-files` | `pre_llm_call` injection, `post_tool_call` reminders, `pre_verify` gate, `/pwf`, tools | [docs/hermes.md](docs/hermes.md) |
+| OpenCode | `"plugin": ["opencode-planning-with-files"]` in `opencode.json` | `chat.message` injection, write reminders, compaction flush, `session.idle` gate, `/pwf`, `pwf_*` tools | [docs/opencode.md](docs/opencode.md) |
+| DeepSeek Harness | `dsh plugin --profile web add dsh-planning-with-files` | `agent/pre-step` injection, write reminders, post-compaction restore, `agent/turn-stopping` gate, `/pwf`, `pwf_*` tools | [docs/deepseek-harness.md](docs/deepseek-harness.md) |
 
-| Hermes surface | What the plugin does |
-|---|---|
-| `/pwf [--autonomous\|--gated] [plan name]` | Creates the three files, in the project root or in an isolated `.planning/YYYY-MM-DD-<slug>/` plan; the v3 flags write the mode marker and attest the plan |
-| `/pwf-status`, `/plan-status` | Active plan id, mode, attestation state, current phase, phase counts, logged errors |
-| `planning_with_files_init`, `_status`, `_check_complete` | The same operations as model-callable tools |
-| `pre_llm_call` | Injects the attested plan head and the normalized progress tail at the start of every turn; resolves `PLAN_ID`, `.planning/.active_plan`, the newest slug plan, then the legacy root file |
-| `post_tool_call` | Queues the progress reminder after `write_file` and `patch` |
-| `pre_verify` | The completion gate in gated mode: holds the turn while an `in_progress` phase remains, bounded by Hermes' `agent.max_verify_nudges` |
-| Hermes Desktop | Same plugin, installed once per user; every Desktop session pins its own project folder and gets its own plan |
-
-Hermes' own `skills-guard` scanner rates the Hermes bundle `SAFE`; the canonical skill path is rejected there because its Claude Code hook frontmatter trips the scanner, so the commands above are the supported route. The `/plan` command is Hermes' own bundled skill and is never shadowed. Full guide, Windows notes, the shell-hook route and the `hermes import-agent claude-code` migration: [docs/hermes.md](docs/hermes.md).
+Hermes needs its skill bundle from `.hermes/skills/planning-with-files` (`hermes skills install OthmanAdi/planning-with-files/.hermes/skills/planning-with-files --yes`); OpenCode and DeepSeek Harness read the skill that `npx skills add ... -g` places in `~/.agents/skills/`. Each host's own `/plan` command is never shadowed.
 
 ## Multi-agent runs: orchestrators, workers and subagents
 
@@ -545,7 +532,7 @@ The agent stops at the first rung that applies:
 6. Every phase complete?                  → only then does the Stop gate release (gated mode)
 ```
 
-Hooks make steps 2 to 6 mechanical rather than optional: the Claude Code plugin runs 6 lifecycle hooks, its activation-scoped standalone skill runs 5, Codex runs 7, Pi runs 8, the Hermes plugin runs 3 (`pre_llm_call`, `post_tool_call`, `pre_verify`), and the OpenCode plugin runs 4 (`chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle`). Together they re-inject the plan each turn, remind after writes, and check completion before stopping.
+Hooks make steps 2 to 6 mechanical rather than optional: the Claude Code plugin runs 6 lifecycle hooks, its activation-scoped standalone skill runs 5, Codex runs 7, Pi runs 8, the Hermes plugin runs 3 (`pre_llm_call`, `post_tool_call`, `pre_verify`), the OpenCode plugin runs 4 (`chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle`), and the DeepSeek Harness plugin runs 4 (`agent/pre-step`, `agent/session-start`, `tools/post-execute`, `agent/turn-stopping`). Together they re-inject the plan each turn, remind after writes, and check completion before stopping.
 
 ```mermaid
 flowchart LR
@@ -589,6 +576,9 @@ Slash commands ship with the Claude Code plugin route (see the install matrix ab
 
 Typing `/plan` prefix-matches every `plan*` command in autocomplete; `/planning-with-files:status` autocompletes as `/status` (the older `/plan:status` label predates the rename).
 
+<details>
+<summary><strong>Pi, OpenCode, Hermes and DeepSeek Harness commands, and command names per host</strong></summary>
+
 ### Pi extension commands
 
 Install the Pi extension with `pi install npm:planning-with-files`; it registers these commands, typed with no `/planning-with-files:` prefix.
@@ -623,6 +613,15 @@ The Hermes plugin registers these in-session commands (CLI, gateway and Desktop)
 
 `/plan` on Hermes is Hermes' own bundled software-development plan skill and is left untouched.
 
+### DeepSeek Harness plugin commands
+
+The DSH plugin registers these in-session commands, typed with no prefix. `/plan` is DSH's own plan mode and is left untouched.
+
+| Command | What it does | Version |
+|---------|--------------|---------|
+| `/pwf [--autonomous\|--gated] [--template analytics] [plan name]` | Create the planning files; a name creates and activates `.planning/YYYY-MM-DD-<slug>/`; the v3 flags write the mode marker and attest the plan | v3.20.0+ |
+| `/pwf-status` | Active plan id, mode, attestation, current phase, phase counts | v3.20.0+ |
+
 ### Command names vs skill names
 
 | Platform | You type | Examples |
@@ -631,9 +630,12 @@ The Hermes plugin registers these in-session commands (CLI, gateway and Desktop)
 | Pi | bare form, no prefix | `/plan-status`, `/plan-execute`, `/plan-goal` |
 | Hermes Agent | bare form, no prefix | `/pwf`, `/pwf-status`, `/plan-status` |
 | OpenCode | bare form, no prefix | `/pwf`, `/pwf-status` |
+| DeepSeek Harness | bare form, no prefix | `/pwf`, `/pwf-status` |
 | Continue.dev | `/planning-with-files` | |
 
 On the plugin route the model-invocable SKILL is `planning-with-files:planning-with-files`; the doubled form is the skill id, not a command you type. The five language variants live under `skills/i18n/`, which the plugin scan does not reach, so there is no `planning-with-files:planning-with-files-de` to invoke by name — reach a translation through its `/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh` or `/plan-zht` command, or install it as its own skill with `npx skills add OthmanAdi/planning-with-files --skill planning-with-files-de -g`, which registers it under its own name. There is no `/pwf-de` and no `/planning-with-files:planning-with-files-goal`; `/pwf` is just a short alias for `/plan`.
+
+</details>
 
 ## v3 Long-Running Agent Features
 
@@ -773,6 +775,8 @@ planning-with-files/
 ├── .codex/ .cursor/ .github/ .gemini/ .kiro/ .continue/ .pi/
 ├── .codebuddy/ .factory/ .hermes/ .mastracode/ .opencode/   # per-IDE mirrors, parity-locked
 ├── .hermes/plugins/planning-with-files/   # native Hermes Agent plugin (tools, /pwf, hooks, gate)
+├── .opencode/packages/opencode-planning-with-files/   # native OpenCode plugin (npm)
+├── .dsh/packages/dsh-planning-with-files/             # native DeepSeek Harness plugin (npm)
 ├── docs/                         # 25+ guides incl. per-platform setup, evals.md, benchmark/
 ├── tests/                        # cross-platform pytest suite, green on Windows, Linux, and macOS CI
 ├── CHANGELOG.md · MIGRATION.md · SECURITY.md · CONTRIBUTING.md · CONTRIBUTORS.md
@@ -793,6 +797,8 @@ Every release maintains 19 tracked parity targets plus the gitignored ClawHub up
 | [docs/quickstart.md](docs/quickstart.md) | Your first planning session in 5 steps |
 | [docs/workflow.md](docs/workflow.md) | Day-to-day usage, plan lifecycle, topic handoffs |
 | [docs/hermes.md](docs/hermes.md) | Hermes Agent CLI and Desktop: install, `/pwf`, the `pre_verify` gate, Windows, migration from Claude Code |
+| [docs/opencode.md](docs/opencode.md) | OpenCode: the native plugin, `/pwf`, the `session.idle` gate, `pwf_*` tools |
+| [docs/deepseek-harness.md](docs/deepseek-harness.md) | DeepSeek Harness: the native plugin, profiles, `/pwf`, the turn-boundary gate, what DSH does not expose |
 | [docs/evals.md](docs/evals.md) | Full benchmark methodology, raw numbers, disclosed limits |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | When hooks are quiet, plus `/plan-doctor` |
 | [docs/claude-code-lost-context-after-compaction.md](docs/claude-code-lost-context-after-compaction.md) | Recovering and preventing context loss from compaction |
@@ -801,7 +807,7 @@ Every release maintains 19 tracked parity targets plus the gitignored ClawHub up
 | [MIGRATION.md](MIGRATION.md) | v2 to v3 migration and host capability tiers |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting and hardening history |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute; authorship is preserved on merge |
-| Per-platform guides | 18+ setup docs in [docs/](docs/), linked from the [platform tables](#works-across-18-platforms) |
+| Per-platform guides | 19+ setup docs in [docs/](docs/), linked from the [platform tables](#works-across-19-platforms) |
 
 ## Contributing
 
