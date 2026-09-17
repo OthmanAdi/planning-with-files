@@ -9,17 +9,24 @@ if ($env:PLANNING_DISABLED -eq '1') {
     exit 0
 }
 
-. (Join-Path $PSScriptRoot "resolve-plan-context.ps1")
-$PlanContext = Resolve-CursorPlanContext
-$PlanFile = if ($PlanContext.Directory) {
-    Join-Path $PlanContext.Directory "task_plan.md"
-} else {
-    $null
-}
+# The protocol response is printed from finally: a missing helper or a
+# profile that sets $ErrorActionPreference = 'Stop' must not end the hook
+# without it. This hook never blocks a tool.
+try {
+    . (Join-Path $PSScriptRoot "resolve-plan-context.ps1")
+    $PlanContext = Resolve-CursorPlanContext
+    $PlanFile = if ($PlanContext.Directory) {
+        Join-Path $PlanContext.Directory "task_plan.md"
+    } else {
+        $null
+    }
 
-if ($PlanFile -and (Test-Path -LiteralPath $PlanFile -PathType Leaf)) {
-    Get-Content -LiteralPath $PlanFile -TotalCount 30 | Write-Host
+    if ($PlanFile -and (Test-Path -LiteralPath $PlanFile -PathType Leaf)) {
+        Get-Content -LiteralPath $PlanFile -TotalCount 30 | Write-Host
+    }
+} catch {
+    # A planning error is never a reason to hold a tool.
+} finally {
+    Write-Output '{"decision": "allow"}'
 }
-
-Write-Output '{"decision": "allow"}'
 exit 0

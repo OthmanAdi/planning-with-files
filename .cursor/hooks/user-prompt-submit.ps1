@@ -10,10 +10,21 @@ if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
 $PlanContext = Resolve-CursorPlanContext
 
 if (-not $PlanContext.Directory) {
-    if ($PlanContext.Status -eq 'ambiguous') {
-        Write-Output "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
-    } else {
-        Write-Output "[planning-with-files] The selected plan could not be resolved safely. Check PLAN_ID, PWF_PLAN_ROOT, and .active_plan; nothing injected."
+    # One notice per failure, worded like the route that owns the rule: the
+    # sh twin for a broken pin, inject-plan.sh for a binding PLAN_ID.
+    switch ($PlanContext.Status) {
+        'ambiguous' {
+            Write-Output "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
+        }
+        'invalid-pin' {
+            Write-Output "[planning-with-files] PWF_PLAN_ROOT is not a directory: $($PlanContext.Detail) — nothing injected."
+        }
+        'invalid-plan-id' {
+            Write-Output "[planning-with-files] PLAN_ID does not name a plan directory under .planning: $($PlanContext.Detail) — nothing injected. Fix or unset the pin; a broken pin fails closed rather than selecting another plan."
+        }
+        default {
+            Write-Output "[planning-with-files] The selected plan could not be resolved safely ($($PlanContext.Detail)). Check PLAN_ID, PWF_PLAN_ROOT, and .active_plan; nothing injected."
+        }
     }
     exit 0
 }
