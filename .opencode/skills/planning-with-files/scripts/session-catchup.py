@@ -403,7 +403,8 @@ def _format_opencode_part(data: Dict[str, Any], session_id: str) -> Optional[Dic
     if ptype == 'tool':
         tool = (data.get('tool') or '').lower()
         state = data.get('state') or {}
-        input_ = state.get('input') or {}
+        input_ = state.get('input') if isinstance(state, dict) else None
+        input_ = input_ if isinstance(input_, dict) else {}
         if tool in ('write', 'edit'):
             fp = input_.get('filePath', '')
             return {'session': short, 'summary': f"Tool {tool}: {fp}"}
@@ -505,6 +506,7 @@ def opencode_catchup(project_path: str, mode: str = 'no-history') -> None:
             """
             SELECT time_created, data FROM part
             WHERE session_id = ?
+              AND json_valid(data)
               AND json_extract(data, '$.type') = 'tool'
               AND lower(json_extract(data, '$.tool')) IN ('write', 'edit', 'patch')
               AND (

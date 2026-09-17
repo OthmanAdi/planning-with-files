@@ -88,6 +88,13 @@ class OpenCodeSchemaSeed:
         )
         self.conn.commit()
 
+    def add_raw_part(self, part_id: str, sid: str, time_created: int, data: str) -> None:
+        self.conn.execute(
+            "INSERT INTO part (id, session_id, time_created, data) VALUES (?, ?, ?, ?)",
+            (part_id, sid, time_created, data),
+        )
+        self.conn.commit()
+
     def close(self) -> None:
         self.conn.close()
 
@@ -153,6 +160,41 @@ class OpenCodeCatchupTests(unittest.TestCase):
         self.assertIn(self.module.safe_session_label("ses_old"), output)
         self.assertNotIn("ses_old", output)
         self.assertIn("Tool edit", output, "follow-up edit after plan write should appear in catchup")
+
+    def test_malformed_tool_shapes_are_skipped_without_hiding_healthy_parts(self) -> None:
+        self.seed.add_part(
+            "prt_bad_state",
+            "ses_old",
+            1_000_012,
+            {"type": "tool", "tool": "edit", "state": "broken"},
+        )
+        self.seed.add_part(
+            "prt_bad_input",
+            "ses_old",
+            1_000_015,
+            {
+                "type": "tool",
+                "tool": "edit",
+                "state": {"input": "broken"},
+            },
+        )
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            self.module.opencode_catchup(str(self.project_dir), mode="replay")
+
+        self.assertIn("SESSION CATCHUP DETECTED (IDE: opencode)", buf.getvalue())
+        self.assertIn("Tool edit", buf.getvalue())
+
+    def test_invalid_json_part_is_skipped_without_hiding_healthy_parts(self) -> None:
+        self.seed.add_raw_part("prt_bad_json", "ses_old", 1_000_005, "not json")
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            self.module.opencode_catchup(str(self.project_dir), mode="replay")
+
+        self.assertIn("SESSION CATCHUP DETECTED (IDE: opencode)", buf.getvalue())
+        self.assertIn("Tool edit", buf.getvalue())
 
     def test_metadata_mode_excludes_session_tool_and_path_bytes(self) -> None:
         buf = StringIO()
