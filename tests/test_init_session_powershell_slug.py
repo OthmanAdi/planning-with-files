@@ -147,6 +147,103 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             plan_dir = root / ".planning" / f"{date.today().isoformat()}-bound-plan"
             self.assertTrue((plan_dir / ".attestation").is_file())
 
+    # Pointer safety mirrors tests/test_init_session_slug.py for init-session.sh:
+    # the shared pointer is replaced through set-active-plan.ps1, never written
+    # in place, and the planning root is verified before anything is created.
+    def test_slug_init_replaces_hardlinked_pointer_without_mutating_peer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            planning.mkdir()
+            sentinel = root / "sentinel.txt"
+            sentinel.write_bytes(b"KEEP-ME")
+            pointer = planning / ".active_plan"
+            os.link(sentinel, pointer)
+
+            result = self.run_init(root, "Hardlink Test")
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(b"KEEP-ME", sentinel.read_bytes())
+            expected = f"{date.today().isoformat()}-hardlink-test"
+            self.assertEqual(expected, pointer.read_text(encoding="utf-8-sig").strip())
+
+    def test_slug_init_rejects_symlink_pointer_without_following_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            planning.mkdir()
+            sentinel = root / "sentinel.txt"
+            sentinel.write_bytes(b"KEEP-ME")
+            pointer = planning / ".active_plan"
+            try:
+                pointer.symlink_to(sentinel)
+            except (OSError, NotImplementedError) as error:
+                self.skipTest(f"file symlinks unavailable: {error}")
+
+            result = self.run_init(root, "Symlink Test")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(b"KEEP-ME", sentinel.read_bytes())
+            self.assertTrue(pointer.is_symlink())
+            self.assertIn("active plan pointer", result.stderr)
+
+    def test_slug_init_rejects_external_planning_directory_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp)
+            planning = root / ".planning"
+            try:
+                planning.symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError) as error:
+                junction = subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(planning), str(outside)],
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    capture_output=True,
+                    check=False,
+                )
+                if junction.returncode != 0:
+                    self.skipTest(
+                        f"directory links unavailable: {error}; {junction.stdout}{junction.stderr}"
+                    )
+
+            result = self.run_init(root, "Escaped Plan")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual([], list(outside.iterdir()))
+            self.assertIn("outside the project", result.stderr)
+
+    def test_slug_init_requires_selector_beside_initializer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scripts = root / "skill" / "scripts"
+            scripts.mkdir(parents=True)
+            shutil.copy2(INIT_PS1, scripts / "init-session.ps1")
+            project = root / "project"
+            project.mkdir()
+
+            result = subprocess.run(
+                [
+                    POWERSHELL,
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(scripts / "init-session.ps1"),
+                    "Lonely Plan",
+                ],
+                cwd=str(project),
+                text=True,
+                encoding="utf-8-sig",
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("set-active-plan.ps1", result.stderr)
+            self.assertFalse((project / ".planning").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

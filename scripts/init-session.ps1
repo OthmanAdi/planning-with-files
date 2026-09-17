@@ -84,7 +84,28 @@ if ($Template -ne "default" -and $Template -ne "analytics") {
 $UsePlanDir = $PlanDir -or $PSBoundParameters.ContainsKey("ProjectName")
 if ($UsePlanDir) {
     $PlanningRoot = Join-Path (Get-Location).Path ".planning"
+    # Match init-session.sh: set-active-plan.ps1 owns every write to the
+    # shared pointer, so a named plan cannot be created without it.
+    $PlanSelector = Join-Path $ScriptDir "set-active-plan.ps1"
+    if (-not (Test-Path -LiteralPath $PlanSelector -PathType Leaf)) {
+        Write-Error "Error: set-active-plan.ps1 is required to create a named plan safely."
+        exit 1
+    }
     New-Item -ItemType Directory -Path $PlanningRoot -Force | Out-Null
+    # Validate the physical planning root before creating a plan below it. A
+    # symlink or junction that escapes the project must not redirect init
+    # writes. A script that returns without exit leaves $LASTEXITCODE alone,
+    # so reset it first and treat a thrown error as a failure too.
+    $global:LASTEXITCODE = 0
+    try {
+        & $PlanSelector -List *> $null
+    } catch {
+        $global:LASTEXITCODE = 1
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Error: planning directory is outside the project or cannot be verified."
+        exit 1
+    }
 
     if ($PSBoundParameters.ContainsKey("ProjectName")) {
         $Slug = Get-PlanSlug $ProjectName
@@ -104,7 +125,19 @@ if ($UsePlanDir) {
     }
     $TargetDir = Join-Path $PlanningRoot $PlanId
     New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $PlanningRoot ".active_plan") -Value $PlanId -Encoding ascii
+    # Reuse the selector's contained, atomic pointer replacement. Set-Content
+    # would follow a reparse point and truncate a hardlinked pointer in place,
+    # overwriting whichever file shares that inode.
+    $global:LASTEXITCODE = 0
+    try {
+        & $PlanSelector $PlanId *> $null
+    } catch {
+        $global:LASTEXITCODE = 1
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Error: could not safely update the active plan pointer at $(Join-Path $PlanningRoot '.active_plan')."
+        exit 1
+    }
     $Mode = Get-InheritedMode $Mode
 } else {
     $TargetDir = (Get-Location).Path
