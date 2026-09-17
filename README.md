@@ -356,6 +356,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.19.0** | Adds PowerShell named-plan slug mode (#247), anchors session catchup only on exact planning filenames across every shipped copy (#248), and replaces active-plan pointers through the selectors with planning-root containment in both initializers (#249). |
 | **v3.18.3** | Silences completed-plan notices in shared Stop gates and Codex while preserving explicit reports and gate safeguards. |
 | **v3.18.2** | Isolates Python in Codex, Gemini, and Copilot shell adapters and makes IDE sync verification fail on missing canonical sources (#244, #245). |
 | **v3.18.1** | Fixes active-plan display and listing for UTF-8 BOM-prefixed pointers from Windows editors and PowerShell workflows across the canonical shell helpers (#243). |

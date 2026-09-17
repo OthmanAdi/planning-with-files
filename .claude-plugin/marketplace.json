@@ -10,7 +10,7 @@
       "name": "planning-with-files",
       "source": "./",
       "description": "Persistent project planning files with lifecycle hooks that inject selected plan context. Automatic recovery uses project files only. Explicit catchup modes may read same-project local session records to emit aggregate counts or bounded nonce-framed excerpts. Optional gated mode can request continuation on capable hosts and never runs commands declared in Markdown. No network upload path. Installs across 60+ agents.",
-      "version": "3.18.3"
+      "version": "3.19.0"
     }
   ]
 }

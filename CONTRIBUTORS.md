@@ -106,12 +106,15 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
-- **[Shaun Lin](https://github.com/ShaunLinTW)**, [PR #245](https://github.com/OthmanAdi/planning-with-files/pull/245)
+- **[Shaun Lin](https://github.com/ShaunLinTW)**, [PR #245](https://github.com/OthmanAdi/planning-with-files/pull/245), [PR #247](https://github.com/OthmanAdi/planning-with-files/pull/247)
   - Isolated Python calls in the Codex, Gemini, and GitHub Copilot shell adapters and added regression coverage for project-local import shadowing.
+  - Added named-plan slug mode to the PowerShell initializer with root-mode policy inheritance, host-aware attestation, and Windows PowerShell regression coverage.
 
-- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243), [PR #244](https://github.com/OthmanAdi/planning-with-files/pull/244)
+- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243), [PR #244](https://github.com/OthmanAdi/planning-with-files/pull/244), [PR #248](https://github.com/OthmanAdi/planning-with-files/pull/248), [PR #249](https://github.com/OthmanAdi/planning-with-files/pull/249)
   - Fixed active-plan display and listing for UTF-8 BOM-prefixed pointers, with regression coverage across the synchronized shell helpers.
   - Made IDE sync verification report missing canonical sources, with subprocess tests for read-only verification and unchanged sync behavior.
+  - Bounded session catchup to exact planning filenames across the canonical scanners and the Hermes, MastraCode, and OpenCode adapters, with lookalike regression coverage.
+  - Replaced the shell initializer's active-pointer write with the selector's contained atomic update and added hardlink, symlink, and junction regressions.
 
 - **[@Dphoshoba](https://github.com/Dphoshoba)**, [PR #242](https://github.com/OthmanAdi/planning-with-files/pull/242)
   - Proposed and implemented named-plan listing with phase counts and a shared active-pointer marker.
@@ -437,4 +440,4 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 **Total Contributors:** 62+ and growing!
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-09-17*

@@ -1,6 +1,6 @@
 {
   "name": "planning-with-files",
-  "version": "3.18.3",
+  "version": "3.19.0",
   "description": "Persistent project planning with selected context injection. Automatic recovery uses project files only; explicit catchup modes read same-project local session records for aggregate counts or bounded replay. The host-aware gate never runs Markdown-declared commands. No network upload path. Ships the skill plus a Pi Coding Agent extension.",
   "keywords": [
     "pi-package",

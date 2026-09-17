@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.19.0] - 2026-09-17
+
+### Added
+- Named-plan slug mode for `init-session.ps1`. A positional project name or `-PlanDir` creates an isolated `.planning/<date>-<slug>/` plan with collision suffixes, records the shared `.active_plan` pointer, inherits the root `.mode` policy floor, and keeps `-Template`, `-Autonomous` and `-Gated` working. Zero-argument root mode is unchanged. Attestation runs through `attest-plan.ps1` on Windows and `attest-plan.sh` elsewhere, bound to the plan that was just created; root mode ignores an inherited `PLAN_ID` while attesting (#247). Plan ids stay ASCII for names with letters that .NET folds to ASCII, plan files are written with literal paths so a project path containing `[` or `]` works under pwsh, root `.mode` inheritance is case-sensitive like the shell twin, and an empty name stays in root mode.
+- `set-active-plan.sh --verify-root` and `set-active-plan.ps1 -VerifyRoot` check that the planning root is inside the project and that the shared pointer is a replaceable regular file, without listing or selecting. Both initializers run it before creating a named plan.
+
+### Fixed
+- Session catchup anchors only on exact planning filenames. A write to a lookalike such as `draft_task_plan.md` or `archive-progress.md` no longer counts as a planning update that moves the recovery window forward and hides later context. The OpenCode SQLite lookup is bounded to exact planning paths, revalidated after decoding, and iterated lazily so large write parts are not materialized. OpenCode path matching is now case-sensitive like the JSONL scanners. Applies to the canonical copies and to the Hermes, MastraCode and OpenCode adapters (#248).
+- The same exact-basename rule now also covers the root `scripts/session-catchup.py` used by the Claude Code plugin and the five translated `skills/i18n` copies, which the sync tool does not maintain. A new test loads every shipped copy so the boundary cannot drift again in one of them.
+
+### Changed
+- A positional project name passed to `init-session.ps1` now creates a named plan under `.planning/` instead of writing the project root, matching `init-session.sh`. The Cursor native PowerShell hooks still read only the root `task_plan.md`, so Cursor users on Windows who want hook injection should keep using zero-argument root mode for now.
+
+### Security
+- `init-session.sh` no longer writes `.planning/.active_plan` with shell redirection in slug mode. It validates the physical planning root through `set-active-plan.sh --verify-root` before creating a plan beneath it and replaces the pointer through the selector's contained atomic update. A hardlinked pointer keeps its peer intact, a symlinked pointer is refused, and a planning root that resolves outside the project stops initialization (#249). The check runs in constant time through the selector's new verify mode before anything is created, so a refused pointer leaves no plan directory behind, the replaced pointer keeps a umask-derived mode instead of the 0600 that `mktemp` creates, and an unreadable pointer no longer aborts plan listing.
+- `init-session.ps1` applies the same rule through `set-active-plan.ps1`: the planning root is verified before anything is created and the pointer is replaced atomically instead of written in place with `Set-Content`. A missing selector stops named-plan creation, matching the shell initializer.
+
+### Thanks
+- @ShaunLinTW, for the PowerShell slug-mode initializer, host-aware attestation, and the Windows PowerShell regression suite in #247.
+- @kuei51307-hub, for the exact planning filename boundary across the catchup scanners in #248 and the safe active-pointer replacement in #249.
+
 ## [3.18.3] - 2026-09-16
 
 ### Fixed
