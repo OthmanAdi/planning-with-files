@@ -8,6 +8,7 @@
 - [SKILL.md](https://github.com/OthmanAdi/planning-with-files/blob/master/skills/planning-with-files/SKILL.md): the canonical skill definition and install spec
 - [MIGRATION.md](https://github.com/OthmanAdi/planning-with-files/blob/master/MIGRATION.md): v2 to v3 migration and host capability tiers
 - [Hermes Agent setup](https://github.com/OthmanAdi/planning-with-files/blob/master/docs/hermes.md): native Hermes Agent plugin (CLI and Desktop), /pwf commands, the pre_verify completion gate, Windows paths
+- [DeepSeek Harness setup](https://github.com/OthmanAdi/planning-with-files/blob/master/docs/deepseek-harness.md): native DSH plugin dsh-planning-with-files, per-prompt injection, /pwf commands, the turn-boundary completion gate, profiles
 - [Benchmarks](https://github.com/OthmanAdi/planning-with-files/blob/master/docs/evals.md): evaluation methodology and results
 - [CITATION.cff](https://github.com/OthmanAdi/planning-with-files/blob/master/CITATION.cff): citation metadata
 
@@ -36,7 +37,7 @@ Context rot is the drift that sets in as the context window fills and earlier in
 
 ### Which coding agents does this work with?
 
-60+ agents, including Claude Code, OpenAI Codex CLI, Cursor, GitHub Copilot, Kiro, OpenCode, Continue, Pi, and Hermes Agent by Nous Research (native plugin for the CLI and Hermes Desktop), each via a one-command install. Distribution follows the Agent Skills standard: the repo ships the canonical SKILL.md plus an in-tree .agents/skills/ layout, so tools that read the standard path discover the current skill from a plain git clone.
+60+ agents, including Claude Code, OpenAI Codex CLI, Cursor, GitHub Copilot, Kiro, OpenCode, Continue, Pi, Hermes Agent by Nous Research (native plugin for the CLI and Hermes Desktop), and DeepSeek Harness (native plugin), each via a one-command install. Distribution follows the Agent Skills standard: the repo ships the canonical SKILL.md plus an in-tree .agents/skills/ layout, so tools that read the standard path discover the current skill from a plain git clone.
 
 ### How does this work with Claude Code's plan mode?
 
