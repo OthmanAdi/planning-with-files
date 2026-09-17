@@ -110,11 +110,12 @@ These amazing people have contributed code, documentation, or significant improv
   - Isolated Python calls in the Codex, Gemini, and GitHub Copilot shell adapters and added regression coverage for project-local import shadowing.
   - Added named-plan slug mode to the PowerShell initializer with root-mode policy inheritance, host-aware attestation, and Windows PowerShell regression coverage.
 
-- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243), [PR #244](https://github.com/OthmanAdi/planning-with-files/pull/244), [PR #248](https://github.com/OthmanAdi/planning-with-files/pull/248), [PR #249](https://github.com/OthmanAdi/planning-with-files/pull/249)
+- **[@kuei51307-hub](https://github.com/kuei51307-hub)**, [PR #243](https://github.com/OthmanAdi/planning-with-files/pull/243), [PR #244](https://github.com/OthmanAdi/planning-with-files/pull/244), [PR #248](https://github.com/OthmanAdi/planning-with-files/pull/248), [PR #249](https://github.com/OthmanAdi/planning-with-files/pull/249), [PR #251](https://github.com/OthmanAdi/planning-with-files/pull/251)
   - Fixed active-plan display and listing for UTF-8 BOM-prefixed pointers, with regression coverage across the synchronized shell helpers.
   - Made IDE sync verification report missing canonical sources, with subprocess tests for read-only verification and unchanged sync behavior.
   - Bounded session catchup to exact planning filenames across the canonical scanners and the Hermes, MastraCode, and OpenCode adapters, with lookalike regression coverage.
   - Replaced the shell initializer's active-pointer write with the selector's contained atomic update and added hardlink, symlink, and junction regressions.
+  - Routed Cursor's native PowerShell hooks through the shared plan resolver so named plans are injected on Windows, and made the resolver's `PWF_PLAN_ROOT` check run on Windows PowerShell 5.1.
 
 - **[@Dphoshoba](https://github.com/Dphoshoba)**, [PR #242](https://github.com/OthmanAdi/planning-with-files/pull/242)
   - Proposed and implemented named-plan listing with phase counts and a shared active-pointer marker.
@@ -400,6 +401,7 @@ Thank you to everyone who reported issues, provided feedback, and helped test fi
 - [@luyanfeng](https://github.com/luyanfeng) - Issue #172 (OpenCode install/verify paths doubled the folder segment in docs/opencode.md; fixed in v2.43.0) and Issue #235 (docs/opencode.md claimed `npx skills add -g` installs to `~/.config/opencode/skills/` while it installs to `~/.agents/skills/`; the report triggered the v3.14.0 OpenCode rewrite with the native plugin)
 - [@mixian939](https://github.com/mixian939) - Issue #191 (Codex hooks reporting a false "0/0 phases complete" status for an unstructured task_plan.md, with a full root-cause diagnosis and suggested fix; the audit this triggered found and fixed the same defect in the canonical scripts and two other IDE adapters, fixed in v3.2.0)
 - [@AvitalAviv](https://github.com/AvitalAviv) - Issue #188 (flagged that the repo had no private vulnerability disclosure channel; private vulnerability reporting is now enabled and documented in SECURITY.md)
+- [@loarland](https://github.com/loarland) - Issue #252 (DeepSeek Harness ran the skill but none of its lifecycle hooks, because DSH ignores the `hooks:` block in SKILL.md; the report led to the native `dsh-planning-with-files` plugin in v3.20.0)
 - [@lazyst](https://github.com/lazyst) - Issue #190 (feature request describing the Pi extension activating hooks on a draft plan before user confirmation, with the exact passive-until-confirmed behavior that shipped as `/plan-execute` in v3.3.0)
 - [@dubes394](https://github.com/dubes394) (Kunal Dubey) - Issue #217 (two agents sharing one plan directory can both write `task_plan.md` from the same read, and the later write silently discards the earlier one's work; the report's simpler option, a reread nudge rather than a lock, is what shipped as the parallel-write guard in v3.10.0)
 - [@popey](https://github.com/popey) (Alan Pope) - [PR #215](https://github.com/OthmanAdi/planning-with-files/pull/215) (bumped the pinned Tessl action SHA past a migration that had silently stopped reviews from running; the range it moves across also closes a marker-spoofing hole in the commit this repo had been pinned to)
@@ -438,6 +440,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 62+ and growing!
+**Total Contributors:** 63+ and growing!
 
 *Last updated: 2026-09-17*

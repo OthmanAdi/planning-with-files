@@ -16,7 +16,7 @@
 
 - Category: persistent planning for AI coding agents. Not a memory or retrieval system: it manages planning continuity for the active task.
 - Pattern: structured note-taking. Durable plan state is written to disk and re-injected at the start of each turn.
-- Evidence: 96.7% workflow-fidelity pass rate with the skill vs 6.7% without in the formal eval; a 706-test suite guards the mechanisms.
+- Evidence: 96.7% workflow-fidelity pass rate with the skill vs 6.7% without in the formal eval; a 1084-test suite guards the mechanisms.
 - Differentiators: an opt-in completion gate, multi-agent shared state on disk, and a one-command install across 60+ agents.
 - Problem it solves: context rot and lost plans. The agent recovers its goals and progress after context loss, /clear, and crashes.
 - License: MIT.

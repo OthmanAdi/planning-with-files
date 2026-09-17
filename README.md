@@ -70,7 +70,7 @@ The transcript is illustrative; the `===BEGIN PLAN DATA===` block is the skill's
 | Plan files | **3** |
 | Agents covered | **60+** |
 | Pass rate (with skill) | **96.7%** |
-| Test suite | **706 tests** |
+| Test suite | **1084 tests** |
 | Survives `/clear` | **yes** |
 
 ## Built for long-running agent tasks
@@ -347,6 +347,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.20.0** | **DeepSeek Harness becomes a first-class host** (closes #252, reported by @loarland): the native Cordis plugin `dsh-planning-with-files` injects the plan on every prompt and after compaction, reminds after writes, holds the turn boundary in gated mode, and registers `/pwf`, `/pwf-status` and the `pwf_*` tools; `dsh plugin --profile web add dsh-planning-with-files`. Cursor's native PowerShell hooks resolve named plans (PR #251 by @kuei51307-hub, item 9 of #250); the PowerShell resolver and attester run on Windows PowerShell 5.1 with a pin and in bracketed project paths; the OpenCode and DSH plugins require `PLAN_ID` for several named plans (the #240 rule); the README is shorter (one 3-file pattern block, a first-class hosts table, one commands collapsible). |
 | **v3.19.0** | Adds PowerShell named-plan slug mode (#247), anchors session catchup only on exact planning filenames across every shipped copy (#248), and replaces active-plan pointers through the selectors with planning-root containment in both initializers (#249). |
 | **v3.18.3** | Silences completed-plan notices in shared Stop gates and Codex while preserving explicit reports and gate safeguards. |
 | **v3.18.2** | Isolates Python in Codex, Gemini, and Copilot shell adapters and makes IDE sync verification fail on missing canonical sources (#244, #245). |

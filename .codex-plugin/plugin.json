@@ -1,6 +1,6 @@
 {
   "name": "planning-with-files",
-  "version": "3.19.0",
+  "version": "3.20.0",
   "description": "Persistent project planning for Codex. Opt-in lifecycle hooks inject selected plan context; automatic recovery uses project files only. Explicit catchup modes may read same-project local session records to emit aggregate counts or bounded nonce-framed excerpts. Optional gated mode can request continuation on capable hosts and never runs Markdown-declared commands. No network upload path.",
   "author": {
     "name": "OthmanAdi",

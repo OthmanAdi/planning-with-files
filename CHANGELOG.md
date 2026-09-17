@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.20.0] - 2026-09-17
+
+### Added
+- DeepSeek Harness (DSH) becomes a first-class host through a native Cordis plugin, `dsh-planning-with-files` (npm, source in `.dsh/packages/dsh-planning-with-files/`). DSH reads the skill from `~/.agents/skills/` but ignores the `hooks:` block in SKILL.md, so the plugin carries the lifecycle: the framed plan is appended on every prompt (`agent/pre-step`) and re-injected with the compaction note after a completed compaction (`session/event`, `compaction/end`), the progress reminder follows `write`, `edit` and `str_replace_editor` mutations (`tools/post-execute`), and the completion gate holds the turn boundary in gated mode (`agent/turn-stopping`) with the shared `.stop_blocks` cap and stall detection. `/pwf [--autonomous|--gated] [--template analytics] [name]` and `/pwf-status` are registered as DSH commands, `pwf_init`, `pwf_status` and `pwf_check` as tools; DSH's own `/plan` is untouched. Install with `dsh plugin --profile web add dsh-planning-with-files` and restart; the same command serves the `headless`, `sdk` and `acp` profiles. `PLAN_ID`, `PWF_PLAN_ROOT`, `PLANNING_DISABLED` and `PWF_GATE_CAP` keep their meaning. The plugin core is byte-identical to the OpenCode plugin core and a test keeps it so; a `vitest (DSH plugin)` CI job runs its suite. Guide: `docs/deepseek-harness.md` (#252).
+- Cursor's native PowerShell hooks resolve named plans. `user-prompt-submit.ps1`, `pre-tool-use.ps1`, `post-tool-use.ps1` and `stop.ps1` share `resolve-plan-context.ps1`, which selects the plan through `resolve-plan-dir.ps1`: `PLAN_ID` is binding, `PWF_PLAN_ROOT` pins the project, one named plan resolves through `.active_plan` or on its own, two or more require `PLAN_ID`, and a stale pointer falls through to the root plan the way `inject-plan.sh` does. The bash hooks keep reading the root `task_plan.md` only (#251, item 9 of #250).
+- `tests/test_cursor_powershell_named_plans.py` runs the Cursor contract under Windows PowerShell 5.1 and pwsh 7 when both are installed; `tests/test_powershell_literal_paths.py` covers bracketed project paths and the attester pin on 5.1.
+
+### Fixed
+- `resolve-plan-dir.ps1` failed on Windows PowerShell 5.1 whenever `PWF_PLAN_ROOT` was set: `[IO.Path]::IsPathFullyQualified` does not exist on .NET Framework, so every 5.1 route that calls the resolver aborted with a method-not-found error. A drive-qualified regex replaces it (#251). `attest-plan.ps1` carried the same call and the same fix.
+- `resolve-plan-dir.ps1` tested candidate directories with wildcard-interpreting `Test-Path` and listed `.planning` with `Get-ChildItem -Path`, so a project path containing `[` or `]` resolved to nothing under pwsh, even with an explicit `PLAN_ID`. Every path test in the resolver is now literal.
+- `resolve-plan-dir.ps1`, `ledger-append.ps1`, `ledger-summary.ps1` and `phase-status.ps1` raised on a zero-byte `.active_plan`, because the `[string]` cast of an empty `Get-Content -Raw` is still `$null`. An empty pointer now falls through like an invalid one.
+- The OpenCode plugin (now 1.1.0) and the DSH plugin apply the v3.17.1 rule: with two or more named plans and no `PLAN_ID`, the prompt gets the `Multiple plans are available` notice and nothing is injected, instead of the shared pointer or the newest directory choosing a plan for the session (#240). `pwf_status` and `pwf_check` name the missing selector.
+- Cursor PowerShell hooks: the shared context is a hashtable, so ConstrainedLanguage mode (WDAC, AppLocker) no longer turns every hook fire into "nothing injected"; hook output is sent as UTF-8, so the em-dash and non-ASCII plan text no longer arrive as `-` and `?` under the OEM code page; `pre-tool-use.ps1` prints its `{"decision": "allow"}` line from a `finally` block; a dot-named or invalid-slug directory beside a root plan no longer blocks that plan; the notices name the offending `PWF_PLAN_ROOT` or `PLAN_ID` value with the canonical wording; the `$?` guard after the resolver call is read where 5.1 actually sets it.
+- `tests/test_plan_listing.py` compares the selector's error against whitespace-normalized stderr, since Windows PowerShell wraps stderr at the console width and the phrase could straddle a line break depending on the checkout path.
+
+### Changed
+- README: the five introductory blocks after the long-running table are one "The 3-file pattern" section; the Hermes section is a "First-class hosts: native plugins" table covering Claude Code, Pi, Hermes, OpenCode and DeepSeek Harness (the Hermes surface table lives in `docs/hermes.md`); the Pi, OpenCode, Hermes and DSH command tables sit in one collapsible under the Claude Code commands. Old anchors keep working.
+- `docs/cursor.md` describes the PowerShell hook route as shipped: every hook file, the runtime dependency on the bundled `scripts/` directory, the selection rules, and the two deliberate differences from the Claude Code route (no session isolation, silent stop on an unresolved explicit selector).
+- The v3.19.0 note that Cursor users on Windows should keep to zero-argument root mode no longer applies.
+
+### Thanks
+- @kuei51307-hub, for routing Cursor's native PowerShell hooks through the shared resolver and for the Windows PowerShell 5.1 compatibility of the resolver's pin check in #251.
+- @loarland, for reporting that DeepSeek Harness ran the skill without its lifecycle hooks and offering to test, in #252.
+
 ## [3.19.0] - 2026-09-17
 
 ### Added

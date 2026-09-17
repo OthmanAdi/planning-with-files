@@ -44,7 +44,7 @@ MONEY_PHRASES = [
 ]
 
 # Only numbers already public in the repo (README FAQ + docs/evals.md).
-PUBLIC_NUMBERS = ["96.7%", "706", "330", "5.0", "13.3"]
+PUBLIC_NUMBERS = ["96.7%", "1084", "330", "5.0", "13.3"]
 
 # Topics rejected on honesty grounds plus competitor names. Word-bounded so
 # e.g. "decline" cannot false-positive on "cline".
