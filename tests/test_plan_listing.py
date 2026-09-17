@@ -388,7 +388,9 @@ def test_existing_set_and_show_semantics(runtime, tmp_path):
     assert "stale pointer" in stale.stdout
     missing = run_selector(runtime, tmp_path, "absent")
     assert missing.returncode != 0
-    assert "not found" in missing.stderr
+    # Windows PowerShell wraps stderr at the console width, so the phrase can
+    # straddle a line break depending on the path length.
+    assert "not found" in " ".join(missing.stderr.split())
     assert pointer.read_bytes() == b"stale\n"
 
 
