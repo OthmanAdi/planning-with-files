@@ -103,6 +103,7 @@ slugify() {
     # Lowercase, non-alphanumerics → '-', collapse repeats, trim leading/trailing '-'
     printf '%s' "$1" \
         | tr '[:upper:]' '[:lower:]' \
+        | tr '\r\n' '--' \
         | sed -e 's/[^a-z0-9]/-/g' -e 's/-\{2,\}/-/g' -e 's/^-//' -e 's/-$//' \
         | cut -c1-40
 }

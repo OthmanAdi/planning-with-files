@@ -56,6 +56,18 @@ class InitSessionSlugTests(unittest.TestCase):
             active = (root / ".planning" / ".active_plan").read_text(encoding="utf-8").strip()
             self.assertEqual(active, f"{today}-backend-refactor")
 
+    def test_slug_embedded_newline_creates_single_line_plan_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_init(root, "line one\nline two")
+            self.assertEqual(0, result.returncode, result.stderr)
+            today = date.today().isoformat()
+            expected = root / ".planning" / f"{today}-line-one-line-two"
+            self.assertTrue(expected.is_dir(), f"got {[p.name for p in (root / '.planning').iterdir()]}")
+            plan_dirs = [p for p in (root / ".planning").iterdir() if p.is_dir()]
+            self.assertEqual([expected], plan_dirs)
+            self.assertNotIn("\n", plan_dirs[0].name)
+
     def test_slug_sanitizes_unsafe_chars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
