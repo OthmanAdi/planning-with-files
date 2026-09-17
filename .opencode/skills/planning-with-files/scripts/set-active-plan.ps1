@@ -5,12 +5,16 @@
 #   .\set-active-plan.ps1             - print the current active plan (if any)
 #   .\set-active-plan.ps1 -List       - list available named plans and phase counts
 #   .\set-active-plan.ps1 --list      - equivalent to -List and -l
+#   .\set-active-plan.ps1 -VerifyRoot - check the planning root and pointer only
+#   .\set-active-plan.ps1 --verify-root - equivalent to -VerifyRoot
 
 param(
     [Parameter(Position = 0)]
     [string]$PlanId = "",
     [Alias('l', '-list')]
     [switch]$List,
+    [Alias('verify-root')]
+    [switch]$VerifyRoot,
     [Alias('h', '-help')]
     [switch]$Help
 )
@@ -213,7 +217,27 @@ function Show-PlanList {
 }
 
 if ($Help -or $PlanId -eq "--help" -or $PlanId -eq "-h") {
-    Write-Output "Usage: set-active-plan.ps1 [-List|-l|--list|PLAN_ID]"
+    Write-Output "Usage: set-active-plan.ps1 [-List|-l|--list|-VerifyRoot|PLAN_ID]"
+    exit 0
+}
+
+# Constant-time check for callers that are about to create a plan: the
+# planning root, when present, must be inside the project, and an existing
+# pointer must be replaceable. Nothing is read, listed, or written.
+if ($VerifyRoot) {
+    if ($List -or $PlanId) {
+        Write-Error "Error: verify the planning root in a separate call."
+        exit 1
+    }
+    if ((Test-Path -LiteralPath $PlanRoot -PathType Container) -and -not (Test-WithinRoot $PlanRoot)) {
+        Write-Error "Error: planning directory is outside the project or cannot be verified."
+        exit 1
+    }
+    $existingPointer = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
+    if ($existingPointer -and -not (Test-SafeActiveFile)) {
+        Write-Error "Error: the active plan pointer must be a regular file within the project."
+        exit 1
+    }
     exit 0
 }
 

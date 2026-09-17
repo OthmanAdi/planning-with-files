@@ -428,3 +428,129 @@ def test_switching_a_hardlinked_pointer_does_not_overwrite_external_file(runtime
     assert external.read_bytes() == before, result.stdout + result.stderr
     assert result.returncode == 0, result.stdout + result.stderr
     assert pointer.read_bytes().rstrip(b"\r\n") == b"selected"
+
+
+def flat(text: str) -> str:
+    # Windows PowerShell 5.1 wraps error records at the console width, which
+    # can split a phrase across lines; compare on collapsed whitespace.
+    return " ".join(text.split())
+
+
+def verify_option(runtime) -> str:
+    # The shell twin takes --verify-root; PowerShell binds the same spelling
+    # through a parameter alias and also accepts the native -VerifyRoot switch.
+    return "--verify-root" if runtime[0] == "sh" else "-VerifyRoot"
+
+
+def test_verify_root_accepts_missing_and_contained_planning_dir(runtime, tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    result = run_selector(runtime, project, verify_option(runtime))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not result.stdout.strip() and not result.stderr.strip(), result.stdout + result.stderr
+    assert not (project / ".planning").exists()
+
+    plan(project, "safe")
+    pointer = project / ".planning" / ".active_plan"
+    pointer.write_bytes(b"safe\n")
+    before = pointer.stat().st_mtime_ns
+    result = run_selector(runtime, project, verify_option(runtime))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not result.stdout.strip(), result.stdout
+    assert pointer.read_bytes() == b"safe\n"
+    assert pointer.stat().st_mtime_ns == before
+
+
+def test_verify_root_accepts_the_shell_spelling(runtime, tmp_path):
+    plan(tmp_path, "safe")
+    result = run_selector(runtime, tmp_path, "--verify-root")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not result.stdout.strip(), result.stdout
+
+
+def test_verify_root_refuses_combined_calls(runtime, tmp_path):
+    plan(tmp_path, "safe")
+    result = run_selector(runtime, tmp_path, verify_option(runtime), "safe")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not (tmp_path / ".planning" / ".active_plan").exists()
+
+
+def test_verify_root_rejects_non_regular_pointer(runtime, tmp_path):
+    plan(tmp_path, "safe")
+    (tmp_path / ".planning" / ".active_plan").mkdir()
+    result = run_selector(runtime, tmp_path, verify_option(runtime))
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "active plan pointer" in flat(result.stderr), result.stderr
+
+
+def test_verify_root_rejects_pointer_symlink(runtime, tmp_path):
+    project = tmp_path / "project"
+    plan(project, "safe")
+    external_pointer = tmp_path / "private-pointer"
+    external_pointer.write_text("safe\n", encoding="utf-8")
+    make_symlink(project / ".planning" / ".active_plan", external_pointer, directory=False)
+    result = run_selector(runtime, project, verify_option(runtime))
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "active plan pointer" in flat(result.stderr), result.stderr
+    assert external_pointer.read_text(encoding="utf-8") == "safe\n"
+
+
+def test_verify_root_rejects_planning_root_symlink(runtime, tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    external_file = plan(tmp_path / "external", "private", "### Phase 1 [complete]\n")
+    make_symlink(project / ".planning", external_file.parent.parent, directory=True)
+    result = run_selector(runtime, project, verify_option(runtime))
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "outside the project" in flat(result.stderr), result.stderr
+
+
+def test_verify_root_rejects_windows_junction_planning_root(runtime, tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    external = tmp_path / "external"
+    external.mkdir()
+    make_junction(project / ".planning", external)
+    result = run_selector(runtime, project, verify_option(runtime))
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "outside the project" in flat(result.stderr), result.stderr
+    assert list(external.iterdir()) == []
+
+
+def test_verify_root_ignores_plan_contents(runtime, tmp_path):
+    # Listing parses every plan; verification must not, so a plan directory with
+    # an unreadable or empty plan file cannot make plan creation fail.
+    plan(tmp_path, "safe")
+    (tmp_path / ".planning" / "broken").mkdir()
+    (tmp_path / ".planning" / "broken" / "task_plan.md").write_bytes(b"")
+    result = run_selector(runtime, tmp_path, verify_option(runtime))
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file modes")
+def test_switching_keeps_the_pointer_readable(runtime, tmp_path):
+    # mktemp creates 0600; the shared pointer must follow the umask instead so
+    # other sessions and users can still resolve the plan.
+    plan(tmp_path, "selected")
+    previous = os.umask(0o022)
+    try:
+        result = run_selector(runtime, tmp_path, "selected")
+    finally:
+        os.umask(previous)
+    assert result.returncode == 0, result.stdout + result.stderr
+    mode = stat.S_IMODE((tmp_path / ".planning" / ".active_plan").stat().st_mode)
+    assert mode & 0o044 == 0o044, oct(mode)
+
+
+@pytest.mark.skipif(os.name == "nt" or not hasattr(os, "geteuid") or os.geteuid() == 0,
+                    reason="POSIX file modes as a non-root user")
+def test_listing_treats_unreadable_pointer_as_unset(runtime, tmp_path):
+    plan(tmp_path, "safe")
+    pointer = tmp_path / ".planning" / ".active_plan"
+    pointer.write_bytes(b"safe\n")
+    pointer.chmod(0o200)
+    try:
+        output = listed(runtime, tmp_path)
+    finally:
+        pointer.chmod(0o644)
+    assert "[active]" not in row(output, "safe")

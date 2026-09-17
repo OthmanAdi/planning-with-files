@@ -83,7 +83,8 @@ done
 
 DATE=$(date +%Y-%m-%d)
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# CDPATH must not redirect the cd that locates the sibling scripts.
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 SKILL_ROOT="$(dirname "$SCRIPT_DIR")"
 TEMPLATE_DIR="$SKILL_ROOT/templates"
 
@@ -388,10 +389,12 @@ if [ "$SLUG_MODE" -eq 1 ]; then
         exit 1
     fi
     mkdir -p "${PLAN_ROOT}"
-    # Validate the physical planning root before creating a plan below it. A
-    # symlink or junction that escapes the project must not redirect init writes.
-    if ! sh "${PLAN_SELECTOR}" --list >/dev/null; then
-        echo "Error: planning directory is outside the project or cannot be verified." >&2
+    # Verify the physical planning root and the existing pointer before
+    # creating anything below it. A symlink or junction that escapes the
+    # project must not redirect init writes, and a linked or non-regular
+    # pointer must be refused before a plan directory exists on disk. The
+    # selector's check is constant time; --list would parse every plan.
+    if ! sh "${PLAN_SELECTOR}" --verify-root; then
         exit 1
     fi
     counter=2

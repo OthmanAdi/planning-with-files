@@ -16,6 +16,12 @@ POWERSHELL = shutil.which("powershell") or shutil.which("powershell.exe")
 PWSH = shutil.which("pwsh") or shutil.which("pwsh.exe")
 
 
+def flat(text: str) -> str:
+    # Windows PowerShell 5.1 wraps error records at the console width, which
+    # can split a phrase across lines; compare on collapsed whitespace.
+    return " ".join(text.split())
+
+
 def child_env() -> dict[str, str]:
     """A developer's PWF_PLAN_ROOT pin must not redirect the initializer under test."""
     return {key: value for key, value in os.environ.items() if key != "PWF_PLAN_ROOT"}
@@ -192,7 +198,19 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertEqual(b"KEEP-ME", sentinel.read_bytes())
             self.assertTrue(pointer.is_symlink())
-            self.assertIn("active plan pointer", result.stderr)
+            self.assertIn("active plan pointer", flat(result.stderr))
+
+    def test_slug_init_refuses_unsafe_pointer_before_creating_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            (planning / ".active_plan").mkdir(parents=True)
+
+            result = self.run_init(root, "Dir Pointer")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("active plan pointer", flat(result.stderr))
+            self.assertEqual([".active_plan"], sorted(p.name for p in planning.iterdir()))
 
     def test_slug_init_rejects_external_planning_directory_before_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
@@ -219,7 +237,7 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
 
             self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertEqual([], list(outside.iterdir()))
-            self.assertIn("outside the project", result.stderr)
+            self.assertIn("outside the project", flat(result.stderr))
 
     def test_slug_from_non_ascii_letters_stays_ascii(self) -> None:
         # A dotted capital I survives a case-insensitive -replace; the plan id
@@ -309,7 +327,7 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             )
 
             self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertIn("set-active-plan.ps1", result.stderr)
+            self.assertIn("set-active-plan.ps1", flat(result.stderr))
             self.assertFalse((project / ".planning").exists())
 
 

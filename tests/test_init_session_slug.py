@@ -140,6 +140,20 @@ class InitSessionSlugTests(unittest.TestCase):
             self.assertTrue(pointer.is_symlink())
             self.assertIn("active plan pointer", result.stderr)
 
+    def test_slug_init_refuses_unsafe_pointer_before_creating_plan(self) -> None:
+        # The pointer is verified before the plan directory exists, so a refusal
+        # leaves nothing behind and a retry does not produce a -2 suffix.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            (planning / ".active_plan").mkdir(parents=True)
+
+            result = self.run_init(root, "Dir Pointer")
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("active plan pointer", result.stderr)
+            self.assertEqual([".active_plan"], sorted(p.name for p in planning.iterdir()))
+
     def test_slug_init_rejects_external_planning_directory_before_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
             root = Path(tmp)

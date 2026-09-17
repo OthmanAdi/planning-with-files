@@ -101,18 +101,20 @@ if ($UsePlanDir) {
         exit 1
     }
     New-Item -ItemType Directory -Path $PlanningRoot -Force | Out-Null
-    # Validate the physical planning root before creating a plan below it. A
-    # symlink or junction that escapes the project must not redirect init
-    # writes. A script that returns without exit leaves $LASTEXITCODE alone,
-    # so reset it first and treat a thrown error as a failure too.
+    # Verify the physical planning root and the existing pointer before
+    # creating anything below it. A symlink or junction that escapes the
+    # project must not redirect init writes, and a linked or non-regular
+    # pointer must be refused before a plan directory exists on disk. A
+    # script that returns without exit leaves $LASTEXITCODE alone, so reset
+    # it first and treat a thrown error as a failure too.
     $global:LASTEXITCODE = 0
     try {
-        & $PlanSelector -List *> $null
+        & $PlanSelector -VerifyRoot *> $null
     } catch {
         $global:LASTEXITCODE = 1
     }
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Error: planning directory is outside the project or cannot be verified."
+        Write-Error "Error: the planning directory or the active plan pointer is outside the project or cannot be verified."
         exit 1
     }
 
