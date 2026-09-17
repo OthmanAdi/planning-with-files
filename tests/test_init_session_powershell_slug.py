@@ -13,14 +13,20 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INIT_PS1 = REPO_ROOT / "scripts" / "init-session.ps1"
 POWERSHELL = shutil.which("powershell") or shutil.which("powershell.exe")
+PWSH = shutil.which("pwsh") or shutil.which("pwsh.exe")
+
+
+def child_env() -> dict[str, str]:
+    """A developer's PWF_PLAN_ROOT pin must not redirect the initializer under test."""
+    return {key: value for key, value in os.environ.items() if key != "PWF_PLAN_ROOT"}
 
 
 @unittest.skipUnless(POWERSHELL, "requires Windows PowerShell")
 class InitSessionPowerShellSlugTests(unittest.TestCase):
-    def run_init(self, cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_init(self, cwd: Path, *args: str, shell: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                POWERSHELL,
+                shell or POWERSHELL,
                 "-NoProfile",
                 "-ExecutionPolicy",
                 "Bypass",
@@ -33,6 +39,7 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             encoding="utf-8-sig",
             capture_output=True,
             check=False,
+            env=child_env(),
         )
 
     def test_named_plan_creates_dated_slug_directory_and_active_pointer(self) -> None:
@@ -213,6 +220,67 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertEqual([], list(outside.iterdir()))
             self.assertIn("outside the project", result.stderr)
+
+    def test_slug_from_non_ascii_letters_stays_ascii(self) -> None:
+        # A dotted capital I survives a case-insensitive -replace; the plan id
+        # must still be one the resolvers and the selector accept.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            name = chr(0x130) + "stanbul Deploy"
+            result = self.run_init(root, name)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            dirs = [p.name for p in (root / ".planning").iterdir() if p.is_dir()]
+            self.assertEqual(1, len(dirs), dirs)
+            self.assertRegex(dirs[0], rf"^{date.today().isoformat()}-[a-z0-9-]+$")
+            active = (root / ".planning" / ".active_plan").read_text(encoding="utf-8-sig").strip()
+            self.assertEqual(dirs[0], active)
+
+    def test_empty_positional_name_stays_in_root_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_init(root, "")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertTrue((root / "task_plan.md").is_file())
+            self.assertFalse((root / ".planning").exists())
+
+    def test_plan_dir_without_name_reports_untitled(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_init(root, "-PlanDir")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("Initializing planning files for: untitled", result.stdout)
+
+    def test_root_mode_inheritance_is_case_sensitive(self) -> None:
+        # inherit_root_mode in init-session.sh and the injector match "gate"
+        # case-sensitively; an upper-case marker is not a policy floor.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".mode").write_text("GATE\n", encoding="ascii")
+            result = self.run_init(root, "Upper Marker")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            plan_dir = root / ".planning" / f"{date.today().isoformat()}-upper-marker"
+            self.assertTrue((plan_dir / "task_plan.md").is_file())
+            self.assertFalse((plan_dir / ".mode").exists())
+
+    @unittest.skipUnless(PWSH, "requires pwsh")
+    def test_pwsh_writes_plan_files_inside_bracketed_project_path(self) -> None:
+        # Out-File -FilePath treats [ and ] as wildcards once the path is
+        # absolute; -LiteralPath keeps root mode and slug mode working. Windows
+        # PowerShell 5.1 relocates its own cwd for such paths, so only pwsh is
+        # exercised here.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj[1]"
+            root.mkdir()
+            result = self.run_init(root, shell=PWSH)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            for name in ("task_plan.md", "findings.md", "progress.md"):
+                self.assertTrue((root / name).is_file(), name)
+
+            named = self.run_init(root, "Bracket Plan", shell=PWSH)
+            self.assertEqual(0, named.returncode, named.stdout + named.stderr)
+            plan_dir = root / ".planning" / f"{date.today().isoformat()}-bracket-plan"
+            for name in ("task_plan.md", "findings.md", "progress.md"):
+                self.assertTrue((plan_dir / name).is_file(), name)
 
     def test_slug_init_requires_selector_beside_initializer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

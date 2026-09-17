@@ -41,11 +41,17 @@ function Get-Nonce {
 }
 
 function Get-PlanSlug([string]$Name) {
-    $slug = $Name.ToLowerInvariant() -replace '[^a-z0-9]', '-'
-    $slug = $slug -replace '-{2,}', '-'
+    # -creplace: the case-insensitive -replace lets letters that .NET folds to
+    # ASCII (a dotted capital I, the Kelvin sign) survive into the plan id.
+    $slug = $Name.ToLowerInvariant() -creplace '[^a-z0-9]', '-'
+    $slug = $slug -creplace '-{2,}', '-'
     $slug = $slug.Trim('-')
     if ($slug.Length -gt 40) {
         $slug = $slug.Substring(0, 40).TrimEnd('-')
+    }
+    # The resolvers and the selector only accept ASCII plan ids.
+    if ($slug -cnotmatch '^[a-z0-9-]*$') {
+        return ""
     }
     return $slug
 }
@@ -64,10 +70,11 @@ function Get-InheritedMode([string]$CurrentMode) {
     }
 
     $RootMode = Get-Content -LiteralPath $RootModePath -Raw -ErrorAction SilentlyContinue
-    if ($RootMode -match 'gate') {
+    # Case-sensitive like inherit_root_mode in init-session.sh and the injector.
+    if ($RootMode -cmatch 'gate') {
         return "gated"
     }
-    if ($RootMode -match 'autonomous') {
+    if ($RootMode -cmatch 'autonomous') {
         return "autonomous"
     }
     return $CurrentMode
@@ -79,9 +86,11 @@ if ($Template -ne "default" -and $Template -ne "analytics") {
     $Template = "default"
 }
 
-# Match init-session.sh: zero args preserve legacy root mode. A positional
-# project name or -PlanDir creates an isolated .planning/<date>-<slug>/ plan.
-$UsePlanDir = $PlanDir -or $PSBoundParameters.ContainsKey("ProjectName")
+# Match init-session.sh: zero args (or an empty name) preserve legacy root
+# mode. A positional project name or -PlanDir creates an isolated
+# .planning/<date>-<slug>/ plan.
+$NamedPlan = $PSBoundParameters.ContainsKey("ProjectName") -and -not [string]::IsNullOrEmpty($ProjectName)
+$UsePlanDir = $PlanDir -or $NamedPlan
 if ($UsePlanDir) {
     $PlanningRoot = Join-Path (Get-Location).Path ".planning"
     # Match init-session.sh: set-active-plan.ps1 owns every write to the
@@ -107,10 +116,11 @@ if ($UsePlanDir) {
         exit 1
     }
 
-    if ($PSBoundParameters.ContainsKey("ProjectName")) {
+    if ($NamedPlan) {
         $Slug = Get-PlanSlug $ProjectName
     } else {
         $Slug = ""
+        $ProjectName = "untitled"
     }
     if ([string]::IsNullOrEmpty($Slug)) {
         $Slug = "untitled-$(Get-ShortId)"
@@ -214,7 +224,7 @@ Phase 1
 ## Errors Encountered
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath $TaskPlanPath -Encoding UTF8
+"@ | Out-File -LiteralPath $TaskPlanPath -Encoding UTF8
     }
     Write-Host "Created $TaskPlanDisplay"
 } else {
@@ -246,7 +256,7 @@ if (-not (Test-Path -LiteralPath $FindingsPath)) {
 
 ## Resources
 -
-"@ | Out-File -FilePath $FindingsPath -Encoding UTF8
+"@ | Out-File -LiteralPath $FindingsPath -Encoding UTF8
     }
     Write-Host "Created $FindingsDisplay"
 } else {
@@ -275,7 +285,7 @@ if (-not (Test-Path -LiteralPath $ProgressPath)) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath $ProgressPath -Encoding UTF8
+"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8
     } else {
         @"
 # Progress Log
@@ -296,7 +306,7 @@ if (-not (Test-Path -LiteralPath $ProgressPath)) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -FilePath $ProgressPath -Encoding UTF8
+"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8
     }
     Write-Host "Created $ProgressDisplay"
 } else {
