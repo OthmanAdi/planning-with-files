@@ -143,6 +143,21 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             )
             self.assertTrue((plan_dir / ".attestation").is_file())
 
+    def test_named_autonomous_plan_attests_current_project_despite_stale_plan_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as other_tmp:
+            root = Path(tmp)
+            other = Path(other_tmp)
+            env = child_env()
+            env["PWF_PLAN_ROOT"] = str(other)
+            result = subprocess.run(
+                [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(INIT_PS1), "-Autonomous", "Bound Root"],
+                cwd=str(root), text=True, encoding="utf-8-sig", capture_output=True,
+                env=env, check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            plan_dir = root / ".planning" / f"{date.today().isoformat()}-bound-root"
+            self.assertTrue((plan_dir / ".attestation").is_file())
+
     def test_named_autonomous_plan_attests_new_plan_despite_stale_plan_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

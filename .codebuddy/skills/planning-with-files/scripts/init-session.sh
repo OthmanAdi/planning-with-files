@@ -207,7 +207,7 @@ apply_v3_mode() {
     #     Run from the project root (CWD here) so both resolutions land.
     _attest="${SCRIPT_DIR}/attest-plan.sh"
     if [ -f "${_attest}" ] && [ -f "${_mode_plan}" ]; then
-        PLAN_ID="${PLAN_ID:-}" sh "${_attest}" >/dev/null 2>&1 || true
+        PWF_PLAN_ROOT="$PWD" PLAN_ID="${PLAN_ID:-}" sh "${_attest}" >/dev/null 2>&1 || true
     fi
 }
 

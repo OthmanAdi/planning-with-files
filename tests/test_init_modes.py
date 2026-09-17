@@ -68,6 +68,23 @@ class AutonomousModeTests(InitModesTestBase):
             attest = (plan_dir / ".attestation").read_text(encoding="utf-8").strip()
             self.assertRegex(attest, r"^[0-9a-f]{64}$", "attestation must be a sha256 hex digest")
 
+    def test_autonomous_attests_current_project_despite_inherited_plan_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as other_tmp:
+            root = Path(tmp)
+            other = Path(other_tmp)
+            env = os.environ.copy()
+            env.pop("PLAN_ID", None)
+            env["PWF_PLAN_ROOT"] = str(other)
+            result = subprocess.run(
+                ["sh", str(INIT_SH), "--autonomous", "Pinned Elsewhere"],
+                cwd=str(root), text=True, encoding="utf-8", capture_output=True,
+                env=env, check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            plan_dir = self.only_plan_dir(root)
+            self.assertTrue((plan_dir / ".attestation").is_file())
+            self.assertFalse((other / ".plan-attestation").exists())
+
     def test_autonomous_resets_stop_blocks_to_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

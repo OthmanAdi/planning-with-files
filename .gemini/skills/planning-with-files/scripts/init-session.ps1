@@ -356,7 +356,10 @@ if ($Mode -ne "") {
     if (Test-Path -LiteralPath $PlanFilePwf) {
         $HadPlanId = Test-Path Env:PLAN_ID
         $PreviousPlanId = $env:PLAN_ID
+        $HadPlanRoot = Test-Path Env:PWF_PLAN_ROOT
+        $PreviousPlanRoot = $env:PWF_PLAN_ROOT
         try {
+            $env:PWF_PLAN_ROOT = (Get-Location).Path
             if ($UsePlanDir) {
                 $env:PLAN_ID = $PlanId
             } else {
@@ -383,6 +386,11 @@ if ($Mode -ne "") {
                 $env:PLAN_ID = $PreviousPlanId
             } else {
                 Remove-Item Env:PLAN_ID -ErrorAction SilentlyContinue
+            }
+            if ($HadPlanRoot) {
+                $env:PWF_PLAN_ROOT = $PreviousPlanRoot
+            } else {
+                Remove-Item Env:PWF_PLAN_ROOT -ErrorAction SilentlyContinue
             }
         }
     }
