@@ -12,7 +12,7 @@ The plugin is built and tested against the published `@deepseek-ai/dsh` 0.1.5-rc
 | Lifecycle point | Behavior |
 |---|---|
 | `agent/pre-step` | Appends the active plan as one plugin-sourced message to the step that carries your prompt: the framed head of `task_plan.md` (50 lines), the normalized tail of `progress.md` (20 lines), a pointer to `findings.md`. Steps that carry only tool results, steering or the plugin's own messages get nothing (the one exception is the first step after a compaction, below), so the plan arrives once per prompt and never twice after a `/pwf` injection |
-| `tools/post-execute` | Attaches the progress reminder as additional context to a successful `write`, `edit` or `str_replace_editor` call with a `create`, `str_replace` or `insert` command, while a plan exists |
+| `tools/post-execute` | Attaches the progress reminder as additional context to a successful `write` or `edit` call, and to a `str_replace_editor` call with a `create`, `str_replace` or `insert` command where a profile mounts that tool (none of the shipped 0.1.5-rc.2 profiles does), while a plan exists |
 | `session/event` carrying a successful `compaction/end` | Marks the session, and the next step of that agent carries the compaction note (plan pointer, flush instruction, attestation hash) followed by the framed plan as one message, so the continuation resumes at the current phase. Automatic pressure compaction runs inside the compacted turn, so its next step is the continuation; a manual `/compact` runs idle, so the next prompt is. The plan is read at that step, never queued earlier, so it is never stale |
 | `agent/turn-stopping` | The completion gate in gated mode (below) |
 
@@ -124,6 +124,7 @@ Each block increments the counter and records the ledger size, so the shell gate
 
 ## Troubleshooting
 
+- **`dsh plugin add` printed missing-peer warnings.** The profile installs no peers on purpose (`autoInstallPeers` is off); the `@deepseek-ai/*` packages resolve from the dsh installation through `$DSH_HOME/profiles/node_modules`. The warnings are harmless.
 - **The plugin is missing from `--dump-config`.** `dsh plugin --profile web why dsh-planning-with-files` shows whether pnpm installed it; re-run the `add`. A package without `dsh.bundle` in its `package.json` installs as a plain dependency and activates no layer; the published package declares it.
 - **Nothing is injected.** Check `PLANNING_DISABLED`, then `/pwf-status`: no plan, a `context blocked` line (attestation), or the ambiguity notice each name their fix. A `planning-with-files: <point> skipped after an error` warning in the dsh log means the plugin contained an error and the turn proceeded without planning context.
 - **Ambiguous plans.** A live plan in a direct child project competes with the cwd plan; pin the session with `PWF_PLAN_ROOT=<absolute path>` or `PLAN_ID=<slug>`.

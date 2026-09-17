@@ -17,8 +17,8 @@ Built against the published `@deepseek-ai/dsh` 0.1.5-rc.2 and the `@deepseek-ai/
 
 | Lifecycle point | Behavior |
 |---|---|
-| `agent/pre-step` | Appends the active plan to the step that carries the user's prompt: the framed head of `task_plan.md`, the normalized tail of `progress.md`, a pointer to `findings.md`. Resolves `PLAN_ID`, then `.planning/.active_plan`, then the newest `.planning/<slug>/task_plan.md`, then the legacy root file. Steps that carry only tool results, steering or the plugin's own messages get nothing |
-| `tools/post-execute` | Attaches a progress reminder to successful `write`, `edit` and mutating `str_replace_editor` calls (`create`, `str_replace`, `insert`) while a plan exists |
+| `agent/pre-step` | Appends the active plan to the step that carries the user's prompt: the framed head of `task_plan.md`, the normalized tail of `progress.md`, a pointer to `findings.md`. Resolves `PLAN_ID`; with one named plan, `.planning/.active_plan` or the plan directory itself; two or more named plans without `PLAN_ID` get the `Multiple plans are available` notice instead of a plan; then the legacy root file. Steps that carry only tool results, steering or the plugin's own messages get nothing |
+| `tools/post-execute` | Attaches a progress reminder to successful `write` and `edit` calls, and to mutating `str_replace_editor` calls (`create`, `str_replace`, `insert`) where a profile mounts that tool, while a plan exists |
 | `session/event` with a successful `compaction/end` | The next step of that agent (the continuation of an automatically compacted turn, or the prompt after a manual `/compact`) carries the compaction note (plan pointer, flush instruction, attestation hash) and the framed plan as one message, so the continuation resumes at the current phase |
 | `agent/turn-stopping` | Completion gate in gated mode: while an `in_progress` phase remains, the plugin steers the agent into another step with the gate reason. Block cap `PWF_GATE_CAP` (default 20) and ledger stall detection release the turn; subagent children are never held |
 
