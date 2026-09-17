@@ -9,7 +9,7 @@ import { createUserMessage } from "@deepseek-ai/dsh-llm"
 import type { UserMessage } from "@deepseek-ai/dsh-session"
 import type { PostToolDecision, ToolDefinition } from "@deepseek-ai/dsh-tools"
 import { Config, apply, inject, name } from "../src/index.js"
-import { BANNER, REMINDER, VERSION } from "../src/core.js"
+import { BANNER, MULTIPLE_PLANS_NOTICE, REMINDER, VERSION } from "../src/core.js"
 
 type Listener = (...args: never[]) => unknown
 type Loaded = {
@@ -263,6 +263,20 @@ describe("agent/pre-step", () => {
 
     process.env.PWF_PLAN_ROOT = root
     expect(textOf(injected(await preStep(loaded, agentFor(root), [userPrompt()]))).startsWith(BANNER)).toBe(true)
+  })
+
+  it("refuses two named plans without PLAN_ID with the multiple-plans notice, and PLAN_ID selects (#240)", async () => {
+    namedPlan("2026-09-02-a", "# PLAN-A\n")
+    namedPlan("2026-09-02-b", "# PLAN-B\n", false)
+    const loaded = load()
+    const notice = textOf(injected(await preStep(loaded, agentFor(root), [userPrompt()])))
+    expect(notice).toBe(MULTIPLE_PLANS_NOTICE)
+    expect(notice).not.toContain("# PLAN-A")
+
+    process.env.PLAN_ID = "2026-09-02-b"
+    const selected = textOf(injected(await preStep(loaded, agentFor(root), [userPrompt()])))
+    expect(selected).toContain("# PLAN-B")
+    expect(selected).not.toContain("# PLAN-A")
   })
 
   it("resolves the plan from the agent's own workspace and injects nothing for a session without one", async () => {

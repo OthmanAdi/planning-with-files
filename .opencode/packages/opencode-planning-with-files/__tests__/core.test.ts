@@ -8,6 +8,7 @@ import {
   ambiguityNotice,
   buildContext,
   checkComplete,
+  countSelectablePlans,
   effectiveProjectRoot,
   evaluateGate,
   gateCounts,
@@ -111,20 +112,41 @@ describe("resolver", () => {
     expect(resolvePlan(root, {}, { ...env, PLAN_ID: "" }).planDir).toBe(active)
   })
 
-  it("picks the newest slug by mtime when there is no pointer, and PLAN_ID overrides", () => {
+  it("resolves a single named plan without a pointer, and PLAN_ID selects among several", () => {
+    const only = slugPlan(root, "2026-09-02-only")
+    expect(resolvePlan(root, {}, env).planDir).toBe(only)
     const older = slugPlan(root, "2026-08-01-old")
-    const newer = slugPlan(root, "2026-09-02-new")
     const past = new Date(Date.now() - 3_600_000)
     fs.utimesSync(path.join(older, "task_plan.md"), past, past)
-    expect(resolvePlan(root, {}, env).planDir).toBe(newer)
     expect(resolvePlan(root, {}, { ...env, PLAN_ID: "2026-08-01-old" }).planDir).toBe(older)
+    expect(resolvePlan(root, {}, { ...env, PLAN_ID: "2026-09-02-only" }).planDir).toBe(only)
+  })
+
+  it("refuses several named plans without PLAN_ID, pointer or pin notwithstanding (#240)", () => {
+    const a = slugPlan(root, "2026-09-02-a", { pointer: true })
+    slugPlan(root, "2026-09-02-b")
+    expect(resolvePlan(root, {}, env)).toEqual({ planDir: null, conflicts: [], multiple: true })
+    expect(resolvePlan(root, { explicit: true }, env)).toEqual({ planDir: null, conflicts: [], multiple: true })
+    expect(countSelectablePlans(root)).toBe(2)
+    expect(resolvePlan(root, {}, { ...env, PLAN_ID: "2026-09-02-a" }).planDir).toBe(a)
+    // a directory without task_plan.md and a dot-named directory do not count
+    fs.mkdirSync(path.join(root, ".planning", "sessions"))
+    fs.mkdirSync(path.join(root, ".planning", ".archive"))
+    fs.writeFileSync(path.join(root, ".planning", ".archive", "task_plan.md"), "# OLD\n")
+    fs.rmSync(path.join(root, ".planning", "2026-09-02-b"), { recursive: true })
+    expect(countSelectablePlans(root)).toBe(1)
+    expect(resolvePlan(root, {}, env).planDir).toBe(a)
+    // an armed sessions directory makes a root plan count as one more
+    fs.writeFileSync(path.join(root, "task_plan.md"), "# ROOT\n")
+    expect(countSelectablePlans(root)).toBe(2)
+    expect(resolvePlan(root, {}, env).multiple).toBe(true)
   })
 
   it("tolerates a UTF-8 BOM in the pointer", () => {
+    // With one named plan the pointer names it; a BOM must not turn that
+    // into an invalid slug that ends resolution.
     const older = slugPlan(root, "2026-08-01-aaa")
-    slugPlan(root, "2026-09-02-zzz")
-    const past = new Date(Date.now() - 3_600_000)
-    fs.utimesSync(path.join(older, "task_plan.md"), past, past)
+    fs.writeFileSync(path.join(root, "task_plan.md"), "# ROOT\n")
     fs.writeFileSync(path.join(root, ".planning", ".active_plan"), Buffer.from("﻿2026-08-01-aaa\r\n", "utf8"))
     expect(resolvePlan(root, {}, env).planDir).toBe(older)
   })

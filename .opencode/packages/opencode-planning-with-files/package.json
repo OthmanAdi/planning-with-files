@@ -1,6 +1,6 @@
 {
   "name": "opencode-planning-with-files",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Native OpenCode plugin for planning-with-files: per-turn plan injection, write reminders, compaction flush, a session-idle completion gate, and pwf_init / pwf_status / pwf_check tools.",
   "type": "module",
   "main": "dist/index.js",

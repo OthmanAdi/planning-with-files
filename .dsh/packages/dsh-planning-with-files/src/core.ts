@@ -182,7 +182,35 @@ export function nestedLivePlans(root: string): string[] {
   return found
 }
 
-export type Resolution = { planDir: string | null; conflicts: string[] }
+export const MULTIPLE_PLANS_NOTICE =
+  "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
+
+/** `multiple` marks the v3.17.1 refusal: several selectable plans and no PLAN_ID. */
+export type Resolution = { planDir: string | null; conflicts: string[]; multiple?: true }
+
+/**
+ * Selectable plans as inject-plan.sh counts them: a root plan under an armed
+ * sessions directory counts as one, plus every valid slug directory holding
+ * task_plan.md. Stops at two; the caller only needs "more than one".
+ */
+export function countSelectablePlans(root: string): number {
+  const planningRoot = path.join(root, ".planning")
+  let count = 0
+  if (isRealDir(path.join(planningRoot, "sessions")) && isRegularFile(path.join(root, "task_plan.md"))) count = 1
+  let entries: string[] = []
+  try {
+    entries = fs.readdirSync(planningRoot)
+  } catch {
+    return count
+  }
+  for (const entry of entries) {
+    if (!slugIsValid(entry)) continue
+    if (!isRegularFile(path.join(planningRoot, entry, "task_plan.md"))) continue
+    count += 1
+    if (count > 1) break
+  }
+  return count
+}
 
 /**
  * Resolve the active plan directory. `explicit` marks a selection that skips
@@ -210,6 +238,11 @@ export function resolvePlan(root: string, opts: { planId?: string; explicit?: bo
     if (explicitDir) return { planDir: explicitDir, conflicts: [] }
     return { planDir: null, conflicts: [] }
   }
+
+  // A shared .active_plan pointer or a directory mtime cannot identify this
+  // session's plan (v3.17.1, #240): with several plans and no PLAN_ID, refuse.
+  // A PWF_PLAN_ROOT pin chooses the project, not the plan, so it does not lift this.
+  if (countSelectablePlans(root) > 1) return { planDir: null, conflicts: [], multiple: true }
 
   let chosen: string | null = null
   if (isRealDir(planningRoot)) {
@@ -748,7 +781,10 @@ export function summarizeStatus(root: string, env: Env): StatusResult {
   const resolved = resolvePlan(root, { explicit: true }, env)
   const conflicts = nestedLivePlans(root)
   if (!resolved.planDir) {
-    return { exists: false, message: "No planning files found. Run pwf_init first.", project_dir: root, conflicts }
+    const message = resolved.multiple
+      ? "Multiple plans are available. Set PLAN_ID=<slug> to select one."
+      : "No planning files found. Run pwf_init first."
+    return { exists: false, message, project_dir: root, conflicts }
   }
   const text = readText(path.join(resolved.planDir, "task_plan.md")) ?? ""
   const tokens = modeTokens(root, resolved.planDir)
@@ -767,7 +803,14 @@ export function summarizeStatus(root: string, env: Env): StatusResult {
 
 export function checkComplete(root: string, env: Env): { complete: boolean; message: string; plan_id?: string; counts?: ReturnType<typeof gateCounts> } {
   const resolved = resolvePlan(root, { explicit: true }, env)
-  if (!resolved.planDir) return { complete: false, message: "No task_plan.md found. Run pwf_init first." }
+  if (!resolved.planDir) {
+    return {
+      complete: false,
+      message: resolved.multiple
+        ? "Multiple plans are available. Set PLAN_ID=<slug> to select one."
+        : "No task_plan.md found. Run pwf_init first.",
+    }
+  }
   const text = readText(path.join(resolved.planDir, "task_plan.md")) ?? ""
   const counts = gateCounts(text)
   const complete = counts.total > 0 && counts.complete >= counts.total

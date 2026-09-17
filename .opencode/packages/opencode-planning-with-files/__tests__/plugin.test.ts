@@ -4,7 +4,7 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { PlanningWithFiles } from "../src/index.js"
-import { BANNER, REMINDER } from "../src/core.js"
+import { BANNER, MULTIPLE_PLANS_NOTICE, REMINDER } from "../src/core.js"
 
 type Hooks = Awaited<ReturnType<typeof PlanningWithFiles>>
 
@@ -79,6 +79,25 @@ describe("chat.message", () => {
     expect(output.parts[0].type).toBe("text")
     expect(output.parts[0].synthetic).toBe(true)
     expect(output.parts[0].text!.startsWith(BANNER)).toBe(true)
+  })
+
+  it("refuses two named plans without PLAN_ID with the multiple-plans notice, and PLAN_ID selects (#240)", async () => {
+    for (const slug of ["2026-09-02-a", "2026-09-02-b"]) {
+      fs.mkdirSync(path.join(root, ".planning", slug), { recursive: true })
+      fs.writeFileSync(path.join(root, ".planning", slug, "task_plan.md"), `# ${slug}\n`)
+    }
+    fs.writeFileSync(path.join(root, ".planning", ".active_plan"), "2026-09-02-a\n")
+    const hooks = await load()
+    const ambiguous = message()
+    await hooks["chat.message"]!(ambiguous.input as never, ambiguous.output as never)
+    expect(ambiguous.output.parts).toHaveLength(1)
+    expect(ambiguous.output.parts[0].text).toBe(MULTIPLE_PLANS_NOTICE)
+
+    process.env.PLAN_ID = "2026-09-02-b"
+    const selected = message()
+    await hooks["chat.message"]!(selected.input as never, selected.output as never)
+    expect(selected.output.parts[0].text).toContain("# 2026-09-02-b")
+    delete process.env.PLAN_ID
   })
 
   it("injects nothing without a plan, when disabled, or for a broken pin; announces ambiguity", async () => {

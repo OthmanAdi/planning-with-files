@@ -27,12 +27,13 @@ import {
   planRootIsPinned,
   resolvePlan,
   summarizeStatus,
+  MULTIPLE_PLANS_NOTICE,
   REMINDER,
   VERSION,
   WRITE_LIKE_TOOLS,
 } from "./core.js"
 
-type Located = { root: string | null; planDir: string | null; conflicts: string[] }
+type Located = { root: string | null; planDir: string | null; conflicts: string[]; multiple?: true }
 
 export const PlanningWithFiles: Plugin = async ({ client, directory }) => {
   const env = process.env
@@ -92,7 +93,7 @@ export const PlanningWithFiles: Plugin = async ({ client, directory }) => {
     const root = effectiveProjectRoot(project, env)
     if (!root) return { root: null, planDir: null, conflicts: [] }
     const resolved = resolvePlan(root, { explicit: planRootIsPinned(env) }, env)
-    return { root, planDir: resolved.planDir, conflicts: resolved.conflicts }
+    return { root, planDir: resolved.planDir, conflicts: resolved.conflicts, ...(resolved.multiple ? { multiple: true } : {}) }
   }
 
   return {
@@ -103,6 +104,7 @@ export const PlanningWithFiles: Plugin = async ({ client, directory }) => {
         if (!located.root) return
         let text: string | null = null
         if (located.planDir) text = buildContext(located.root, located.planDir)
+        else if (located.multiple) text = MULTIPLE_PLANS_NOTICE
         else if (located.conflicts.length) text = ambiguityNotice(located.conflicts)
         if (!text) return
         const alreadyInjected = output.parts.some((part) => {

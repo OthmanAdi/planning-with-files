@@ -40,6 +40,7 @@ import {
   planRootIsPinned,
   resolvePlan,
   summarizeStatus,
+  MULTIPLE_PLANS_NOTICE,
   REMINDER,
   VERSION,
   WRITE_LIKE_TOOLS,
@@ -62,7 +63,7 @@ export const Config: Schema<Config> = Schema.object({
   gate: Schema.boolean().default(true),
 })
 
-type Located = { root: string | null; planDir: string | null; conflicts: string[] }
+type Located = { root: string | null; planDir: string | null; conflicts: string[]; multiple?: true }
 type RootOrError = string | { ok: false; error: string }
 type PwfInput = { ok: true; opts: { name?: string; mode?: string; template?: string } } | { ok: false; error: string }
 
@@ -159,7 +160,7 @@ export function apply(ctx: Context, config: Config): void {
     const root = effectiveProjectRoot(project, env)
     if (!root) return NOTHING
     const resolved = resolvePlan(root, { explicit: planRootIsPinned(env) }, env)
-    return { root, planDir: resolved.planDir, conflicts: resolved.conflicts }
+    return { root, planDir: resolved.planDir, conflicts: resolved.conflicts, ...(resolved.multiple ? { multiple: true } : {}) }
   }
 
   /** Tools and commands resolve the same root as the listeners; a broken pin or the opt-out is an explicit error, never a silent fallback. */
@@ -178,6 +179,7 @@ export function apply(ctx: Context, config: Config): void {
       const located = locate(workspaceOf(agent))
       let text: string | null = null
       if (located.root && located.planDir) text = buildContext(located.root, located.planDir)
+      else if (located.multiple) text = MULTIPLE_PLANS_NOTICE
       else if (located.conflicts.length) text = ambiguityNotice(located.conflicts)
       if (!text) return downstream
       return { ...downstream, messages: [...downstream.messages, message([text])] }
