@@ -1,21 +1,22 @@
 """Nested plan-root isolation for the Cursor hook route (issue #212).
 
-The two Cursor UserPromptSubmit hooks (.cursor/hooks/user-prompt-submit.sh
-and .ps1) support only the legacy root task_plan.md shape, no .planning
-awareness. They can still hit the issue #212 failure in the legacy-root
-shape: a root task_plan.md at a shared parent cwd plus a nested project
-below it carrying its own .planning plan. Ported semantics:
+The Cursor UserPromptSubmit hooks can still hit the issue #212 failure in the
+legacy-root shape: a root task_plan.md at a shared parent cwd plus a nested
+project below it carrying its own .planning plan. The PowerShell route also
+resolves named plans through resolve-plan-dir.ps1; the shell route retains its
+legacy-root-only behavior. Shared semantics:
 
   * PWF_PLAN_ROOT — every planning-state read goes through the pin; a
     broken pin fails CLOSED with one notice; unset stays byte-identical.
   * Depth-1 nested-root conflict detection — the legacy root plan is always
     a cwd GUESS on this route, so a competing direct-child .planning
     (.active_plan or a <slug>/task_plan.md) refuses injection with the
-    warning. The warning names PWF_PLAN_ROOT only: this route implements no
-    PLAN_ID escape hatch, so advertising one would be false guidance.
+    warning. The PowerShell warning may also advertise PLAN_ID because that
+    route now implements the named-plan selector.
 
-Both hook twins must behave identically; every scenario runs against sh and
-PowerShell through a shared contract mixin.
+Legacy-root scenarios run against both interpreters through a shared contract;
+PowerShell's named-plan capability is asserted explicitly where the routes now
+differ.
 """
 from __future__ import annotations
 
@@ -47,6 +48,8 @@ def have_sh() -> bool:
 class CursorHookContract:
     """Shared scenarios. NOT a TestCase: concrete twins mix this in and
     provide _run, so every assertion runs once per interpreter."""
+
+    SUPPORTS_NAMED_PLAN_PIN = False
 
     def setUp(self) -> None:  # noqa: N802 (unittest naming)
         self.tmp = Path(tempfile.mkdtemp(prefix="pwf-cursor-nested-"))
@@ -126,14 +129,15 @@ class CursorHookContract:
         self.assertNotIn(ROOT_TITLE, result.stdout, "cwd plan must not leak through")
         self.assertNotIn("Ambiguous plan", result.stdout, "a pin is explicit")
 
-    def test_pin_without_legacy_plan_stays_silent(self) -> None:
-        # The pinned root has only a .planning slug plan; this route reads
-        # only the legacy root shape, so it injects nothing rather than
-        # falling back to the cwd plan.
+    def test_pin_with_only_a_named_plan_matches_route_capability(self) -> None:
         self.build_tree(nested=True)
         result = self._run({"PWF_PLAN_ROOT": str(self.project)})
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("", result.stdout.strip())
+        if self.SUPPORTS_NAMED_PLAN_PIN:
+            self.assertIn(NESTED_TITLE, result.stdout)
+            self.assertNotIn(ROOT_TITLE, result.stdout)
+        else:
+            self.assertEqual("", result.stdout.strip())
 
     def test_broken_pin_notices_and_injects_nothing(self) -> None:
         self.build_tree(nested=True)
@@ -171,6 +175,8 @@ class CursorShNestedRootTests(CursorHookContract, unittest.TestCase):
 
 @unittest.skipUnless(pwsh_exe(), "requires PowerShell")
 class CursorPs1NestedRootTests(CursorHookContract, unittest.TestCase):
+    SUPPORTS_NAMED_PLAN_PIN = True
+
     def _run(self, env_extra: dict | None = None) -> subprocess.CompletedProcess[str]:
         exe = pwsh_exe()
         assert exe is not None
@@ -184,7 +190,6 @@ class CursorPs1NestedRootTests(CursorHookContract, unittest.TestCase):
             check=False,
             timeout=120,
         )
-
 
 if __name__ == "__main__":
     unittest.main()

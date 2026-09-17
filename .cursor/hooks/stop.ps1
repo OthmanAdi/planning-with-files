@@ -7,13 +7,19 @@
 # no-plan-file behaviour, so the Cursor protocol shape never changes.
 if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
 
-$PlanFile = "task_plan.md"
+. (Join-Path $PSScriptRoot "resolve-plan-context.ps1")
+$PlanContext = Resolve-CursorPlanContext
+$PlanFile = if ($PlanContext.Directory) {
+    Join-Path $PlanContext.Directory "task_plan.md"
+} else {
+    $null
+}
 
-if (-not (Test-Path $PlanFile)) {
+if (-not $PlanFile -or -not (Test-Path -LiteralPath $PlanFile -PathType Leaf)) {
     exit 0
 }
 
-$content = Get-Content $PlanFile -Raw
+$content = Get-Content -LiteralPath $PlanFile -Raw
 
 $TOTAL = ([regex]::Matches($content, "### Phase")).Count
 

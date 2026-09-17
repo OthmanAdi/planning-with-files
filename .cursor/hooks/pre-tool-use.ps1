@@ -9,10 +9,16 @@ if ($env:PLANNING_DISABLED -eq '1') {
     exit 0
 }
 
-$PlanFile = "task_plan.md"
+. (Join-Path $PSScriptRoot "resolve-plan-context.ps1")
+$PlanContext = Resolve-CursorPlanContext
+$PlanFile = if ($PlanContext.Directory) {
+    Join-Path $PlanContext.Directory "task_plan.md"
+} else {
+    $null
+}
 
-if (Test-Path $PlanFile) {
-    Get-Content $PlanFile -TotalCount 30 | Write-Host
+if ($PlanFile -and (Test-Path -LiteralPath $PlanFile -PathType Leaf)) {
+    Get-Content -LiteralPath $PlanFile -TotalCount 30 | Write-Host
 }
 
 Write-Output '{"decision": "allow"}'

@@ -25,13 +25,19 @@ This copies the skill files, hooks config, and hook scripts to your project.
 
 ## Hooks Support
 
-Cursor now supports hooks natively via `.cursor/hooks.json`. This skill includes three hooks that mirror the Claude Code experience:
+Cursor now supports hooks natively via `.cursor/hooks.json`. This skill includes four hooks that mirror the Claude Code experience:
 
 | Hook | Purpose | Cursor Feature |
 |------|---------|----------------|
+| `userPromptSubmit` | Injects the selected plan and recent progress | Restores state on every prompt |
 | `preToolUse` | Re-reads task_plan.md before tool operations | Keeps goals in context |
 | `postToolUse` | Reminds to update plan after file edits | Prevents forgetting updates |
 | `stop` | Checks if all phases are complete | **Auto-continues** if incomplete |
+
+The native PowerShell hooks resolve the same selected task directory as the
+planning scripts. They honor `PLAN_ID`, `PWF_PLAN_ROOT`, `.active_plan`, and
+the single-plan fallback through `resolve-plan-dir.ps1`. Invalid or ambiguous
+selectors fail closed instead of reading a different root plan.
 
 ### How the Stop Hook Works
 
@@ -50,6 +56,8 @@ your-project/
 ├── .cursor/
 │   ├── hooks.json                  ← Hook configuration
 │   ├── hooks/
+│   │   ├── user-prompt-submit.ps1  ← Selected-plan context injection
+│   │   ├── resolve-plan-context.ps1 ← Shared PowerShell plan selection
 │   │   ├── pre-tool-use.sh         ← Pre-tool-use script
 │   │   ├── post-tool-use.sh        ← Post-tool-use script
 │   │   ├── stop.sh                 ← Completion check script

@@ -77,6 +77,17 @@ function Get-FinalDirectoryPath {
     return (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
 }
 
+function Test-FullyQualifiedLocalPath {
+    param([string]$Path)
+    if (-not $Path -or $Path.StartsWith('\\') -or $Path.StartsWith('//')) {
+        return $false
+    }
+    if ($script:IsWindowsHost) {
+        return $Path -match '^[A-Za-z]:[\\/]'
+    }
+    return [System.IO.Path]::IsPathRooted($Path)
+}
+
 # PWF_PLAN_ROOT: absolute plan-root binding (issue #212), mirroring
 # resolve-plan-dir.sh. A thread whose cwd is a shared PARENT of the real
 # project resolves the parent's plan and never sees the nested one;
@@ -90,9 +101,8 @@ function Get-FinalDirectoryPath {
 # checked against the pinned root. Unset keeps legacy behavior unchanged.
 if ($env:PWF_PLAN_ROOT) {
     $pin = $env:PWF_PLAN_ROOT
-    $isUnc = $pin.StartsWith('\\') -or $pin.StartsWith('//')
-    $isAbsolute = [System.IO.Path]::IsPathFullyQualified($pin)
-    if ($isAbsolute -and -not $isUnc -and (Test-Path -LiteralPath $pin -PathType Container)) {
+    if ((Test-FullyQualifiedLocalPath $pin) -and
+        (Test-Path -LiteralPath $pin -PathType Container)) {
         $projectRoot = $pin
         $PlanRoot = Join-Path $pin ".planning"
     } else {
