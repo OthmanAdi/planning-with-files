@@ -193,7 +193,9 @@ if ($activeItem) {
         (($activeItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
         exit 0
     }
-    $planId = (Get-Content -LiteralPath $activeFile -Raw).Trim()
+    # Get-Content -Raw returns $null for a zero-byte pointer; an empty pointer
+    # falls through like an invalid one instead of raising inside a caller.
+    $planId = "$(Get-Content -LiteralPath $activeFile -Raw -ErrorAction SilentlyContinue)".Trim()
     if ($planId -and (Test-ValidSlug $planId)) {
         $candidate = Join-Path $PlanRoot $planId
         if ((Test-Path -LiteralPath $candidate -PathType Container) -and (Test-WithinRoot $candidate)) {

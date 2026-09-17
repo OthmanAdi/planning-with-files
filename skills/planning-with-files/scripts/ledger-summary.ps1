@@ -44,7 +44,7 @@ function Resolve-PlanDir {
 
     $activePointer = Join-Path $planRoot ".active_plan"
     if (Test-Path -LiteralPath $activePointer) {
-        $planId = (Get-Content -LiteralPath $activePointer -Raw).Trim()
+        $planId = "$(Get-Content -LiteralPath $activePointer -Raw -ErrorAction SilentlyContinue)".Trim()
         if ($planId) {
             $candidate = Join-Path $planRoot $planId
             if (Test-Path -LiteralPath $candidate -PathType Container) { return $candidate }

@@ -6,18 +6,25 @@
 # no-plan-file behaviour, so the Cursor protocol shape never changes.
 if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
 
+# The OEM code page turns the em-dash into "-" and non-ASCII plan text into "?"
+# on both Windows PowerShell 5.1 and pwsh; the plan reaches Cursor as UTF-8.
+# ConstrainedLanguage may refuse the assignment, which only keeps the old bytes.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
 . (Join-Path $PSScriptRoot "resolve-plan-context.ps1")
 $PlanContext = Resolve-CursorPlanContext
 
 if (-not $PlanContext.Directory) {
-    # One notice per failure, worded like the route that owns the rule: the
-    # sh twin for a broken pin, inject-plan.sh for a binding PLAN_ID.
+    # One notice per failure, worded like inject-plan.sh, which owns the rule.
     switch ($PlanContext.Status) {
         'ambiguous' {
             Write-Output "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
         }
         'invalid-pin' {
-            Write-Output "[planning-with-files] PWF_PLAN_ROOT is not a directory: $($PlanContext.Detail) — nothing injected."
+            Write-Output "[planning-with-files] PWF_PLAN_ROOT is not a supported absolute local directory: $($PlanContext.Detail) — nothing injected."
+        }
+        'refused' {
+            # A plan the resolver refused for containment: silent, like inject-plan.sh.
         }
         'invalid-plan-id' {
             Write-Output "[planning-with-files] PLAN_ID does not name a plan directory under .planning: $($PlanContext.Detail) — nothing injected. Fix or unset the pin; a broken pin fails closed rather than selecting another plan."

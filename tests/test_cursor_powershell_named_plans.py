@@ -286,8 +286,78 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
         )
 
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn(f"PWF_PLAN_ROOT is not a directory: {missing}", result.stdout)
+        self.assertIn(
+            f"PWF_PLAN_ROOT is not a supported absolute local directory: {missing}",
+            result.stdout,
+        )
         self.assertNotIn("ROOT-PLAN-MARKER", result.stdout)
+
+    def test_traversal_pointer_text_falls_through_to_the_root_plan(self) -> None:
+        # Parity row 07c: the pointer text is an invalid slug, so every canonical
+        # route ignores it and serves the root plan.
+        self.write_root_plan()
+        (self.workspace / ".planning").mkdir()
+        (self.workspace / ".planning" / ".active_plan").write_text(
+            "../escape\n", encoding="utf-8"
+        )
+
+        result = self.run_hook("user-prompt-submit")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("ROOT-PLAN-MARKER", result.stdout)
+
+    def test_empty_pointer_falls_through_like_every_other_route(self) -> None:
+        # Parity rows 27 and 28: Get-Content -Raw yields $null for a zero-byte
+        # pointer; the resolver must not raise into the caller.
+        self.write_named_plan("plan-a", "PLAN-A-MARKER")
+        (self.workspace / ".planning" / ".active_plan").write_bytes(b"")
+        named = self.run_hook("user-prompt-submit")
+        self.assertEqual(0, named.returncode, named.stderr)
+        self.assertIn("PLAN-A-MARKER", named.stdout)
+
+        shutil.rmtree(self.workspace / ".planning" / "plan-a")
+        self.write_root_plan()
+        root = self.run_hook("user-prompt-submit")
+        self.assertEqual(0, root.returncode, root.stderr)
+        self.assertIn("ROOT-PLAN-MARKER", root.stdout)
+
+    def test_plan_text_reaches_cursor_as_utf8(self) -> None:
+        # The OEM code page turned the em-dash into "-" and non-ASCII plan text
+        # into "?" on both interpreters.
+        self.write_root_plan("ROOT \u00c4rger \u4e2d\u6587")
+
+        result = self.run_hook("user-prompt-submit")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("ACTIVE PLAN \u2014 current state:", result.stdout)
+        self.assertIn("ROOT \u00c4rger \u4e2d\u6587", result.stdout)
+
+    @unittest.skipUnless(os.name == "nt", "junctions are a Windows shape")
+    def test_junction_escaping_the_project_is_refused_silently(self) -> None:
+        # A valid slug that is a junction to a directory outside the project
+        # fails containment. inject-plan.sh injects nothing and says nothing.
+        outside = Path(self._tmp.name).parent / f"{Path(self._tmp.name).name}-outside"
+        outside.mkdir()
+        self.addCleanup(shutil.rmtree, outside, True)
+        (outside / "task_plan.md").write_text(
+            "# OUTSIDE-MARKER\n### Phase 1\n**Status:** pending\n", encoding="utf-8"
+        )
+        self.write_root_plan()
+        (self.workspace / ".planning").mkdir()
+        link = self.workspace / ".planning" / "plan-a"
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+            capture_output=True,
+            check=True,
+        )
+        try:
+            result = self.run_hook("user-prompt-submit")
+        finally:
+            # Remove the junction before tearDown removes the tree.
+            link.rmdir()
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout.strip())
 
     def test_legacy_root_survives_constrained_language_mode(self) -> None:
         # [pscustomobject] is rejected under ConstrainedLanguage; the shared

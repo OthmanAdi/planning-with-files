@@ -56,7 +56,7 @@ function Resolve-PlanFile {
 
     $activePointer = Join-Path $planRoot ".active_plan"
     if (Test-Path -LiteralPath $activePointer) {
-        $planId = (Get-Content -LiteralPath $activePointer -Raw).Trim()
+        $planId = "$(Get-Content -LiteralPath $activePointer -Raw -ErrorAction SilentlyContinue)".Trim()
         if ($planId) {
             $candidate = Join-Path $planRoot $planId
             $planFile  = Join-Path $candidate "task_plan.md"

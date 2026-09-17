@@ -9,6 +9,11 @@ if ($env:PLANNING_DISABLED -eq '1') {
     exit 0
 }
 
+# The OEM code page turns the em-dash into "-" and non-ASCII plan text into "?"
+# on both Windows PowerShell 5.1 and pwsh; the plan reaches Cursor as UTF-8.
+# ConstrainedLanguage may refuse the assignment, which only keeps the old bytes.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
 # The protocol response is printed from finally: a missing helper or a
 # profile that sets $ErrorActionPreference = 'Stop' must not end the hook
 # without it. This hook never blocks a tool.

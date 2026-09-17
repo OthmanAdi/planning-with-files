@@ -84,7 +84,8 @@ function Resolve-CursorPlanContext {
     # A pointer that is a directory or a reparse point is an unsafe selector the
     # resolver stopped on, and a valid slug plan the resolver still refused is a
     # containment failure (a junction escaping the project). Neither may fall
-    # through to the root plan. A stale pointer text, a dot-named directory or an
+    # through to the root plan; the containment case stays silent, as
+    # inject-plan.sh is. A stale pointer text, a dot-named directory or an
     # invalid slug is ignored the way inject-plan.sh ignores it, so the legacy
     # root applies, as on every other route.
     $activeItem = Get-Item -LiteralPath (Join-Path $planRoot '.active_plan') -Force -ErrorAction SilentlyContinue
@@ -99,7 +100,7 @@ function Resolve-CursorPlanContext {
             Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'task_plan.md') -PathType Leaf } |
             Select-Object -First 1)
         if ($refused.Count -gt 0) {
-            return (New-CursorPlanContext $null 'invalid' 'selection-unresolved')
+            return (New-CursorPlanContext $null 'refused' 'containment')
         }
     }
     return (New-CursorPlanContext $legacyRoot 'legacy')
