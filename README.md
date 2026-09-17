@@ -532,7 +532,7 @@ The agent stops at the first rung that applies:
 6. Every phase complete?                  → only then does the Stop gate release (gated mode)
 ```
 
-Hooks make steps 2 to 6 mechanical rather than optional: the Claude Code plugin runs 6 lifecycle hooks, its activation-scoped standalone skill runs 5, Codex runs 7, Pi runs 8, the Hermes plugin runs 3 (`pre_llm_call`, `post_tool_call`, `pre_verify`), the OpenCode plugin runs 4 (`chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle`), and the DeepSeek Harness plugin runs 4 (`agent/pre-step`, `agent/session-start`, `tools/post-execute`, `agent/turn-stopping`). Together they re-inject the plan each turn, remind after writes, and check completion before stopping.
+Hooks make steps 2 to 6 mechanical rather than optional: the Claude Code plugin runs 6 lifecycle hooks, its activation-scoped standalone skill runs 5, Codex runs 7, Pi runs 8, the Hermes plugin runs 3 (`pre_llm_call`, `post_tool_call`, `pre_verify`), the OpenCode plugin runs 4 (`chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle`), and the DeepSeek Harness plugin runs 4 (`agent/pre-step`, `session/event` for the compaction end, `tools/post-execute`, `agent/turn-stopping`). Together they re-inject the plan each turn, remind after writes, and check completion before stopping.
 
 ```mermaid
 flowchart LR
