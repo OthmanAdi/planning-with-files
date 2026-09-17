@@ -412,12 +412,17 @@ def parse_session_messages(session_file: Path) -> List[Dict[str, Any]]:
 
 
 def planning_file_from_path(path_value: Any) -> Optional[str]:
+    """Return a planning filename only when it is the path's exact basename.
+
+    A suffix check treats lookalikes such as ``draft_task_plan.md`` as real
+    planning updates and can anchor catchup at unrelated transcript content.
+    Normalize separators so the same boundary rule works for Unix and Windows
+    session records.
+    """
     if not isinstance(path_value, str):
         return None
-    for pf in PLANNING_FILES:
-        if path_value.endswith(pf):
-            return pf
-    return None
+    basename = path_value.replace(chr(92), '/').rsplit('/', 1)[-1]
+    return basename if basename in PLANNING_FILES else None
 
 
 def planning_file_from_paths(paths: Iterable[Any]) -> Optional[str]:

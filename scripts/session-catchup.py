@@ -27,6 +27,20 @@ from typing import List, Dict, Optional, Tuple
 PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 
 
+def planning_file_from_path(path_value: object) -> Optional[str]:
+    """Return a planning filename only when it is the path's exact basename.
+
+    A suffix check treats lookalikes such as ``draft_task_plan.md`` as real
+    planning updates and can anchor catchup at unrelated transcript content.
+    Normalize separators so the same boundary rule works for Unix and Windows
+    session records.
+    """
+    if not isinstance(path_value, str):
+        return None
+    basename = path_value.replace(chr(92), '/').rsplit('/', 1)[-1]
+    return basename if basename in PLANNING_FILES else None
+
+
 def detect_ide() -> str:
     """
     Detect which IDE is being used based on environment and file structure.
@@ -340,11 +354,10 @@ def scan_for_planning_update(session_file: Path) -> Tuple[int, Optional[str]]:
                             continue
 
                         file_path = item.get('input', {}).get('file_path', '')
-                        for pf in PLANNING_FILES:
-                            if file_path.endswith(pf):
-                                last_update_line = line_num
-                                last_update_file = pf
-                                break
+                        planning_file = planning_file_from_path(file_path)
+                        if planning_file:
+                            last_update_line = line_num
+                            last_update_file = planning_file
                 except json.JSONDecodeError:
                     continue
     except Exception:
@@ -437,7 +450,15 @@ def extract_messages_from_session(session_file: Path, after_line: int = -1) -> L
     return result
 
 
-PLANNING_LIKE = ('%task_plan.md', '%findings.md', '%progress.md')
+def _load_opencode_part(data_str: object) -> Optional[Dict]:
+    """Decode one OpenCode part record; malformed rows are skipped, not fatal."""
+    if not isinstance(data_str, str):
+        return None
+    try:
+        data = json.loads(data_str)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def get_opencode_db_path() -> Optional[Path]:
@@ -570,28 +591,39 @@ def opencode_catchup(project_path: str, mode: str = 'no-history') -> None:
     update_time = None
     update_idx = -1
     for idx, (sid, _) in enumerate(previous_sessions):
-        params = (sid,) + PLANNING_LIKE
         cur.execute(
             """
-            SELECT time_created FROM part
+            SELECT time_created, data FROM part
             WHERE session_id = ?
               AND json_extract(data, '$.type') = 'tool'
               AND lower(json_extract(data, '$.tool')) IN ('write', 'edit', 'patch')
               AND (
-                json_extract(data, '$.state.input.filePath') LIKE ?
-                OR json_extract(data, '$.state.input.filePath') LIKE ?
-                OR json_extract(data, '$.state.input.filePath') LIKE ?
+                  replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      IN ('task_plan.md', 'findings.md', 'progress.md')
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/task_plan.md'
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/findings.md'
+                  OR replace(json_extract(data, '$.state.input.filePath'), char(92), '/')
+                      GLOB '*/progress.md'
               )
-            ORDER BY time_created DESC
-            LIMIT 1
+            ORDER BY time_created DESC, id DESC
             """,
-            params,
+            (sid,),
         )
-        row = cur.fetchone()
-        if row:
-            update_sid = sid
-            update_time = row[0]
-            update_idx = idx
+        for candidate_time, data_str in cur.fetchall():
+            data = _load_opencode_part(data_str)
+            if not isinstance(data, dict):
+                continue
+            state = data.get('state')
+            input_ = state.get('input') if isinstance(state, dict) else None
+            file_path = input_.get('filePath') if isinstance(input_, dict) else None
+            if planning_file_from_path(file_path):
+                update_sid = sid
+                update_time = candidate_time
+                update_idx = idx
+                break
+        if update_sid:
             break
 
     if not update_sid:
