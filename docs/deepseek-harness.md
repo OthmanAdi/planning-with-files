@@ -11,9 +11,9 @@ The plugin is built and tested against the published `@deepseek-ai/dsh` 0.1.5-rc
 
 | Lifecycle point | Behavior |
 |---|---|
-| `agent/pre-step` | Appends the active plan as one plugin-sourced message to the step that carries your prompt: the framed head of `task_plan.md` (50 lines), the normalized tail of `progress.md` (20 lines), a pointer to `findings.md`. Steps that carry only tool results, steering or the plugin's own messages get nothing, so the plan arrives once per prompt and never twice after a compaction or `/pwf` injection |
+| `agent/pre-step` | Appends the active plan as one plugin-sourced message to the step that carries your prompt: the framed head of `task_plan.md` (50 lines), the normalized tail of `progress.md` (20 lines), a pointer to `findings.md`. Steps that carry only tool results, steering or the plugin's own messages get nothing (the one exception is the first step after a compaction, below), so the plan arrives once per prompt and never twice after a `/pwf` injection |
 | `tools/post-execute` | Attaches the progress reminder as additional context to a successful `write`, `edit` or `str_replace_editor` call with a `create`, `str_replace` or `insert` command, while a plan exists |
-| `agent/session-start` with source `compact` | Injects the compaction note (plan pointer, flush instruction, attestation hash) followed by the framed plan, so the continuation resumes at the current phase. `startup`, `resume` and `clear` inject nothing here: the next prompt carries the plan |
+| `session/event` carrying a successful `compaction/end` | Marks the session, and the next step of that agent carries the compaction note (plan pointer, flush instruction, attestation hash) followed by the framed plan as one message, so the continuation resumes at the current phase. Automatic pressure compaction runs inside the compacted turn, so its next step is the continuation; a manual `/compact` runs idle, so the next prompt is. The plan is read at that step, never queued earlier, so it is never stale |
 | `agent/turn-stopping` | The completion gate in gated mode (below) |
 
 | Command | Behavior |
@@ -113,7 +113,7 @@ Each block increments the counter and records the ledger size, so the shell gate
 - **`hooks:` frontmatter.** dsh ignores the `hooks:` block in `SKILL.md`; the plugin is the replacement.
 - **dsh's own `/plan`.** That command is dsh plan mode and stays untouched; the plugin registers only `/pwf` and `/pwf-status`.
 - **Prompts from other plugins.** Only a step that carries a user-sourced message gets the plan. A turn driven by another plugin's message (a `/goal` round, for example) is a continuation and gets nothing.
-- **dsh 0.1.6 (alpha).** The alpha line folds `agent/session-start` into `agent/created` with a `source` field. On that line the compaction re-injection does not fire; the next prompt still carries the plan.
+- **`agent/session-start` sources.** The published 0.1.5-rc.2 declares `compact` as a possible source but every dispatch site announces `startup` or `resume`, and the 0.1.6 alpha line does the same after folding the field into `agent/created`. The plugin therefore keys the compaction re-injection off the durable `compaction/end` session event, which both lines write, and listens to `agent/session-start` for nothing.
 
 ## Windows notes
 

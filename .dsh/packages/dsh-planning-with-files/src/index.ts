@@ -11,8 +11,13 @@
  *   carries tool context, steering or this plugin's own injected messages
  * - tools/post-execute: attach the progress reminder to the result of a
  *   write-like tool while a plan exists
- * - agent/session-start with source compact: inject the compaction note
- *   and the plan so the continuation resumes at the current phase
+ * - session/event with a successful compaction/end: mark the session, so the
+ *   next step of that agent (a continuation of the compacted turn, or the next
+ *   prompt) carries the compaction note and the plan and resumes at the
+ *   current phase. The published dsh (0.1.5-rc.2) declares `compact` as an
+ *   agent/session-start source but every dispatch site announces `startup` or
+ *   `resume` only, and the 0.1.6 alpha line does the same on agent/created;
+ *   the durable compaction/end event is what both lines actually write.
  * - agent/turn-stopping: the completion gate in gated mode, steering the
  *   agent into another step with the gate reason (Tier 2: follow-up inject)
  * - commands /pwf and /pwf-status, tools pwf_init, pwf_status, pwf_check
@@ -24,6 +29,7 @@ import type { Context } from "@deepseek-ai/cordis"
 import Schema from "@deepseek-ai/schemastery"
 import type { Agent } from "@deepseek-ai/dsh-agent"
 import type {} from "@deepseek-ai/dsh-commands"
+import type {} from "@deepseek-ai/dsh-compaction"
 import { createUserMessage } from "@deepseek-ai/dsh-llm"
 import type { ContentBlock, MessageSource } from "@deepseek-ai/dsh-llm"
 import type { UserMessage } from "@deepseek-ai/dsh-session"
@@ -100,12 +106,12 @@ function isOurs(candidate: UserMessage): boolean {
  * Whether a step batch carries the user's prompt. The loop claims pending
  * next-step items (tool contexts, steering, our own injections) together
  * with the queued turn message, so a batch without a user-sourced message is
- * a continuation step, and a batch that already holds one of our messages
- * (the plan queued by a compaction or /pwf, a pending reminder) is served:
- * neither gets the plan again.
+ * a continuation step and gets the plan only right after a compaction; a
+ * batch that already holds one of our messages (the plan queued by /pwf, a
+ * pending reminder) is served either way.
  */
 function opensTurn(messages: UserMessage[]): boolean {
-  return messages.some((candidate) => candidate.source.kind === "user") && !messages.some(isOurs)
+  return messages.some((candidate) => candidate.source.kind === "user")
 }
 
 /** DSH's mutating file tools: write, edit, and str_replace_editor unless it only views. */
@@ -172,35 +178,47 @@ export function apply(ctx: Context, config: Config): void {
     return root
   }
 
+  /**
+   * Sessions compacted since their last admitted step. Automatic pressure
+   * compaction runs inside the loop's own agent/pre-step listener ahead of
+   * this one, so the step being admitted is the first request after the
+   * summary; a manual /compact runs on an idle agent and the next prompt is.
+   * Marking the session instead of queueing an inbox item keeps the plan
+   * fresh at admission time and never leaves a stale copy for a later prompt.
+   */
+  const compacted = new Set<string>()
+
+  ctx.on("session/event", (session, event) => {
+    if (event.type !== "compaction/end" || event.data.error !== undefined) return
+    compacted.add(session.id)
+  })
+
+  ctx.on("session/disposed", (session) => {
+    compacted.delete(session.id)
+  })
+
   ctx.on("agent/pre-step", async ({ agent, messages }, next) => {
     const downstream = await next()
     try {
-      if (downstream.kind !== "enter" || !opensTurn(messages)) return downstream
+      if (downstream.kind !== "enter") return downstream
+      const afterCompaction = compacted.delete(agent.session.id)
+      if (messages.some(isOurs)) return downstream
+      if (!afterCompaction && !opensTurn(messages)) return downstream
       const located = locate(workspaceOf(agent))
-      let text: string | null = null
-      if (located.root && located.planDir) text = buildContext(located.root, located.planDir)
-      else if (located.multiple) text = MULTIPLE_PLANS_NOTICE
-      else if (located.conflicts.length) text = ambiguityNotice(located.conflicts)
-      if (!text) return downstream
-      return { ...downstream, messages: [...downstream.messages, message([text])] }
+      let texts: string[] | null = null
+      if (located.root && located.planDir) {
+        const plan = buildContext(located.root, located.planDir)
+        texts = afterCompaction ? [compactionNote(located.root, located.planDir), plan] : [plan]
+      } else if (opensTurn(messages)) {
+        // the notices answer a prompt; a continuation step after compaction gets them with the next prompt
+        if (located.multiple) texts = [MULTIPLE_PLANS_NOTICE]
+        else if (located.conflicts.length) texts = [ambiguityNotice(located.conflicts)]
+      }
+      if (!texts) return downstream
+      return { ...downstream, messages: [...downstream.messages, message(texts)] }
     } catch (error) {
       warn("agent/pre-step", error)
       return downstream
-    }
-  })
-
-  // The published dsh (0.1.5-rc.2) announces the lifecycle source on
-  // agent/session-start; startup, resume and clear inject nothing here
-  // because the first agent/pre-step carries the prompt and injects the plan,
-  // and a copy here would be the double injection the OpenCode review flagged.
-  ctx.on("agent/session-start", ({ agent, source }) => {
-    if (source !== "compact") return
-    try {
-      const located = locate(workspaceOf(agent))
-      if (!located.root || !located.planDir) return
-      agent.inject(message([compactionNote(located.root, located.planDir), buildContext(located.root, located.planDir)]))
-    } catch (error) {
-      warn("agent/session-start", error)
     }
   })
 

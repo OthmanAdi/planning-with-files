@@ -19,7 +19,7 @@ type Loaded = {
   warn: ReturnType<typeof vi.fn>
 }
 type Header = { id: string; cwd?: string; origin?: "subagent"; delegationDepth?: number }
-type FakeAgent = { id: string; session: { header: Header }; inject: ReturnType<typeof vi.fn>; steer: ReturnType<typeof vi.fn> }
+type FakeAgent = { id: string; session: { id: string; header: Header }; inject: ReturnType<typeof vi.fn>; steer: ReturnType<typeof vi.fn> }
 
 const PLAN = "### Phase 1: A\n- **Status:** complete\n\n### Phase 2: B\n- **Status:** in_progress\n"
 const DONE = "### Phase 1: A\n- **Status:** complete\n\n### Phase 2: B\n- **Status:** complete\n"
@@ -70,8 +70,8 @@ function fire(loaded: Loaded, event: string, ...args: unknown[]): unknown {
   return registered[0](...(args as never[]))
 }
 
-function agentFor(cwd: string | undefined, header: Partial<Header> = {}): FakeAgent {
-  return { id: "ses_main", session: { header: { id: "ses_main", cwd, ...header } }, inject: vi.fn(), steer: vi.fn() }
+function agentFor(cwd: string | undefined, header: Partial<Header> = {}, id = "ses_main"): FakeAgent {
+  return { id, session: { id, header: { id, cwd, ...header } }, inject: vi.fn(), steer: vi.fn() }
 }
 
 function userPrompt(text = "hi"): UserMessage {
@@ -127,8 +127,14 @@ function stop(loaded: Loaded, agent: FakeAgent): unknown {
   return fire(loaded, "agent/turn-stopping", { agent, turn: 1, signal: SIGNAL })
 }
 
-function created(loaded: Loaded, agent: FakeAgent, source: string): unknown {
-  return fire(loaded, "agent/session-start", { agent, source })
+/** The durable compaction/end event of an agent's session, as the session log emits it. */
+function compacted(loaded: Loaded, agent: FakeAgent, error?: string): unknown {
+  const event = { type: "compaction/end", seq: 40, time: Date.now(), data: { compactionId: "cmp_1", turn: null, ...(error === undefined ? {} : { error }) } }
+  return fire(loaded, "session/event", agent.session, event)
+}
+
+function disposed(loaded: Loaded, agent: FakeAgent): unknown {
+  return fire(loaded, "session/disposed", agent.session)
 }
 
 function command(loaded: Loaded, commandName: string, agent: FakeAgent, rawInput = ""): Promise<CommandResult> {
@@ -190,7 +196,7 @@ describe("plugin shape", () => {
     expect(off.tools.size).toBe(0)
 
     const on = load()
-    expect([...on.listeners.keys()].sort()).toEqual(["agent/pre-step", "agent/session-start", "agent/turn-stopping", "tools/post-execute"])
+    expect([...on.listeners.keys()].sort()).toEqual(["agent/pre-step", "agent/turn-stopping", "session/disposed", "session/event", "tools/post-execute"])
     expect([...on.commands.keys()].sort()).toEqual(["pwf", "pwf-status"])
     expect(on.commands.has("plan")).toBe(false)
     expect([...on.tools.keys()].sort()).toEqual(["pwf_check", "pwf_init", "pwf_status"])
@@ -372,42 +378,78 @@ describe("tools/post-execute", () => {
   })
 })
 
-describe("agent/session-start", () => {
-  it("injects the compaction note and the plan after compaction, nothing on startup, resume or clear", async () => {
+describe("compaction", () => {
+  it("carries the compaction note and the plan on the next step after a successful compaction, once, and never on startup or resume", async () => {
     gatedRoot()
     const loaded = load()
-    for (const source of ["startup", "resume", "clear"]) {
-      const agent = agentFor(root)
-      await created(loaded, agent, source)
-      expect(agent.inject).not.toHaveBeenCalled()
-    }
     const agent = agentFor(root)
-    await created(loaded, agent, "compact")
-    expect(agent.inject).toHaveBeenCalledTimes(1)
-    const message = agent.inject.mock.calls[0][0] as UserMessage
+    // automatic pressure compaction runs inside the compacted turn: the continuation step gets note + plan
+    await compacted(loaded, agent)
+    const continuation = [pluginMessage("tool context", "some-tool")]
+    const entered1 = entered(await preStep(loaded, agent, continuation))
+    expect(entered1).toHaveLength(2)
+    expect(entered1[0]).toBe(continuation[0])
+    const message = entered1[1]
     expect(message.source).toEqual({ kind: "plugin", plugin: name })
     expect(message.content).toHaveLength(2)
     expect(textOf(message, 0)).toContain("Compaction in progress")
     expect(textOf(message, 0)).toContain("task_plan.md in the project root")
     expect(textOf(message, 0)).toContain(`Plan-SHA256: ${sha(path.join(root, "task_plan.md"))}`)
     expect(textOf(message, 1).startsWith(BANNER)).toBe(true)
+    // the mark is consumed: the following continuation step gets nothing, the next prompt the plain plan
+    expect(entered(await preStep(loaded, agent, continuation))).toEqual(continuation)
+    const prompt = injected(await preStep(loaded, agent, [userPrompt()]))
+    expect(prompt.content).toHaveLength(1)
+    expect(textOf(prompt)).not.toContain("Compaction in progress")
 
-    // the prompt after compaction carries the injected message, so pre-step adds no second copy
-    const batch = [message, userPrompt()]
-    expect(entered(await preStep(loaded, agent, batch))).toEqual(batch)
-
-    const empty = agentFor(fs.mkdtempSync(path.join(root, "empty-")))
-    await created(loaded, empty, "compact")
-    expect(empty.inject).not.toHaveBeenCalled()
+    // a manual /compact runs idle: the next prompt carries note + plan as one message, no second plan copy
+    await compacted(loaded, agent)
+    const afterManual = injected(await preStep(loaded, agent, [userPrompt()]))
+    expect(afterManual.content).toHaveLength(2)
+    expect(textOf(afterManual, 0)).toContain("Compaction in progress")
+    expect(textOf(afterManual, 1).startsWith(BANNER)).toBe(true)
+    expect(agent.inject).not.toHaveBeenCalled()
   })
 
-  it("logs a warning and continues when planning throws", async () => {
+  it("keeps the mark across a rejected step and drops it for a step that already carries a queued plan", async () => {
     gatedRoot()
     const loaded = load()
-    const broken = { id: "ses_main", get session(): never { throw new Error("header exploded") }, inject: vi.fn(), steer: vi.fn() }
-    await created(loaded, broken as never, "compact")
-    expect(loaded.warn).toHaveBeenCalledTimes(1)
-    expect(String(loaded.warn.mock.calls[0][0])).toContain("agent/session-start")
+    const agent = agentFor(root)
+    await compacted(loaded, agent)
+    const rejected = await fire(loaded, "agent/pre-step", { agent, messages: [], turn: 1, step: 1, signal: SIGNAL }, async () => ({ kind: "reject" }))
+    expect(rejected).toEqual({ kind: "reject" })
+    const held = entered(await preStep(loaded, agent, []))
+    expect(held).toHaveLength(1)
+    expect(textOf(held[0], 0)).toContain("Compaction in progress")
+
+    await compacted(loaded, agent)
+    const queued = [pluginMessage(`${BANNER}\n\n# Plan`), userPrompt()]
+    expect(entered(await preStep(loaded, agent, queued))).toEqual(queued)
+    expect(entered(await preStep(loaded, agent, []))).toEqual([])
+  })
+
+  it("re-injects nothing for a failed compaction, another session, a disposed session, an ambiguous root or a project without a plan", async () => {
+    gatedRoot()
+    const loaded = load()
+    const agent = agentFor(root)
+    await compacted(loaded, agent, "summary failed")
+    expect(entered(await preStep(loaded, agent, []))).toEqual([])
+    await compacted(loaded, agentFor(root, {}, "ses_other"))
+    expect(entered(await preStep(loaded, agent, []))).toEqual([])
+    await compacted(loaded, agent)
+    await disposed(loaded, agent)
+    expect(entered(await preStep(loaded, agent, []))).toEqual([])
+
+    fs.mkdirSync(path.join(root, "svc", ".planning", "2026-09-02-child"), { recursive: true })
+    fs.writeFileSync(path.join(root, "svc", ".planning", "2026-09-02-child", "task_plan.md"), "# CHILD\n")
+    await compacted(loaded, agent)
+    expect(entered(await preStep(loaded, agent, []))).toEqual([])
+    expect(textOf(injected(await preStep(loaded, agent, [userPrompt()])))).toContain("Ambiguous plan")
+
+    const empty = agentFor(fs.mkdtempSync(path.join(root, "empty-")), {}, "ses_empty")
+    await compacted(loaded, empty)
+    expect(entered(await preStep(loaded, empty, []))).toEqual([])
+    expect(loaded.warn).not.toHaveBeenCalled()
   })
 })
 
