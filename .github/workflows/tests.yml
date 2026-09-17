@@ -1,5 +1,6 @@
 # Tests: runs the pytest suite on Linux, Windows, and macOS plus the Pi
-# extension vitest suite on every PR and push to master.
+# extension, OpenCode plugin and DSH plugin vitest suites on every PR and
+# push to master.
 # The pytest suite also runs scripts/sync-ide-folders.py --verify via
 # tests/test_canonical_script_sync.py, so cross-copy parity is covered.
 name: Tests
@@ -82,6 +83,27 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: .opencode/packages/opencode-planning-with-files/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck and build
+        run: npm run build
+      - name: Run vitest
+        run: npm test
+
+  vitest-dsh:
+    name: vitest (DSH plugin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .dsh/packages/dsh-planning-with-files
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .dsh/packages/dsh-planning-with-files/package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Typecheck and build
