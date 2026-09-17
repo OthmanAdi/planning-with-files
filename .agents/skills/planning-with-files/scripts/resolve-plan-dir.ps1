@@ -175,7 +175,7 @@ if ($planCount -gt 1) { exit 0 }
 if ($env:PLAN_ID) {
     if (Test-ValidSlug $env:PLAN_ID) {
         $candidate = Join-Path $PlanRoot $env:PLAN_ID
-        if ((Test-Path $candidate -PathType Container) -and (Test-WithinRoot $candidate)) {
+        if ((Test-Path -LiteralPath $candidate -PathType Container) -and (Test-WithinRoot $candidate)) {
             Write-Output $candidate
             exit 0
         }
@@ -196,18 +196,21 @@ if ($activeItem) {
     $planId = (Get-Content -LiteralPath $activeFile -Raw).Trim()
     if ($planId -and (Test-ValidSlug $planId)) {
         $candidate = Join-Path $PlanRoot $planId
-        if ((Test-Path $candidate -PathType Container) -and (Test-WithinRoot $candidate)) {
+        if ((Test-Path -LiteralPath $candidate -PathType Container) -and (Test-WithinRoot $candidate)) {
             Write-Output $candidate
             exit 0
         }
     }
 }
 
-if (Test-Path $PlanRoot -PathType Container) {
-    $latest = Get-ChildItem -Path $PlanRoot -Directory |
+# Literal paths throughout: a project path containing [ or ] is a wildcard to
+# Test-Path and Get-ChildItem -Path, and a pattern that matches nothing turned a
+# valid selection into an empty result.
+if (Test-Path -LiteralPath $PlanRoot -PathType Container) {
+    $latest = Get-ChildItem -LiteralPath $PlanRoot -Directory |
         Where-Object { -not $_.Name.StartsWith('.') } |
         Where-Object { Test-ValidSlug $_.Name } |
-        Where-Object { Test-Path (Join-Path $_.FullName "task_plan.md") -PathType Leaf } |
+        Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "task_plan.md") -PathType Leaf } |
         Where-Object { Test-WithinRoot $_.FullName } |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1

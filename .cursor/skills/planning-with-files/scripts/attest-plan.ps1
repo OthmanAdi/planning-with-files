@@ -218,8 +218,10 @@ if ($script:IsWindowsHost) {
     $securityRootPath = (Get-Location).Path
     if ($env:PWF_PLAN_ROOT) {
         $pin = $env:PWF_PLAN_ROOT
+        # Windows PowerShell 5.1 has no IsPathFullyQualified; a drive-qualified
+        # local path is the only accepted shape, as in resolve-plan-dir.ps1.
         $isUnc = $pin.StartsWith('\\') -or $pin.StartsWith('//')
-        if (-not [IO.Path]::IsPathFullyQualified($pin) -or $isUnc) {
+        if ($isUnc -or ($pin -notmatch '^[A-Za-z]:[\\/]')) {
             throw "[plan-attest] PWF_PLAN_ROOT must be an absolute local path."
         }
         $securityRootPath = $pin
