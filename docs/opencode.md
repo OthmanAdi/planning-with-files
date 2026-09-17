@@ -63,7 +63,7 @@ Start OpenCode in a project and ask: "Call pwf_status." With no plan it answers 
 
 | Hook | Behavior |
 |---|---|
-| `chat.message` | Appends the active plan to every user message as a synthetic part: the framed head of `task_plan.md` (50 lines), the normalized tail of `progress.md` (20 lines), a pointer to `findings.md`. Resolves `PLAN_ID`, then `.planning/.active_plan` (BOM tolerant), then the newest `.planning/<slug>/task_plan.md`, then the legacy root file, with the same slug validation and containment rules as `resolve-plan-dir.sh` and the same nested-root ambiguity rule as `inject-plan.sh` |
+| `chat.message` | Appends the active plan to every user message as a synthetic part: the framed head of `task_plan.md` (50 lines), the normalized tail of `progress.md` (20 lines), a pointer to `findings.md`. Resolves `PLAN_ID`, then a single named plan through `.planning/.active_plan` (BOM tolerant) or the plan directory itself, then the legacy root file; two or more named plans without `PLAN_ID` are ambiguous and get the `Multiple plans are available` notice instead of a plan (v3.20.0, matching `inject-plan.sh`), with the same slug validation and containment rules as `resolve-plan-dir.sh` and the same nested-root ambiguity rule as `inject-plan.sh` |
 | `tool.execute.after` | Appends the progress reminder to the output of `write`, `edit`, `patch`, `multiedit` and `apply_patch` while a plan exists |
 | `experimental.session.compacting` | Adds the plan pointer, the flush instruction, and the attestation hash to the compaction context, so the continuation resumes from the file on disk |
 | `event` on `session.idle` | The completion gate in gated mode (below) |

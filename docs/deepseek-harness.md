@@ -85,8 +85,8 @@ The command answers with the created files, the plan id (`YYYY-MM-DD-my-task`) a
 Every event resolves the plan again from the session's working directory (the `cwd` on the session header), in this order:
 
 1. `PLAN_ID=<slug>` in the dsh process environment binds one plan. A slug that names no plan ends resolution: nothing is injected, and neither the pointer nor the root plan is used instead.
-2. `.planning/.active_plan` (BOM tolerant) names the active slug.
-3. The newest `.planning/<slug>/task_plan.md` by modification time.
+2. Without `PLAN_ID`, two or more named plans under `.planning/` are ambiguous: the first prompt gets the one-line `Multiple plans are available` notice and nothing is injected until `PLAN_ID` is set. A shared pointer or a directory timestamp cannot tell which plan this session means.
+3. With one named plan, `.planning/.active_plan` (BOM tolerant) or the plan directory itself selects it.
 4. The legacy `task_plan.md` in the project root.
 
 `PWF_PLAN_ROOT=<absolute path>` pins the project root; a pin that does not resolve to a real directory fails closed. When a direct child project carries its own live plan, a cwd guess is ambiguous: the plugin injects a one-line notice instead of a plan until you pin the session with `PWF_PLAN_ROOT` or `PLAN_ID`. `PLANNING_DISABLED=1` silences every listener, command and tool.
