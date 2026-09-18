@@ -9,7 +9,9 @@ from typing import Any
 
 from .constants import PLANNING_FILES, PLAN_PREVIEW_LINES, PROGRESS_TAIL_LINES
 from .paths import (
+    MULTIPLE_PLANS_MESSAGE,
     attestation_path_for,
+    multiple_plans_require_selector,
     plan_id_for,
     resolve_plan_dir,
     resolve_skill_dir,
@@ -425,9 +427,14 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
 def summarize_status(project_dir: Path) -> dict[str, Any]:
     plan_dir = resolve_plan_dir(project_dir)
     if plan_dir is None:
+        message = (
+            MULTIPLE_PLANS_MESSAGE
+            if multiple_plans_require_selector(project_dir)
+            else "No planning files found. Run planning_with_files_init first."
+        )
         return {
             "exists": False,
-            "message": "No planning files found. Run planning_with_files_init first.",
+            "message": message,
             "project_dir": str(project_dir),
             "files": {
                 "task_plan.md": False,

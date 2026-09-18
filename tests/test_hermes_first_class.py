@@ -200,13 +200,14 @@ class HermesFirstClassTests(unittest.TestCase):
             os.environ["PLAN_ID"] = ""
             self.assertEqual(active, paths_module.resolve_plan_dir(root))
 
-    def test_newest_slug_by_mtime_when_no_pointer(self) -> None:
+    def test_single_slug_discovers_without_pointer_but_multiple_require_selector(self) -> None:
         with self._workspace() as root:
             older = self._slug_plan(root, "2026-08-01-old")
-            newer = self._slug_plan(root, "2026-09-01-new")
             past = time.time() - 3600
             os.utime(older / "task_plan.md", (past, past))
-            self.assertEqual(newer, paths_module.resolve_plan_dir(root))
+            self.assertEqual(older, paths_module.resolve_plan_dir(root))
+            self._slug_plan(root, "2026-09-01-new")
+            self.assertIsNone(paths_module.resolve_plan_dir(root))
             os.environ["PLAN_ID"] = "2026-08-01-old"
             self.assertEqual(older, paths_module.resolve_plan_dir(root))
 
@@ -337,7 +338,7 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertEqual(alpha.name, "plan-a")
             self.assertEqual(beta.name, "plan-b")
 
-    def test_armed_single_plan_and_legacy_multiple_plans_keep_resolution(self) -> None:
+    def test_single_plan_resolves_but_legacy_multiple_plans_require_plan_id(self) -> None:
         with self._workspace() as root:
             self._slug_plan(root, "plan-a", text="# PLAN-A\n", pointer=True)
             os.chdir(root)
@@ -353,7 +354,14 @@ class HermesFirstClassTests(unittest.TestCase):
             self._slug_plan(root, "plan-b", text="# PLAN-B\n", pointer=True)
             legacy = self._pre_llm("unattached")
             assert legacy is not None
-            self.assertIn("PLAN-B", legacy["context"])
+            self.assertIn("Multiple plans are available", legacy["context"])
+            self.assertIn("Set PLAN_ID=<slug>", legacy["context"])
+            self.assertNotIn("PLAN-A", legacy["context"])
+            self.assertNotIn("PLAN-B", legacy["context"])
+            os.environ["PLAN_ID"] = "plan-b"
+            selected = self._pre_llm("unattached")
+            assert selected is not None
+            self.assertIn("PLAN-B", selected["context"])
 
     def test_armed_root_and_slug_plans_require_a_plan_id(self) -> None:
         with self._workspace() as root:
@@ -421,12 +429,9 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertIn("PLAN-A", result["context"])
             self.assertNotIn("Set PLAN_ID=<slug>", result["context"])
 
-    def test_active_plan_pointer_tolerates_a_utf8_bom(self) -> None:
+    def test_active_plan_pointer_tolerates_a_utf8_bom_with_single_plan(self) -> None:
         with self._workspace() as root:
             older = self._slug_plan(root, "2026-08-01-aaa")
-            self._slug_plan(root, "2026-09-01-zzz")
-            past = time.time() - 3600
-            os.utime(older / "task_plan.md", (past, past))
             (root / ".planning" / ".active_plan").write_bytes(b"\xef\xbb\xbf2026-08-01-aaa\r\n")
             self.assertEqual(older, paths_module.resolve_plan_dir(root))
 
@@ -547,17 +552,22 @@ class HermesFirstClassTests(unittest.TestCase):
             self._slug_plan(root, "2026-09-01-parent", text="# PARENT\n", pointer=True)
             self.assertTrue(shell_injects(root, {}))
             self.assertIsNotNone(paths_module.resolve_plan_dir(root))
-            # 2. empty nested .planning: both still inject
+            # 2. a second same-root plan without PLAN_ID: both refuse
+            second = self._slug_plan(root, "2026-09-02-second", text="# SECOND\n")
+            self.assertFalse(shell_injects(root, {}))
+            self.assertIsNone(paths_module.resolve_plan_dir(root))
+            shutil.rmtree(second)
+            # 3. empty nested .planning: both still inject
             (root / "svc" / ".planning").mkdir(parents=True)
             self.assertTrue(shell_injects(root, {}))
             self.assertIsNotNone(paths_module.resolve_plan_dir(root))
-            # 3. live nested plan: both refuse
+            # 4. live nested plan: both refuse
             live = root / "svc" / ".planning" / "2026-09-01-child"
             live.mkdir()
             (live / "task_plan.md").write_text("# CHILD\n", encoding="utf-8")
             self.assertFalse(shell_injects(root, {}))
             self.assertIsNone(paths_module.resolve_plan_dir(root))
-            # 4. explicit PLAN_ID and a PWF_PLAN_ROOT pin: both inject again
+            # 5. explicit PLAN_ID and a PWF_PLAN_ROOT pin: both inject again
             self.assertTrue(shell_injects(root, {"PLAN_ID": "2026-09-01-parent"}))
             self.assertIsNotNone(paths_module.resolve_plan_dir(root, plan_id="2026-09-01-parent"))
             self.assertTrue(shell_injects(root, {"PWF_PLAN_ROOT": str(root)}))
@@ -684,6 +694,26 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertEqual("python", result["route"])
             self.assertEqual("2026-09-01-run", result["plan_id"])
             self.assertIn("ALL PHASES COMPLETE", result["stdout"])
+
+    def test_status_and_check_complete_require_selector_for_multiple_plans(self) -> None:
+        with self._workspace() as root:
+            self._slug_plan(root, "plan-a", text=COMPLETE_PLAN, pointer=True)
+            self._slug_plan(root, "plan-b", text=COMPLETE_PLAN)
+
+            status = json.loads(tools_module.planning_with_files_status(cwd=str(root)))
+            self.assertFalse(status["exists"])
+            self.assertIn("Multiple plans are available", status["message"])
+            self.assertIn("Set PLAN_ID=<slug>", status["message"])
+
+            complete = json.loads(tools_module.planning_with_files_check_complete(cwd=str(root)))
+            self.assertFalse(complete["ok"])
+            self.assertFalse(complete["complete"])
+            self.assertIn("Multiple plans are available", complete["error"])
+
+            os.environ["PLAN_ID"] = "plan-a"
+            selected = json.loads(tools_module.planning_with_files_status(cwd=str(root)))
+            self.assertTrue(selected["exists"])
+            self.assertEqual("plan-a", selected["plan_id"])
 
     # -- registration and slash commands -------------------------------------
 

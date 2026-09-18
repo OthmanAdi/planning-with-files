@@ -3,7 +3,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .paths import normalize_cwd, plan_id_for, resolve_plan_dir, resolve_skill_dir
+from .paths import (
+    MULTIPLE_PLANS_MESSAGE,
+    multiple_plans_require_selector,
+    normalize_cwd,
+    plan_id_for,
+    resolve_plan_dir,
+    resolve_skill_dir,
+)
 from .planning_files import init_plan, phase_counts, summarize_status
 
 
@@ -49,7 +56,11 @@ def planning_with_files_check_complete(cwd: str = "") -> str:
         return json.dumps(
             {
                 "ok": False,
-                "error": "No task_plan.md found. Run planning_with_files_init first.",
+                "error": (
+                    MULTIPLE_PLANS_MESSAGE
+                    if multiple_plans_require_selector(project_dir)
+                    else "No task_plan.md found. Run planning_with_files_init first."
+                ),
                 "skill_root": str(skill_root),
                 "complete": False,
             },
