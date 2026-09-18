@@ -284,17 +284,20 @@ def resolve_plan(
 ) -> tuple[Path | None, list[str]]:
     """Resolve the active plan directory; return it with any nested conflicts.
 
-    Precedence mirrors resolve-plan-dir.sh: an explicit plan id (the PLAN_ID
-    environment variable when not passed), then .planning/.active_plan, then
-    the newest .planning/<slug>/task_plan.md by modification time, then the
-    legacy root task_plan.md. Slugs are validated and the chosen directory
-    must stay inside .planning (no symlink or junction escape).
+    Precedence mirrors resolve-plan-dir.sh: a non-empty explicit plan id (the
+    PLAN_ID environment variable when not passed) is binding. Without one,
+    more than one selectable same-root plan is refused; otherwise resolution
+    continues through .planning/.active_plan, the newest
+    .planning/<slug>/task_plan.md by modification time, then the legacy root
+    task_plan.md. Slugs are validated and the chosen directory must stay
+    inside .planning (no symlink or junction escape).
 
     A cwd guess (pointer, newest, or legacy root) is refused when a direct
     child of the root carries its own live plan (issue #212): the result is
     ``(None, [child names])`` so the caller can say why. ``explicit`` marks a
-    selection that skips that check, exactly as inject-plan.sh does for a
-    ``PWF_PLAN_ROOT`` pin or a ``PLAN_ID`` slug.
+    project-root selection that skips only that nested-root check, exactly as
+    inject-plan.sh does for a valid ``PWF_PLAN_ROOT`` pin. It never selects one
+    of several same-root plans; that still requires ``PLAN_ID``.
     """
     planning_root = project_dir / ".planning"
     requested = plan_id if plan_id is not None else os.environ.get("PLAN_ID", "").strip()
