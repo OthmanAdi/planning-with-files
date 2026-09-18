@@ -200,15 +200,20 @@ class HermesFirstClassTests(unittest.TestCase):
             os.environ["PLAN_ID"] = ""
             self.assertEqual(active, paths_module.resolve_plan_dir(root))
 
-    def test_newest_slug_by_mtime_when_no_pointer(self) -> None:
+    def test_multiple_named_plans_require_selector_instead_of_pointer_or_mtime(self) -> None:
         with self._workspace() as root:
             older = self._slug_plan(root, "2026-08-01-old")
             newer = self._slug_plan(root, "2026-09-01-new")
             past = time.time() - 3600
             os.utime(older / "task_plan.md", (past, past))
-            self.assertEqual(newer, paths_module.resolve_plan_dir(root))
+            self.assertIsNone(paths_module.resolve_plan_dir(root))
+            (root / ".planning" / ".active_plan").write_text(
+                "2026-09-01-new\n", encoding="utf-8"
+            )
+            self.assertIsNone(paths_module.resolve_plan_dir(root))
             os.environ["PLAN_ID"] = "2026-08-01-old"
             self.assertEqual(older, paths_module.resolve_plan_dir(root))
+            self.assertEqual(newer.name, "2026-09-01-new")
 
     def test_plan_root_pin_redirects_and_broken_pin_fails_closed(self) -> None:
         with self._workspace() as parent:
@@ -337,10 +342,14 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertEqual(alpha.name, "plan-a")
             self.assertEqual(beta.name, "plan-b")
 
-    def test_armed_single_plan_and_legacy_multiple_plans_keep_resolution(self) -> None:
+    def test_single_named_plan_keeps_resolution_with_or_without_session_isolation(self) -> None:
         with self._workspace() as root:
             self._slug_plan(root, "plan-a", text="# PLAN-A\n", pointer=True)
             os.chdir(root)
+            legacy = self._pre_llm("legacy")
+            assert legacy is not None
+            self.assertIn("PLAN-A", legacy["context"])
+
             sessions = root / ".planning" / "sessions"
             sessions.mkdir()
             key = hook_state_module.state_key(root, "s1")
@@ -349,11 +358,38 @@ class HermesFirstClassTests(unittest.TestCase):
             assert armed is not None
             self.assertIn("PLAN-A", armed["context"])
 
-            shutil.rmtree(sessions)
-            self._slug_plan(root, "plan-b", text="# PLAN-B\n", pointer=True)
-            legacy = self._pre_llm("unattached")
-            assert legacy is not None
-            self.assertIn("PLAN-B", legacy["context"])
+    def test_multiple_named_plans_without_session_isolation_require_plan_id(self) -> None:
+        with self._workspace() as root:
+            self._slug_plan(root, "plan-a", text="# PLAN-A\n", pointer=True)
+            self._slug_plan(root, "plan-b", text="# PLAN-B\n")
+            os.chdir(root)
+
+            result = self._pre_llm("legacy")
+            self.assertEqual(
+                {"context": paths_module.MULTIPLE_PLANS_NOTICE},
+                result,
+            )
+            self.assertIsNone(self._pre_verify("legacy"))
+            hooks_module.post_tool_call(
+                tool_name="write_file", session_id="legacy",
+                args={"path": "a", "content": "b"},
+            )
+            self.assertEqual([], hook_state_module.pop_reminders(root, "legacy"))
+
+            status = json.loads(tools_module.planning_with_files_status(cwd=str(root)))
+            self.assertFalse(status["exists"])
+            self.assertIn("Set PLAN_ID=<slug>", status["message"])
+            completion = json.loads(
+                tools_module.planning_with_files_check_complete(cwd=str(root))
+            )
+            self.assertFalse(completion["ok"])
+            self.assertIn("Set PLAN_ID=<slug>", completion["error"])
+
+            os.environ["PLAN_ID"] = "plan-a"
+            selected = self._pre_llm("legacy")
+            assert selected is not None
+            self.assertIn("PLAN-A", selected["context"])
+            self.assertNotIn("PLAN-B", selected["context"])
 
     def test_armed_root_and_slug_plans_require_a_plan_id(self) -> None:
         with self._workspace() as root:
@@ -423,12 +459,9 @@ class HermesFirstClassTests(unittest.TestCase):
 
     def test_active_plan_pointer_tolerates_a_utf8_bom(self) -> None:
         with self._workspace() as root:
-            older = self._slug_plan(root, "2026-08-01-aaa")
-            self._slug_plan(root, "2026-09-01-zzz")
-            past = time.time() - 3600
-            os.utime(older / "task_plan.md", (past, past))
+            plan = self._slug_plan(root, "2026-08-01-aaa")
             (root / ".planning" / ".active_plan").write_bytes(b"\xef\xbb\xbf2026-08-01-aaa\r\n")
-            self.assertEqual(older, paths_module.resolve_plan_dir(root))
+            self.assertEqual(plan, paths_module.resolve_plan_dir(root))
 
     def test_gate_counts_mixed_status_formats_like_the_shell(self) -> None:
         mixed = (

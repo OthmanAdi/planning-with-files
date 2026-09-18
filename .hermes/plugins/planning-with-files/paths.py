@@ -12,6 +12,11 @@ SKILL_DIR_NAME = "planning-with-files"
 # underscore. Rejects traversal, separators, and whitespace by construction.
 _SLUG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]*$")
 _REPARSE_ATTR = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+MULTIPLE_PLANS_NOTICE = (
+    "[planning-with-files] Multiple plans are available. "
+    "Set PLAN_ID=<slug> for this session; nothing injected."
+)
+MULTIPLE_PLANS_MESSAGE = "Multiple plans are available. Set PLAN_ID=<slug> to select one."
 
 
 def has_skill_assets(candidate: Path) -> bool:
@@ -197,6 +202,42 @@ def _read_active_pointer(planning_root: Path) -> str:
     return lines[0] if len(lines) == 1 else ""
 
 
+def count_selectable_plans(project_dir: Path) -> int:
+    """Count plans that need an explicit PLAN_ID once more than one exists.
+
+    Mirrors inject-plan.sh and the OpenCode/DSH adapters: a root task_plan.md
+    counts only while .planning/sessions is armed, plus every valid slug
+    directory containing a real task_plan.md. The caller only needs to know
+    whether the count exceeds one, so stop there.
+    """
+    planning_root = project_dir / ".planning"
+    sessions_dir = planning_root / "sessions"
+    count = 0
+    if (
+        sessions_dir.is_dir()
+        and not _is_link_or_reparse(sessions_dir)
+        and _is_regular_file(project_dir / "task_plan.md")
+    ):
+        count = 1
+    try:
+        entries = planning_root.iterdir()
+        for entry in entries:
+            if _slug_plan_dir(planning_root, entry.name) is None:
+                continue
+            count += 1
+            if count > 1:
+                break
+    except OSError:
+        pass
+    return count
+
+
+def multiple_plans_require_selector(project_dir: Path, *, plan_id: str | None = None) -> bool:
+    """True when pointer/mtime guessing must not choose between same-root plans."""
+    requested = plan_id if plan_id is not None else os.environ.get("PLAN_ID", "").strip()
+    return not requested and count_selectable_plans(project_dir) > 1
+
+
 def nested_live_plans(root: Path) -> list[str]:
     """Direct children whose own .planning holds a live plan (<slug>/task_plan.md).
 
@@ -269,6 +310,12 @@ def resolve_plan(
         explicit_dir = _slug_plan_dir(planning_root, requested)
         if explicit_dir is not None:
             return explicit_dir, []
+        return None, []
+
+    # A shared .active_plan pointer or directory mtime cannot identify which
+    # same-root plan this session means (#240, #264). PWF_PLAN_ROOT selects the
+    # project, not the plan, so even an explicit project pin does not lift this.
+    if count_selectable_plans(project_dir) > 1:
         return None, []
 
     chosen: Path | None = None

@@ -9,25 +9,22 @@ from .constants import PROGRESS_TAIL_LINES, READ_PREVIEW_LINES
 from .context_frame import frame_bytes, read_regular_bytes, select_lines, verified_frame
 from .hook_state import add_reminder, pop_reminders, state_key
 from .paths import (
+    MULTIPLE_PLANS_NOTICE,
     ambiguity_notice,
     attestation_path_for,
+    count_selectable_plans,
     effective_project_root,
     normalize_cwd,
     plan_id_for,
     plan_root_is_pinned,
     resolve_plan,
     resolve_plan_dir,
-    slug_is_valid,
 )
 from .planning_files import evaluate_gate, normalize_wall_clock
 
 ATTACH_LEGACY = "legacy"      # no .planning/sessions directory: single-session setup
 ATTACH_ATTACHED = "attached"  # sessions directory armed and this session holds a sentinel
 ATTACH_DETACHED = "detached"  # sessions directory armed, no sentinel (or unsafe directory)
-SESSION_PLAN_BINDING_NOTICE = (
-    "[planning-with-files] Multiple plans are available while session isolation "
-    "is armed. Set PLAN_ID=<slug> for this session; nothing injected."
-)
 
 
 def _runtime_project_dir(kwargs: dict[str, Any]) -> Path | None:
@@ -84,50 +81,6 @@ def _session_attachment(project_dir: Path, session_id: str) -> str:
         return ATTACH_DETACHED
 
 
-def _is_live_plan_file(path: Path) -> bool:
-    try:
-        info = path.lstat()
-    except OSError:
-        return False
-    attrs = getattr(info, "st_file_attributes", 0)
-    return (
-        stat.S_ISREG(info.st_mode)
-        and not stat.S_ISLNK(info.st_mode)
-        and not attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
-    )
-
-
-def _session_plan_requires_binding(project_dir: Path) -> bool:
-    """True when an attached session must select a same-root plan by PLAN_ID."""
-    if os.environ.get("PLAN_ID", "").strip():
-        return False
-    candidates = 1 if _is_live_plan_file(project_dir / "task_plan.md") else 0
-    planning_dir = project_dir / ".planning"
-    try:
-        children = planning_dir.iterdir()
-        for child in children:
-            if not slug_is_valid(child.name):
-                continue
-            try:
-                info = child.lstat()
-            except OSError:
-                continue
-            attrs = getattr(info, "st_file_attributes", 0)
-            if (
-                not stat.S_ISDIR(info.st_mode)
-                or stat.S_ISLNK(info.st_mode)
-                or attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
-            ):
-                continue
-            if _is_live_plan_file(child / "task_plan.md"):
-                candidates += 1
-                if candidates > 1:
-                    return True
-    except (OSError, RuntimeError):
-        return True
-    return False
-
-
 def _resolve_plan(project_dir: Path, *, explicit: bool = False) -> tuple[Path | None, list[str]]:
     """Active plan directory whose task_plan.md is a regular file, plus nested conflicts."""
     plan_dir, conflicts = resolve_plan(project_dir, explicit=explicit)
@@ -148,7 +101,7 @@ def _session_id(kwargs: dict[str, Any]) -> str:
 def _locate(
     kwargs: dict[str, Any],
 ) -> tuple[Path | None, Path | None, list[str], str, bool]:
-    """Shared front half: project, plan, conflicts, session id, binding refusal.
+    """Shared front half: project, plan, conflicts, session id, selector refusal.
 
     PWF_PLAN_ROOT selects the effective project root. PLAN_ID selects a plan
     within it. A session attachment is admission only and never skips either
@@ -161,11 +114,13 @@ def _locate(
     attachment = _session_attachment(project_dir, session_id)
     if attachment == ATTACH_DETACHED:
         return project_dir, None, [], session_id, False
-    if attachment == ATTACH_ATTACHED and _session_plan_requires_binding(project_dir):
-        return project_dir, None, [], session_id, True
+    selector_required = (
+        not os.environ.get("PLAN_ID", "").strip()
+        and count_selectable_plans(project_dir) > 1
+    )
     explicit = plan_root_is_pinned()
     plan_dir, conflicts = _resolve_plan(project_dir, explicit=explicit)
-    return project_dir, plan_dir, conflicts, session_id, False
+    return project_dir, plan_dir, conflicts, session_id, selector_required and plan_dir is None
 
 
 def build_user_prompt_context(project_dir: Path, plan_dir: Path | None = None) -> str:
@@ -213,14 +168,14 @@ def build_user_prompt_context(project_dir: Path, plan_dir: Path | None = None) -
 
 
 def pre_llm_call(**kwargs: Any) -> dict[str, str] | None:
-    project_dir, plan_dir, conflicts, session_id, binding_required = _locate(kwargs)
+    project_dir, plan_dir, conflicts, session_id, selector_required = _locate(kwargs)
     if project_dir is None:
         return None
     if plan_dir is None:
         # The refusal holds in every hook; the notice is turn-scoped, so only
         # this once-per-turn hook says why (same split as inject-plan.sh).
-        if binding_required:
-            return {"context": SESSION_PLAN_BINDING_NOTICE}
+        if selector_required:
+            return {"context": MULTIPLE_PLANS_NOTICE}
         if conflicts:
             return {"context": ambiguity_notice(conflicts)}
         return None
