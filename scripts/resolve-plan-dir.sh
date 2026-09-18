@@ -338,8 +338,9 @@ if [ -z "${PLAN_ID:-}" ]; then
         PLAN_COUNT=1
     fi
     for plan_candidate in "${PLAN_ROOT}"/*/task_plan.md; do
-        [ -f "$plan_candidate" ] || continue
         plan_candidate_dir="${plan_candidate%/task_plan.md}"
+        [ -L "$plan_candidate_dir" ] && continue
+        [ -f "$plan_candidate" ] || continue
         slug_is_valid "${plan_candidate_dir##*/}" || continue
         PLAN_COUNT=$((PLAN_COUNT + 1))
         if [ "$PLAN_COUNT" -gt 1 ]; then PLAN_AMBIGUOUS=1; break; fi

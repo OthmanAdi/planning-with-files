@@ -535,6 +535,7 @@ class HermesFirstClassTests(unittest.TestCase):
     def test_python_resolver_agrees_with_inject_plan_sh(self) -> None:
         """Differential test: the shell injector and the Python resolver must agree on every fixture."""
         inject = CANONICAL_SKILL / "scripts" / "inject-plan.sh"
+        resolve = CANONICAL_SKILL / "scripts" / "resolve-plan-dir.sh"
 
         def shell_injects(root: Path, env_extra: dict[str, str]) -> bool:
             env = {k: v for k, v in os.environ.items() if k not in ENV_KEYS}
@@ -546,6 +547,28 @@ class HermesFirstClassTests(unittest.TestCase):
             if "ACTIVE PLAN" in out:
                 self.assertNotIn("Ambiguous plan", out)
             return "ACTIVE PLAN" in out
+
+        def shell_reports_ambiguity(root: Path) -> bool:
+            env = {k: v for k, v in os.environ.items() if k not in ENV_KEYS}
+            out = subprocess.run(
+                ["sh", str(resolve), "--check-ambiguity"], cwd=str(root), env=env,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+            ).stdout
+            return "PWF_PLAN_AMBIGUOUS_V1" in out
+
+        def link_directory(link: Path, target: Path) -> None:
+            if os.name == "nt":
+                result = subprocess.run(
+                    ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                    capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+                )
+                if result.returncode != 0:
+                    self.skipTest(f"could not create junction: {result.stderr or result.stdout}")
+                return
+            try:
+                link.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"could not create directory symlink: {exc}")
 
         with self._workspace() as root:
             # 1. slug plan alone: both inject
@@ -572,6 +595,15 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertIsNotNone(paths_module.resolve_plan_dir(root, plan_id="2026-09-01-parent"))
             self.assertTrue(shell_injects(root, {"PWF_PLAN_ROOT": str(root)}))
             self.assertIsNotNone(paths_module.resolve_plan_dir(root, explicit=True))
+            # 6. a linked same-root plan is not selectable: both ignore it
+            shutil.rmtree(root / "svc")
+            linked_target = root / "linked-target"
+            linked_target.mkdir()
+            (linked_target / "task_plan.md").write_text("# LINKED\n", encoding="utf-8")
+            link_directory(root / ".planning" / "2026-09-02-linked", linked_target)
+            self.assertTrue(shell_injects(root, {}))
+            self.assertFalse(shell_reports_ambiguity(root))
+            self.assertIsNotNone(paths_module.resolve_plan_dir(root))
 
     def test_planning_disabled_suppresses_every_hook(self) -> None:
         with self._workspace() as root:
