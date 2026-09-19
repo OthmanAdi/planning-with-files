@@ -482,10 +482,13 @@ def get_opencode_db_path() -> Optional[Path]:
 
 def _format_opencode_part(data: Dict, session_id: str) -> Optional[Dict]:
     """Convert one OpenCode part row's JSON `data` blob into a print-ready summary."""
+    if not isinstance(data, dict):
+        return None
     ptype = data.get('type')
     short = safe_session_label(session_id)
     if ptype == 'tool':
-        tool = (data.get('tool') or '').lower()
+        tool_value = data.get('tool')
+        tool = tool_value.lower() if isinstance(tool_value, str) else ''
         state = data.get('state') or {}
         input_ = state.get('input') if isinstance(state, dict) else None
         input_ = input_ if isinstance(input_, dict) else {}
@@ -499,7 +502,8 @@ def _format_opencode_part(data: Dict, session_id: str) -> Optional[Dict]:
             return {'session': short, 'summary': f"Tool bash: {cmd}"}
         return {'session': short, 'summary': f"Tool {tool}"}
     if ptype == 'text':
-        text = (data.get('text') or '')[:300]
+        text_value = data.get('text')
+        text = text_value[:300] if isinstance(text_value, str) else ''
         if text.strip():
             return {'session': short, 'summary': f"text: {text}"}
     return None
