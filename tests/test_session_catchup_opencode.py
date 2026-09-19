@@ -178,6 +178,14 @@ class OpenCodeCatchupTests(unittest.TestCase):
                 "state": {"input": "broken"},
             },
         )
+        self.seed.add_raw_part("prt_null", "ses_old", 1_000_016, "null")
+        self.seed.add_raw_part("prt_array", "ses_old", 1_000_017, "[]")
+        self.seed.add_part(
+            "prt_nonstring_tool", "ses_old", 1_000_018, {"type": "tool", "tool": 5}
+        )
+        self.seed.add_part(
+            "prt_object_text", "ses_old", 1_000_019, {"type": "text", "text": {"a": 1}}
+        )
 
         buf = StringIO()
         with redirect_stdout(buf):
