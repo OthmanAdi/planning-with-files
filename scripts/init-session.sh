@@ -186,6 +186,10 @@ apply_v3_mode() {
     _mode_plan="$2"
     [ -z "$MODE" ] && return 0
 
+    ATTESTATION_OK=0
+    ATTESTATION_COMMAND="attest-plan.sh"
+    ATTESTATION_REASON="task_plan.md was not available for attestation"
+
     # (a) reset the gate block counter and drop any stale gate ledger so a prior
     #     run's high block count cannot let the next run stop instantly.
     printf '0\n' > "${_mode_dir}/.stop_blocks"
@@ -210,13 +214,54 @@ apply_v3_mode() {
     #     ./task_plan.md when no selector is set, and a bound pin would make it
     #     refuse the root plan. Run from the project root (CWD here) so both
     #     resolutions land.
-    _attest="${SCRIPT_DIR}/attest-plan.sh"
-    if [ -f "${_attest}" ] && [ -f "${_mode_plan}" ]; then
-        if [ "$SLUG_MODE" -eq 1 ]; then
-            PWF_PLAN_ROOT="$PWD" PLAN_ID="${PLAN_ID}" sh "${_attest}" >/dev/null 2>&1 || true
+    _attest="${SCRIPT_DIR}/${ATTESTATION_COMMAND}"
+    if [ ! -f "${_attest}" ]; then
+        ATTESTATION_REASON="${ATTESTATION_COMMAND} was not found beside init-session.sh"
+        return 0
+    fi
+    if [ ! -f "${_mode_plan}" ]; then
+        return 0
+    fi
+
+    if [ "$SLUG_MODE" -eq 1 ]; then
+        if _attest_output="$(PWF_PLAN_ROOT="$PWD" PLAN_ID="${PLAN_ID}" sh "${_attest}" 2>&1)"; then
+            ATTESTATION_OK=1
+            ATTESTATION_REASON=""
+            return 0
         else
-            PWF_PLAN_ROOT="" PLAN_ID="" sh "${_attest}" >/dev/null 2>&1 || true
+            _attest_rc=$?
         fi
+    else
+        if _attest_output="$(PWF_PLAN_ROOT="" PLAN_ID="" sh "${_attest}" 2>&1)"; then
+            ATTESTATION_OK=1
+            ATTESTATION_REASON=""
+            return 0
+        else
+            _attest_rc=$?
+        fi
+    fi
+
+    _attest_reason="$(
+        printf '%s\n' "${_attest_output}" |
+            sed -n '/[^[:space:]]/ { s/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//; p; q; }' |
+            cut -c1-300
+    )"
+    if [ -n "${_attest_reason}" ]; then
+        ATTESTATION_REASON="${_attest_reason}"
+    else
+        ATTESTATION_REASON="${ATTESTATION_COMMAND} exited with code ${_attest_rc}"
+    fi
+    return 0
+}
+
+print_v3_mode_status() {
+    _status_dir="$1"
+    _marker="$(cat "${_status_dir}/.mode")"
+    if [ "${ATTESTATION_OK:-0}" -eq 1 ]; then
+        printf 'Mode: %s (attested, gate counter reset)\n' "${_marker}"
+    else
+        printf 'Mode: %s (NOT attested: %s; run %s before the first hook fire)\n' \
+            "${_marker}" "${ATTESTATION_REASON:-attestation failed}" "${ATTESTATION_COMMAND:-attest-plan.sh}"
     fi
 }
 
@@ -431,7 +476,7 @@ if [ "$SLUG_MODE" -eq 1 ]; then
     echo "Pin this terminal to the plan for parallel sessions:"
     echo "  export PLAN_ID=$PLAN_ID"
     if [ -n "$MODE" ]; then
-        echo "Mode: $(cat "${PLAN_DIR}/.mode") (attested, gate counter reset)"
+        print_v3_mode_status "${PLAN_DIR}"
     fi
 else
     PROJECT_NAME="${PROJECT_NAME:-project}"
@@ -442,6 +487,6 @@ else
     echo "Planning files initialized!"
     echo "Files: task_plan.md, findings.md, progress.md"
     if [ -n "$MODE" ]; then
-        echo "Mode: $(cat "$(pwd)/.mode") (attested, gate counter reset)"
+        print_v3_mode_status "$(pwd)"
     fi
 fi

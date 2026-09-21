@@ -80,6 +80,26 @@ function Get-InheritedMode([string]$CurrentMode) {
     return $CurrentMode
 }
 
+function Format-AttestationFailureReason {
+    param([object[]]$Output, [string]$Fallback)
+
+    $Reason = @(
+        $Output |
+            ForEach-Object {
+                if ($null -ne $_) { ($_.ToString()).Trim() }
+            } |
+            Where-Object { $_ }
+    ) -join " "
+    $Reason = ($Reason -replace '\s+', ' ').Trim()
+    if ([string]::IsNullOrWhiteSpace($Reason)) {
+        return $Fallback
+    }
+    if ($Reason.Length -gt 300) {
+        return ($Reason.Substring(0, 297) + "...")
+    }
+    return $Reason
+}
+
 # Validate template
 if ($Template -ne "default" -and $Template -ne "analytics") {
     Write-Host "Unknown template: $Template (available: default, analytics). Using default."
@@ -355,8 +375,11 @@ if ($Mode -ne "") {
     # to another project or plan (#261, #237). Root mode clears both instead:
     # the attester only falls back to the legacy ./task_plan.md when no
     # selector is set, and a bound pin would make it refuse the root plan.
+    $AttestationSucceeded = $false
+    $AttestationCommand = "attest-plan"
+    $AttestationReason = "task_plan.md was not available for attestation"
     $PlanFilePwf = Join-Path $PlanDirPwf "task_plan.md"
-    if (Test-Path -LiteralPath $PlanFilePwf) {
+    if (Test-Path -LiteralPath $PlanFilePwf -PathType Leaf) {
         $HadPlanId = Test-Path Env:PLAN_ID
         $PreviousPlanId = $env:PLAN_ID
         $HadPlanRoot = Test-Path Env:PWF_PLAN_ROOT
@@ -370,21 +393,54 @@ if ($Mode -ne "") {
                 Remove-Item Env:PLAN_ID -ErrorAction SilentlyContinue
             }
 
+            # A called script can return without changing $LASTEXITCODE, so
+            # clear the inherited value before every attempt. Both a non-zero
+            # status and a terminating exception mean the plan is not attested.
+            $global:LASTEXITCODE = 0
+            $AttestOutput = @()
             $IsWindowsHost = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
             if ($IsWindowsHost) {
-                $AttestPs1 = Join-Path $ScriptDir "attest-plan.ps1"
-                if (Test-Path -LiteralPath $AttestPs1) {
-                    & $AttestPs1 *> $null
+                $AttestationCommand = "attest-plan.ps1"
+                $AttestPs1 = Join-Path $ScriptDir $AttestationCommand
+                if (Test-Path -LiteralPath $AttestPs1 -PathType Leaf) {
+                    $AttestOutput = @(& $AttestPs1 2>&1)
+                    $AttestExitCode = $LASTEXITCODE
+                    if ($AttestExitCode -eq 0) {
+                        $AttestationSucceeded = $true
+                        $AttestationReason = ""
+                    } else {
+                        $AttestationReason = Format-AttestationFailureReason `
+                            -Output $AttestOutput `
+                            -Fallback "$AttestationCommand exited with code $AttestExitCode"
+                    }
+                } else {
+                    $AttestationReason = "$AttestationCommand was not found beside init-session.ps1"
                 }
             } else {
-                $AttestSh = Join-Path $ScriptDir "attest-plan.sh"
+                $AttestationCommand = "attest-plan.sh"
+                $AttestSh = Join-Path $ScriptDir $AttestationCommand
                 $Sh = Get-Command sh -ErrorAction SilentlyContinue
-                if ($Sh -and (Test-Path -LiteralPath $AttestSh)) {
-                    & $Sh.Path $AttestSh *> $null
+                if ($Sh -and (Test-Path -LiteralPath $AttestSh -PathType Leaf)) {
+                    $AttestOutput = @(& $Sh.Path $AttestSh 2>&1)
+                    $AttestExitCode = $LASTEXITCODE
+                    if ($AttestExitCode -eq 0) {
+                        $AttestationSucceeded = $true
+                        $AttestationReason = ""
+                    } else {
+                        $AttestationReason = Format-AttestationFailureReason `
+                            -Output $AttestOutput `
+                            -Fallback "$AttestationCommand exited with code $AttestExitCode"
+                    }
+                } elseif (-not $Sh) {
+                    $AttestationReason = "sh was not found; $AttestationCommand could not run"
+                } else {
+                    $AttestationReason = "$AttestationCommand was not found beside init-session.ps1"
                 }
             }
         } catch {
-            # attestation failure must not abort init; the mode marker still stands.
+            $AttestationReason = Format-AttestationFailureReason `
+                -Output @($_) `
+                -Fallback "$AttestationCommand failed"
         } finally {
             if ($HadPlanId) {
                 $env:PLAN_ID = $PreviousPlanId
@@ -399,5 +455,9 @@ if ($Mode -ne "") {
         }
     }
 
-    Write-Host "Mode: $MarkerText (attested, gate counter reset)"
+    if ($AttestationSucceeded) {
+        Write-Host "Mode: $MarkerText (attested, gate counter reset)"
+    } else {
+        Write-Host "Mode: $MarkerText (NOT attested: $AttestationReason; run $AttestationCommand before the first hook fire)"
+    }
 }
