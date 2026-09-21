@@ -136,20 +136,7 @@ if ($UsePlanDir) {
         $Counter++
     }
     $TargetDir = Join-Path $PlanningRoot $PlanId
-    New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
-    # Reuse the selector's contained, atomic pointer replacement. Set-Content
-    # would follow a reparse point and truncate a hardlinked pointer in place,
-    # overwriting whichever file shares that inode.
-    $global:LASTEXITCODE = 0
-    try {
-        & $PlanSelector $PlanId *> $null
-    } catch {
-        $global:LASTEXITCODE = 1
-    }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Error: could not safely update the active plan pointer at $(Join-Path $PlanningRoot '.active_plan')."
-        exit 1
-    }
+    New-Item -ItemType Directory -Path $TargetDir -Force -ErrorAction Stop | Out-Null
     $Mode = Get-InheritedMode $Mode
 } else {
     $TargetDir = (Get-Location).Path
@@ -173,11 +160,12 @@ if ($UsePlanDir) {
     Write-Host "PLAN_ID=$PlanId"
 }
 
+try {
 # Create task_plan.md if it doesn't exist
 if (-not (Test-Path -LiteralPath $TaskPlanPath)) {
     $AnalyticsPlan = Join-Path $TemplateDir "analytics_task_plan.md"
     if ($Template -eq "analytics" -and (Test-Path $AnalyticsPlan)) {
-        Copy-Item -LiteralPath $AnalyticsPlan -Destination $TaskPlanPath
+        Copy-Item -LiteralPath $AnalyticsPlan -Destination $TaskPlanPath -ErrorAction Stop
     } else {
         @"
 # Task Plan: [Brief Description]
@@ -226,7 +214,7 @@ Phase 1
 ## Errors Encountered
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -LiteralPath $TaskPlanPath -Encoding UTF8
+"@ | Out-File -LiteralPath $TaskPlanPath -Encoding UTF8 -ErrorAction Stop
     }
     Write-Host "Created $TaskPlanDisplay"
 } else {
@@ -237,7 +225,7 @@ Phase 1
 if (-not (Test-Path -LiteralPath $FindingsPath)) {
     $AnalyticsFindings = Join-Path $TemplateDir "analytics_findings.md"
     if ($Template -eq "analytics" -and (Test-Path $AnalyticsFindings)) {
-        Copy-Item -LiteralPath $AnalyticsFindings -Destination $FindingsPath
+        Copy-Item -LiteralPath $AnalyticsFindings -Destination $FindingsPath -ErrorAction Stop
     } else {
         @"
 # Findings & Decisions
@@ -258,7 +246,7 @@ if (-not (Test-Path -LiteralPath $FindingsPath)) {
 
 ## Resources
 -
-"@ | Out-File -LiteralPath $FindingsPath -Encoding UTF8
+"@ | Out-File -LiteralPath $FindingsPath -Encoding UTF8 -ErrorAction Stop
     }
     Write-Host "Created $FindingsDisplay"
 } else {
@@ -287,7 +275,7 @@ if (-not (Test-Path -LiteralPath $ProgressPath)) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8
+"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8 -ErrorAction Stop
     } else {
         @"
 # Progress Log
@@ -308,11 +296,31 @@ if (-not (Test-Path -LiteralPath $ProgressPath)) {
 ### Errors
 | Error | Resolution |
 |-------|------------|
-"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8
+"@ | Out-File -LiteralPath $ProgressPath -Encoding UTF8 -ErrorAction Stop
     }
     Write-Host "Created $ProgressDisplay"
 } else {
     Write-Host "$ProgressDisplay already exists, skipping"
+}
+} catch {
+    Write-Error "Error: could not initialize planning files in '$TargetDir': $($_.Exception.Message)"
+    exit 1
+}
+
+if ($UsePlanDir) {
+    # Activate the named plan only after all three planning files are ready.
+    # This matches init-session.sh and prevents a failed initialization from
+    # leaving .active_plan pointed at a partial plan directory.
+    $global:LASTEXITCODE = 0
+    try {
+        & $PlanSelector $PlanId *> $null
+    } catch {
+        $global:LASTEXITCODE = 1
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Error: could not safely update the active plan pointer at $(Join-Path $PlanningRoot '.active_plan')."
+        exit 1
+    }
 }
 
 Write-Host ""

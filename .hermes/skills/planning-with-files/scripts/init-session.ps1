@@ -7,6 +7,8 @@ param(
     [string]$Template = "default"
 )
 
+$ErrorActionPreference = "Stop"
+
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 # Resolve template directory (skill root is one level up from scripts/)

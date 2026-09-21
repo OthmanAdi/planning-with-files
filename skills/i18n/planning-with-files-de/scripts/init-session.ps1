@@ -5,6 +5,8 @@ param(
     [string]$ProjectName = "projekt"
 )
 
+$ErrorActionPreference = "Stop"
+
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 Write-Host "Initialisiere Planungsdateien: $ProjectName"

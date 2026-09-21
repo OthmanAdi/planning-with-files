@@ -5,6 +5,8 @@ param(
     [string]$ProjectName = "project"
 )
 
+$ErrorActionPreference = "Stop"
+
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 Write-Host "جارٍ تهيئة ملفات التخطيط: $ProjectName"

@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 INIT_PS1 = REPO_ROOT / "scripts" / "init-session.ps1"
 POWERSHELL = shutil.which("powershell") or shutil.which("powershell.exe")
 PWSH = shutil.which("pwsh") or shutil.which("pwsh.exe")
+ICACLS = shutil.which("icacls") or shutil.which("icacls.exe")
 
 
 def flat(text: str) -> str:
@@ -324,6 +325,87 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             plan_dir = root / ".planning" / f"{date.today().isoformat()}-upper-marker"
             self.assertTrue((plan_dir / "task_plan.md").is_file())
             self.assertFalse((plan_dir / ".mode").exists())
+
+    @unittest.skipUnless(os.name == "nt" and ICACLS, "requires Windows ACL tools")
+    def test_denied_root_write_fails_without_success_output(self) -> None:
+        shells = [POWERSHELL]
+        if PWSH and Path(PWSH).resolve() != Path(POWERSHELL).resolve():
+            shells.append(PWSH)
+
+        user = subprocess.run(
+            ["whoami"], text=True, encoding="utf-8", errors="replace",
+            capture_output=True, check=True,
+        ).stdout.strip()
+        for shell in shells:
+            with self.subTest(shell=Path(shell).name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                denied = subprocess.run(
+                    [ICACLS, str(root), "/deny", f"{user}:(W)"],
+                    text=True, encoding="utf-8", errors="replace",
+                    capture_output=True, check=False,
+                )
+                if denied.returncode != 0:
+                    self.skipTest(f"could not deny writes with icacls: {denied.stdout}{denied.stderr}")
+                try:
+                    result = self.run_init(root, shell=shell)
+                finally:
+                    restored = subprocess.run(
+                        [ICACLS, str(root), "/remove:d", user],
+                        text=True, encoding="utf-8", errors="replace",
+                        capture_output=True, check=False,
+                    )
+                self.assertEqual(0, restored.returncode, restored.stdout + restored.stderr)
+                self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertNotIn("Created task_plan.md", result.stdout)
+                self.assertNotIn("Planning files initialized!", result.stdout)
+                for name in ("task_plan.md", "findings.md", "progress.md"):
+                    self.assertFalse((root / name).exists(), name)
+
+    def test_named_plan_write_failure_does_not_activate_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            planning = root / ".planning"
+            previous_id = "2026-01-01-existing"
+            previous = planning / previous_id
+            previous.mkdir(parents=True)
+            (previous / "task_plan.md").write_text("# Existing plan\n", encoding="utf-8")
+            (planning / ".active_plan").write_text(previous_id, encoding="utf-8")
+
+            wrapper = root / "deny-out-file.ps1"
+            init_path = str(INIT_PS1).replace("'", "''")
+            wrapper.write_text(
+                f"""function Out-File {{
+    [CmdletBinding()]
+    param(
+        [Parameter(ValueFromPipeline=$true)] [object] $InputObject,
+        [string] $LiteralPath,
+        [string] $Encoding
+    )
+    process {{ Write-Error "Access to the path '$LiteralPath' is denied." }}
+}}
+& '{init_path}' 'Denied Plan'
+exit $LASTEXITCODE
+""",
+                encoding="utf-8-sig",
+            )
+
+            result = subprocess.run(
+                [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(wrapper)],
+                cwd=str(root), text=True, encoding="utf-8-sig",
+                capture_output=True, check=False, env=child_env(),
+            )
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertNotIn("Created ", result.stdout)
+            self.assertNotIn("Planning files initialized!", result.stdout)
+            self.assertEqual(
+                previous_id,
+                (planning / ".active_plan").read_text(encoding="utf-8-sig").strip(),
+            )
+            plan_dir = planning / f"{date.today().isoformat()}-denied-plan"
+            self.assertTrue(plan_dir.is_dir())
+            for name in ("task_plan.md", "findings.md", "progress.md"):
+                self.assertFalse((plan_dir / name).exists(), name)
 
     @unittest.skipUnless(PWSH, "requires pwsh")
     def test_pwsh_writes_plan_files_inside_bracketed_project_path(self) -> None:

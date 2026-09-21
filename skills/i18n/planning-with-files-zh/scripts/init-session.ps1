@@ -5,6 +5,8 @@ param(
     [string]$ProjectName = "project"
 )
 
+$ErrorActionPreference = "Stop"
+
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 Write-Host "正在初始化规划文件：$ProjectName"
