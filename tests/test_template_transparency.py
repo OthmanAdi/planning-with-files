@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -101,6 +102,8 @@ class TemplateTransparencyTests(unittest.TestCase):
             ),
             "analytics_task_plan.md": (
                 "[One sentence describing the analytical objective]",
+                "## Next Step",
+                "[The single next analytical action. Update whenever phase status changes.]",
                 "## Current Phase",
                 "## Phases",
                 "## Hypotheses",
@@ -125,6 +128,28 @@ class TemplateTransparencyTests(unittest.TestCase):
         self.assertEqual(4, analytics_plan.count("- **Status:**"))
         self.assertEqual(1, analytics_plan.count("- **Status:** in_progress"))
         self.assertEqual(3, analytics_plan.count("- **Status:** pending"))
+
+    def test_shipped_task_plan_templates_have_a_nonempty_next_step_section(self) -> None:
+        analytics_paths = [
+            path
+            for path in tracked_install_facing_templates()
+            if path.name == "analytics_task_plan.md"
+        ]
+        self.assertTrue(analytics_paths, "no shipped analytics task plan templates found")
+        paths = [CANONICAL_TEMPLATES / "task_plan.md", *analytics_paths]
+        for path in paths:
+            with self.subTest(path=path):
+                body = self.read_template(path)
+                section = re.search(
+                    r"(?ms)^## Next Step\s*\n(?P<body>.*?)(?=^## |\Z)",
+                    body,
+                )
+                self.assertIsNotNone(section, f"{path} is missing ## Next Step")
+                assert section is not None
+                self.assertTrue(
+                    section.group("body").strip(),
+                    f"{path} has an empty ## Next Step section",
+                )
 
     def test_autonomous_template_names_the_real_gate_authority(self) -> None:
         body = self.read_template(CANONICAL_TEMPLATES / "task_plan_autonomous.md")

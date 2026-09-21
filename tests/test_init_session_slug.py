@@ -115,6 +115,25 @@ class InitSessionSlugTests(unittest.TestCase):
             self.assertTrue((root / "task_plan.md").exists())
             self.assertFalse((root / ".planning").exists())
 
+    def test_named_analytics_plan_has_a_nonempty_next_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_init(root, "--template", "analytics", "Analytics Run")
+            self.assertEqual(0, result.returncode, result.stderr)
+            plan = (
+                root
+                / ".planning"
+                / f"{date.today().isoformat()}-analytics-run"
+                / "task_plan.md"
+            ).read_text(encoding="utf-8")
+            section = re.search(
+                r"(?ms)^## Next Step\s*\n(?P<body>.*?)(?=^## |\Z)",
+                plan,
+            )
+            self.assertIsNotNone(section)
+            assert section is not None
+            self.assertTrue(section.group("body").strip())
+
     def test_slug_init_replaces_hardlinked_pointer_without_mutating_peer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

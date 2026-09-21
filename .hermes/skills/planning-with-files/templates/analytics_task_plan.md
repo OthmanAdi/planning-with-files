@@ -8,6 +8,12 @@ State what the analysis should determine or produce in one clear sentence.
 
 [One sentence describing the analytical objective]
 
+## Next Step
+
+Record the single analytical action that should happen next. Update it whenever the active phase or immediate action changes.
+
+[The single next analytical action. Update whenever phase status changes.]
+
 ## Current Phase
 
 Name the phase currently being worked on.
@@ -84,6 +90,6 @@ Record each distinct error, the attempt number, and the resolution. Change the a
 ## Notes
 
 - Update phase status as work progresses: `pending` to `in_progress` to `complete`.
-- Re-read the goal and current phase before major analytical decisions.
+- Re-read the goal, next step, and current phase before major analytical decisions.
 - Log errors promptly so failed approaches are not repeated.
 - Record query results and visual findings in findings.md while the evidence is available.
