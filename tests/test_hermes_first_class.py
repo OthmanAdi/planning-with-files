@@ -850,6 +850,21 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertEqual("autonomous gate", status["mode"])
             self.assertTrue(status["attested"])
 
+    def test_init_plan_refuses_hard_linked_active_pointer(self) -> None:
+        with self._workspace() as root:
+            planning = root / ".planning"
+            planning.mkdir()
+            sibling = root / "pointer-sibling.txt"
+            sibling.write_text("existing-plan\n", encoding="utf-8")
+            os.link(sibling, planning / ".active_plan")
+
+            result = planning_module.init_plan(root, name="Hermes Night Run")
+
+            self.assertFalse(result["ok"])
+            self.assertIn("unsafe active plan pointer", result["error"])
+            self.assertEqual("existing-plan\n", sibling.read_text(encoding="utf-8"))
+            self.assertEqual([".active_plan"], sorted(path.name for path in planning.iterdir()))
+
     def test_init_plan_rejects_unknown_mode_and_keeps_legacy_root(self) -> None:
         with self._workspace() as root:
             bad = planning_module.init_plan(root, mode="turbo")

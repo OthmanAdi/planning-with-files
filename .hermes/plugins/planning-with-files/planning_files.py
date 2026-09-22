@@ -115,6 +115,46 @@ def apply_v3_mode(project_dir: Path, plan_dir: Path, mode: str) -> dict[str, Any
     return {"marker": marker.strip(), "attestation": digest}
 
 
+
+def _active_plan_pointer_error(planning_root: Path) -> str | None:
+    pointer = planning_root / ".active_plan"
+    if not pointer.exists() and not pointer.is_symlink():
+        return None
+    try:
+        stat = pointer.lstat()
+        resolved = pointer.resolve(strict=True)
+        resolved.relative_to(planning_root.resolve(strict=True))
+    except (OSError, ValueError):
+        return f"refusing to replace unsafe active plan pointer: {pointer}"
+    if pointer.is_symlink() or not pointer.is_file() or stat.st_nlink > 1:
+        return f"refusing to replace unsafe active plan pointer: {pointer}"
+    return None
+
+
+def _write_active_plan(planning_root: Path, plan_id: str) -> str | None:
+    pointer = planning_root / ".active_plan"
+    unsafe = _active_plan_pointer_error(planning_root)
+    if unsafe:
+        return unsafe
+    temp = planning_root / f".active_plan.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+    fd: int | None = None
+    try:
+        fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = None
+            handle.write(plan_id + "\n")
+        os.replace(temp, pointer)
+        return None
+    except OSError as exc:
+        return f"could not safely update active plan pointer: {exc}"
+    finally:
+        if fd is not None:
+            os.close(fd)
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+
 def init_plan(
     project_dir: Path,
     *,
@@ -147,8 +187,13 @@ def init_plan(
         planning_root.mkdir(parents=True, exist_ok=True)
         plan_id = f"{_dt.date.today().isoformat()}-{slug}"
         plan_dir = planning_root / plan_id
+        pointer_error = _active_plan_pointer_error(planning_root)
+        if pointer_error:
+            return {"ok": False, "error": pointer_error, "project_dir": str(project_dir)}
         plan_dir.mkdir(exist_ok=True)
-        (planning_root / ".active_plan").write_text(plan_id + "\n", encoding="utf-8")
+        write_error = _write_active_plan(planning_root, plan_id)
+        if write_error:
+            return {"ok": False, "error": write_error, "project_dir": str(project_dir)}
     else:
         plan_dir = project_dir
         plan_id = "root"
