@@ -372,6 +372,21 @@ describe("init and status", () => {
     expect(buildContext(root, dir)).toContain("[planning-with-files] plan: ")
   })
 
+  it("refuses a hard-linked active plan pointer without modifying its sibling", () => {
+    const planning = path.join(root, ".planning")
+    fs.mkdirSync(planning, { recursive: true })
+    const sibling = path.join(root, "pointer-sibling.txt")
+    fs.writeFileSync(sibling, "existing-plan\n")
+    fs.linkSync(sibling, path.join(planning, ".active_plan"))
+
+    const result = initPlan(root, { name: "Night Run" }, env)
+
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain("unsafe active plan pointer")
+    expect(fs.readFileSync(sibling, "utf8")).toBe("existing-plan\n")
+    expect(fs.readdirSync(planning)).toEqual([".active_plan"])
+  })
+
   it("uses a real skill template when one is discoverable, and rejects unknown modes", () => {
     const skill = path.join(root, ".agents", "skills", "planning-with-files", "templates")
     fs.mkdirSync(skill, { recursive: true })
