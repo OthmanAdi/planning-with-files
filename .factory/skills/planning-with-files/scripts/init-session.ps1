@@ -18,6 +18,27 @@ param(
     [switch]$Gated
 )
 
+# Windows PowerShell 5.1 can silently relocate a -File invocation when the
+# inherited cwd contains wildcard characters such as [ or ]. Recover the
+# physical cwd for a direct invocation before any project-relative paths are
+# resolved.
+if ($PSVersionTable.PSVersion.Major -eq 5 -and
+    [System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters([Environment]::CurrentDirectory)) {
+    $processArgs = [Environment]::GetCommandLineArgs()
+    for ($index = 0; $index -lt ($processArgs.Length - 1); $index++) {
+        if ($processArgs[$index] -ieq '-File') {
+            $entryScript = $processArgs[$index + 1]
+            if (-not [IO.Path]::IsPathRooted($entryScript)) {
+                $entryScript = Join-Path ([Environment]::CurrentDirectory) $entryScript
+            }
+            if ([IO.Path]::GetFullPath($entryScript) -eq [IO.Path]::GetFullPath($PSCommandPath)) {
+                Set-Location -LiteralPath ([Environment]::CurrentDirectory)
+            }
+            break
+        }
+    }
+}
+
 $DATE = Get-Date -Format "yyyy-MM-dd"
 
 # Resolve v3 opt-in mode. -Gated implies autonomous and is the stronger marker.

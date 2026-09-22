@@ -407,6 +407,20 @@ exit $LASTEXITCODE
             for name in ("task_plan.md", "findings.md", "progress.md"):
                 self.assertFalse((plan_dir / name).exists(), name)
 
+    def test_windows_powershell_recovers_bracketed_project_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj [v2]"
+            root.mkdir()
+            result = self.run_init(root, "Bracket Plan")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            plan_dir = root / ".planning" / f"{date.today().isoformat()}-bracket-plan"
+            for name in ("task_plan.md", "findings.md", "progress.md"):
+                self.assertTrue((plan_dir / name).is_file(), name)
+            self.assertEqual(
+                plan_dir.name,
+                (root / ".planning" / ".active_plan").read_text(encoding="utf-8-sig").strip(),
+            )
+
     @unittest.skipUnless(PWSH, "requires pwsh")
     def test_pwsh_writes_plan_files_inside_bracketed_project_path(self) -> None:
         # Out-File -FilePath treats [ and ] as wildcards once the path is
