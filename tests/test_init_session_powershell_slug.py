@@ -226,6 +226,8 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             expected = f"{date.today().isoformat()}-hardlink-test"
             self.assertEqual(expected, pointer.read_text(encoding="utf-8-sig").strip())
 
+    @unittest.skipUnless(os.name == "nt", "requires Windows read-only file attributes")
+    @unittest.skipUnless(os.name == "nt", "requires Windows read-only file attributes")
     def test_slug_init_rejects_readonly_pointer_before_creating_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
