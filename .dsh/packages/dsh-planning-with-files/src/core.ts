@@ -86,6 +86,38 @@ function writeText(target: string, text: string): void {
   fs.writeFileSync(target, text, { encoding: "utf8" })
 }
 
+function activePlanPointerError(planningRoot: string): string | null {
+  const pointer = path.join(planningRoot, ".active_plan")
+  if (!fs.existsSync(pointer)) return null
+  const st = lstatSafe(pointer)
+  const real = realpathOrNull(pointer)
+  return !st || !st.isFile() || st.isSymbolicLink() || st.nlink > 1 || !real || !isInside(real, planningRoot)
+    ? `refusing to replace unsafe active plan pointer: ${pointer}`
+    : null
+}
+
+function writeActivePlan(planningRoot: string, planId: string): string | null {
+  const pointer = path.join(planningRoot, ".active_plan")
+  const unsafe = activePlanPointerError(planningRoot)
+  if (unsafe) return unsafe
+
+  const tmp = path.join(planningRoot, `.active_plan.${process.pid}.${crypto.randomBytes(4).toString("hex")}.tmp`)
+  let fd: number | null = null
+  try {
+    fd = fs.openSync(tmp, "wx")
+    fs.writeFileSync(fd, `${planId}\n`, { encoding: "utf8" })
+    fs.closeSync(fd)
+    fd = null
+    fs.renameSync(tmp, pointer)
+    return null
+  } catch (err) {
+    return `could not safely update active plan pointer: ${err instanceof Error ? err.message : String(err)}`
+  } finally {
+    if (fd !== null) fs.closeSync(fd)
+    try { fs.unlinkSync(tmp) } catch { /* already renamed or absent */ }
+  }
+}
+
 function realpathOrNull(target: string): string | null {
   try {
     return fs.realpathSync(target)
@@ -736,8 +768,11 @@ export function initPlan(
     fs.mkdirSync(planningRoot, { recursive: true })
     planId = `${new Date().toISOString().slice(0, 10)}-${slug}`
     planDir = path.join(planningRoot, planId)
+    const pointerError = activePlanPointerError(planningRoot)
+    if (pointerError) return { ok: false, error: pointerError, project_dir: root }
     fs.mkdirSync(planDir, { recursive: true })
-    writeText(path.join(planningRoot, ".active_plan"), `${planId}\n`)
+    const writeError = writeActivePlan(planningRoot, planId)
+    if (writeError) return { ok: false, error: writeError, project_dir: root }
   }
   const created = copyTemplates(planDir, templatesDir, template)
   const result: InitResult = {
