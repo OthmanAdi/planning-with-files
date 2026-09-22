@@ -128,6 +128,7 @@ function Test-SafeActiveFile {
     $linked = ([string]$item.LinkType) -in @('SymbolicLink', 'Junction')
     return -not $item.PSIsContainer -and
         ($AllowLink -or -not $linked) -and
+        ($AllowLink -or -not $item.IsReadOnly) -and
         (Test-WithinRoot $ActiveFile)
 }
 

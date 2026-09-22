@@ -226,6 +226,40 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             expected = f"{date.today().isoformat()}-hardlink-test"
             self.assertEqual(expected, pointer.read_text(encoding="utf-8-sig").strip())
 
+    def test_slug_init_rejects_readonly_pointer_before_creating_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self.run_init(root, "First")
+            self.assertEqual(0, first.returncode, first.stdout + first.stderr)
+            pointer = root / ".planning" / ".active_plan"
+            readonly = subprocess.run(
+                [
+                    POWERSHELL,
+                    "-NoProfile",
+                    "-Command",
+                    "(Get-Item -LiteralPath '.planning\\.active_plan').IsReadOnly=$true",
+                ],
+                cwd=str(root), text=True, encoding="utf-8-sig",
+                capture_output=True, check=False, env=child_env(),
+            )
+            self.assertEqual(0, readonly.returncode, readonly.stdout + readonly.stderr)
+            try:
+                result = self.run_init(root, "Second")
+                self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+                self.assertIn("active plan pointer", flat(result.stderr))
+                self.assertFalse((root / ".planning" / f"{date.today().isoformat()}-second").exists())
+            finally:
+                subprocess.run(
+                    [
+                        POWERSHELL,
+                        "-NoProfile",
+                        "-Command",
+                        "(Get-Item -LiteralPath '.planning\\.active_plan').IsReadOnly=$false",
+                    ],
+                    cwd=str(root), text=True, encoding="utf-8-sig",
+                    capture_output=True, check=False, env=child_env(),
+                )
+
     def test_slug_init_rejects_symlink_pointer_without_following_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
