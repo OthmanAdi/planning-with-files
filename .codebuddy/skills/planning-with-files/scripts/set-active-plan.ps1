@@ -316,10 +316,23 @@ try {
         $stream.Write($bytes, 0, $bytes.Length)
         $stream.Flush()
     } finally { $stream.Dispose() }
-    if ($activeItem) {
-        [IO.File]::Replace($tempFile, $ActiveFile, [NullString]::Value)
-    } else {
-        [IO.File]::Move($tempFile, $ActiveFile)
+    $maxAttempts = 20
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            $currentActive = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
+            if ($currentActive) {
+                if (-not (Test-SafeActiveFile)) {
+                    throw [InvalidOperationException]::new("the active plan pointer became unsafe during replacement")
+                }
+                [IO.File]::Replace($tempFile, $ActiveFile, [NullString]::Value)
+            } else {
+                [IO.File]::Move($tempFile, $ActiveFile)
+            }
+            break
+        } catch [IO.IOException] {
+            if ($attempt -eq $maxAttempts) { throw }
+            Start-Sleep -Milliseconds 25
+        }
     }
 } catch {
     Write-Error "Error: could not set the active plan pointer: $($_.Exception.Message)"

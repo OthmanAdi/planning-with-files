@@ -285,6 +285,32 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             self.assertEqual([], list(outside.iterdir()))
             self.assertIn("outside the project", flat(result.stderr))
 
+    def test_concurrent_named_inits_all_replace_pointer_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            processes = [
+                subprocess.Popen(
+                    [
+                        POWERSHELL,
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(INIT_PS1),
+                        f"Race Case {index}",
+                    ],
+                    cwd=str(root), text=True, encoding="utf-8-sig",
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=child_env(),
+                )
+                for index in range(4)
+            ]
+            results = [process.communicate(timeout=30) + (process.returncode,) for process in processes]
+            for stdout, stderr, returncode in results:
+                self.assertEqual(0, returncode, stdout + stderr)
+            planning = root / ".planning"
+            self.assertTrue((planning / ".active_plan").is_file())
+            self.assertEqual([], list(planning.glob(".active_plan~RF*.TMP")))
+
     def test_slug_from_non_ascii_letters_stays_ascii(self) -> None:
         # A dotted capital I survives a case-insensitive -replace; the plan id
         # must still be one the resolvers and the selector accept.
