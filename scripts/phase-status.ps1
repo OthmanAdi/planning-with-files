@@ -7,9 +7,10 @@
     The ONLY sanctioned concurrent-safe writer of task_plan.md status lines. The
     orchestrator owns task_plan.md; workers NEVER edit it directly. The edit is
     a read-modify-write under the portable
-    <plan-dir>\.pwf-locks\phase-status.lock directory lock, with an atomic
-    temp-file + move swap so a torn write can never leave a half-rewritten plan
-    on disk (architecture C4).
+    <plan-dir>\.pwf-locks\phase-status.lock namespace. Ownership is granted by
+    atomically creating its .owner file, rather than trusting an external mkdir
+    exit status. The plan rewrite uses an atomic temp-file + move swap so a torn
+    write can never leave a half-rewritten plan on disk (architecture C4).
 
     Editing task_plan.md changes its SHA, so the orchestrator must re-attest at
     phase boundaries (see attest-plan.ps1).
@@ -102,18 +103,44 @@ function Enter-PwfDirectoryLock {
 
     $wait = [Diagnostics.Stopwatch]::StartNew()
     while ($wait.Elapsed.TotalSeconds -lt 5) {
-        $createdByUs = $false
         try {
-            New-Item -Path $LockDir -ItemType Directory -ErrorAction Stop | Out-Null
-            $createdByUs = $true
-            [System.IO.File]::WriteAllText($ownerFile, $token + "`n", $utf8NoBom)
+            [void][System.IO.Directory]::CreateDirectory($LockDir)
+        } catch {
+            Start-Sleep -Milliseconds 100
+            continue
+        }
+
+        $stream = $null
+        $createdOwner = $false
+        $claimed = $false
+        try {
+            # FileMode.CreateNew is the cross-runtime ownership decision. It
+            # fails atomically when either the shell or PowerShell writer has
+            # already claimed .owner, even if both observed mkdir success.
+            $stream = [System.IO.File]::Open(
+                $ownerFile,
+                [System.IO.FileMode]::CreateNew,
+                [System.IO.FileAccess]::Write,
+                [System.IO.FileShare]::None
+            )
+            $createdOwner = $true
+            $bytes = $utf8NoBom.GetBytes($token + "`n")
+            $stream.Write($bytes, 0, $bytes.Length)
+            $stream.Flush()
+            $claimed = $true
             return [PSCustomObject]@{
                 Directory = $LockDir
                 OwnerFile = $ownerFile
                 Token = $token
             }
         } catch {
-            if ($createdByUs) {
+            # Existing ownership is the normal contention path. Other failures
+            # remain fail-closed and are retried only within the bounded wait.
+        } finally {
+            if ($stream) {
+                $stream.Dispose()
+            }
+            if ($createdOwner -and -not $claimed) {
                 try {
                     if ([System.IO.File]::Exists($ownerFile)) {
                         $ownerValue = [System.IO.File]::ReadAllText($ownerFile).Trim()
@@ -121,13 +148,12 @@ function Enter-PwfDirectoryLock {
                             [System.IO.File]::Delete($ownerFile)
                         }
                     }
-                    [System.IO.Directory]::Delete($LockDir, $false)
                 } catch {
-                    # Leave any directory we cannot prove is still ours intact.
+                    # Leave any owner file we cannot prove is still ours intact.
                 }
             }
-            Start-Sleep -Milliseconds 100
         }
+        Start-Sleep -Milliseconds 100
     }
 
     return $null
@@ -174,7 +200,7 @@ $planDir  = Split-Path -Parent $planFile
 $lockRoot = Join-Path $planDir ".pwf-locks"
 $lockDir  = Join-Path $lockRoot "phase-status.lock"
 
-# Atomic directory creation is the common lock primitive used by both the sh
+# Exclusive .owner creation is the common lock primitive used by both the sh
 # and PowerShell implementations. Failure to acquire within about five seconds
 # is fail-closed: no plan read/rewrite is attempted.
 $lock = Enter-PwfDirectoryLock -LockRoot $lockRoot -LockDir $lockDir
