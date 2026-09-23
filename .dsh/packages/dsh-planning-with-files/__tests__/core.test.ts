@@ -372,6 +372,41 @@ describe("init and status", () => {
     expect(buildContext(root, dir)).toContain("[planning-with-files] plan: ")
   })
 
+  it("updates a regular active plan pointer through a directory junction project root", () => {
+    const linkedRoot = `${root}-junction`
+    fs.symlinkSync(root, linkedRoot, "junction")
+    try {
+      const first = initPlan(linkedRoot, { name: "First" }, env)
+      expect(first.ok).toBe(true)
+      const second = initPlan(linkedRoot, { name: "Second" }, env)
+      expect(second.ok).toBe(true)
+      const pointer = path.join(root, ".planning", ".active_plan")
+      expect(fs.lstatSync(pointer).isFile()).toBe(true)
+      expect(fs.readFileSync(pointer, "utf8")).toBe(`${second.plan_id}\n`)
+    } finally {
+      fs.rmSync(linkedRoot, { recursive: true, force: true })
+    }
+  })
+
+  it("refuses a linked planning directory without changing its external pointer", () => {
+    const outside = `${root}-outside`
+    const planning = path.join(root, ".planning")
+    fs.mkdirSync(outside)
+    const pointer = path.join(outside, ".active_plan")
+    fs.writeFileSync(pointer, "external-plan\n")
+    fs.symlinkSync(outside, planning, "junction")
+    try {
+      const result = initPlan(root, { name: "Blocked" }, env)
+      expect(result.ok).toBe(false)
+      expect(result.error).toContain("unsafe active plan pointer")
+      expect(fs.readFileSync(pointer, "utf8")).toBe("external-plan\n")
+      expect(fs.readdirSync(outside)).toEqual([".active_plan"])
+    } finally {
+      fs.rmSync(planning, { recursive: true, force: true })
+      fs.rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
   it("uses a real skill template when one is discoverable, and rejects unknown modes", () => {
     const skill = path.join(root, ".agents", "skills", "planning-with-files", "templates")
     fs.mkdirSync(skill, { recursive: true })

@@ -88,10 +88,12 @@ function writeText(target: string, text: string): void {
 
 function activePlanPointerError(planningRoot: string): string | null {
   const pointer = path.join(planningRoot, ".active_plan")
+  const realRoot = realpathOrNull(planningRoot)
+  if (!isRealDir(planningRoot) || !realRoot) return `refusing to replace unsafe active plan pointer: ${pointer}`
   if (!fs.existsSync(pointer)) return null
   const st = lstatSafe(pointer)
   const real = realpathOrNull(pointer)
-  return !st || !st.isFile() || st.isSymbolicLink() || st.nlink > 1 || !real || !isInside(real, planningRoot)
+  return !st || !st.isFile() || st.isSymbolicLink() || st.nlink > 1 || !real || !isInside(real, realRoot)
     ? `refusing to replace unsafe active plan pointer: ${pointer}`
     : null
 }
