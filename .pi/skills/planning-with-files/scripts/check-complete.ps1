@@ -51,6 +51,8 @@ if ($PlanFile -ne "") {
 }
 
 if (-not (Test-Path $PlanFile)) {
+    # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
+    if ($Gate) { exit 0 }
     Write-Host '[planning-with-files] No task_plan.md found -- no active planning session.'
     exit 0
 }

@@ -10,6 +10,9 @@
 PLAN_FILE="${1:-task_plan.md}"
 
 if [ ! -f "$PLAN_FILE" ]; then
+    # Automatic gate checks have nothing to report without a plan (header:
+    # "plans stay silent in --gate mode"); the explicit report keeps its notice.
+    [ "$GATE" -eq 1 ] && exit 0
     echo "[planning-with-files] 未找到 task_plan.md — 沒有進行中的規劃會話。"
     exit 0
 fi

@@ -140,3 +140,18 @@ def test_incomplete_gated_plan_still_blocks_automatic_stop(project, route):
     assert "Phase 1: Work" in output["reason"]
     assert (root / ".stop_blocks").read_text(encoding="utf-8-sig").strip() == "1"
     assert (root / "ledger-main.jsonl").read_bytes() == ledger_before
+
+
+@pytest.mark.parametrize("route", CHECKERS + HOOKS)
+def test_automatic_check_without_plan_is_silent(project, route):
+    # A cwd with no plan is the common case for every session that never
+    # opted into planning; the Stop hook must not surface a notice there.
+    root, _ = project
+    before = file_state(root)
+    assert invoke(route, project) == ""
+    assert file_state(root) == before
+
+
+@pytest.mark.parametrize("route", CHECKERS)
+def test_explicit_report_without_plan_keeps_notice(project, route):
+    assert "No task_plan.md found" in invoke(route, project, gate=False)

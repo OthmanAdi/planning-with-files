@@ -11,6 +11,8 @@ param(
 if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
 
 if (-not (Test-Path $PlanFile)) {
+    # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
+    if ($Gate) { exit 0 }
     Write-Host '[planning-with-files-es] No se encontró task_plan.md — no hay sesión de planificación activa.'
     exit 0
 }
