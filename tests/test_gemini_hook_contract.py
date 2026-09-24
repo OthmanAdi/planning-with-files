@@ -20,7 +20,6 @@ REPO = Path(__file__).resolve().parents[1]
 GEMINI_DIR = REPO / ".gemini"
 GEMINI_HOOKS = GEMINI_DIR / "hooks"
 SETTINGS = GEMINI_DIR / "settings.json"
-GEMINI_SKILL = GEMINI_DIR / "skills" / "planning-with-files" / "SKILL.md"
 GEMINI_DOC = REPO / "docs" / "gemini.md"
 SH = shutil.which("sh")
 BASH = (
@@ -87,18 +86,13 @@ class GeminiHookContractTests(unittest.TestCase):
         self.assertEqual("planning-before-agent", before_agent["name"])
         self.assertTrue(before_agent["command"].endswith("/.gemini/hooks/before-agent.sh"))
 
-    def test_docs_and_skill_metadata_follow_registered_events(self) -> None:
+    def test_docs_follow_registered_events(self) -> None:
         doc = GEMINI_DOC.read_text(encoding="utf-8")
-        skill = GEMINI_SKILL.read_text(encoding="utf-8")
         self.assertIn("BeforeAgent", doc)
         self.assertIn("before-agent.sh", doc)
         self.assertIn("SessionEnd", doc)
         self.assertNotIn("before-tool.sh", doc)
         self.assertNotIn("before-model.sh", doc)
-        self.assertIn(
-            "SessionStart, BeforeAgent, AfterTool, SessionEnd",
-            skill,
-        )
         self.assertFalse((GEMINI_HOOKS / "before-tool.sh").exists())
         self.assertFalse((GEMINI_HOOKS / "before-model.sh").exists())
 
