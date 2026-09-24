@@ -4,7 +4,7 @@
 
 # Issue #195 opt-out. The disabled branch reproduces this hook's own
 # no-plan-file behaviour, so the Cursor protocol shape never changes.
-if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
+if ($env:PLANNING_DISABLED -eq '1') { return }
 
 # The OEM code page turns the em-dash into "-" and non-ASCII plan text into "?"
 # on both Windows PowerShell 5.1 and pwsh; the plan reaches Cursor as UTF-8.
@@ -33,7 +33,7 @@ if (-not $PlanContext.Directory) {
             Write-Output "[planning-with-files] The selected plan could not be resolved safely ($($PlanContext.Detail)). Check PLAN_ID, PWF_PLAN_ROOT, and .active_plan; nothing injected."
         }
     }
-    exit 0
+    return
 }
 
 $planFile = Join-Path $PlanContext.Directory "task_plan.md"
@@ -69,7 +69,7 @@ if (Test-Path -LiteralPath $planFile -PathType Leaf) {
         if ($nestedRoots.Count -gt 0) {
             $nestedList = (@($nestedRoots | Select-Object -First 3)) -join ", "
             Write-Output "[planning-with-files] Ambiguous plan: this cwd has an active plan and a nested project below it has its own ($nestedList). Nothing injected. Pin the thread with PWF_PLAN_ROOT=<absolute path> or PLAN_ID=<slug>."
-            exit 0
+            return
         }
     }
 
@@ -90,4 +90,4 @@ if (Test-Path -LiteralPath $planFile -PathType Leaf) {
     Write-Output ""
     Write-Output "[planning-with-files] Read findings.md for research context. Continue from the current phase."
 }
-exit 0
+return

@@ -7,6 +7,7 @@ them is invisible when only the other runs.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -116,6 +117,7 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
         return {
             name: self.run_hook(name, env=env)
             for name in (
+                "session-start",
                 "pre-tool-use",
                 "post-tool-use",
                 "stop",
@@ -131,9 +133,18 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
 
         for result in results.values():
             self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn(marker, results["pre-tool-use"].stdout)
-        self.assertIn('"decision": "allow"', results["pre-tool-use"].stdout)
-        self.assertIn("Update progress.md", results["post-tool-use"].stdout)
+        self.assertIn(
+            marker,
+            json.loads(results["session-start"].stdout)["additional_context"],
+        )
+        self.assertEqual(
+            {"permission": "allow"},
+            json.loads(results["pre-tool-use"].stdout),
+        )
+        self.assertIn(
+            "Update progress.md",
+            json.loads(results["post-tool-use"].stdout)["additional_context"],
+        )
         self.assertIn(
             "Task incomplete (0/1 phases done)", results["stop"].stdout
         )
@@ -149,8 +160,18 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
 
         for result in results.values():
             self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("ROOT-PLAN-MARKER", results["pre-tool-use"].stdout)
-        self.assertIn("Update progress.md", results["post-tool-use"].stdout)
+        self.assertIn(
+            "ROOT-PLAN-MARKER",
+            json.loads(results["session-start"].stdout)["additional_context"],
+        )
+        self.assertEqual(
+            {"permission": "allow"},
+            json.loads(results["pre-tool-use"].stdout),
+        )
+        self.assertIn(
+            "Update progress.md",
+            json.loads(results["post-tool-use"].stdout)["additional_context"],
+        )
         self.assertIn(
             "Task incomplete (0/1 phases done)", results["stop"].stdout
         )
@@ -180,8 +201,8 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertNotIn("ROOT-PLAN-MARKER", result.stdout)
             self.assertNotIn("ACTIVE-PLAN-MARKER", result.stdout)
-        self.assertIn('"decision": "allow"', results["pre-tool-use"].stdout)
-        self.assertEqual("", results["post-tool-use"].stdout.strip())
+        self.assertIn('"permission":"allow"', results["pre-tool-use"].stdout)
+        self.assertEqual("{}", results["post-tool-use"].stdout.strip())
         self.assertEqual("", results["stop"].stdout.strip())
         self.assertIn("PLAN_ID", results["user-prompt-submit"].stdout)
         self.assertIn("nothing injected", results["user-prompt-submit"].stdout)
@@ -261,7 +282,7 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
             self.assertNotIn("ROOT-PLAN-MARKER", result.stdout)
         self.assertIn("(unsafe-pointer)", results["user-prompt-submit"].stdout)
         self.assertIn("nothing injected", results["user-prompt-submit"].stdout)
-        self.assertIn('"decision": "allow"', results["pre-tool-use"].stdout)
+        self.assertIn('"permission":"allow"', results["pre-tool-use"].stdout)
 
     def test_symlinked_pointer_fails_closed_and_a_plain_pointer_resolves(self) -> None:
         # #275: the pointer check is LinkType (symlink, junction), not the
@@ -404,7 +425,7 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
         result = self.run_hook("pre-tool-use", hooks_dir=hooks_dir)
 
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn('"decision": "allow"', result.stdout)
+        self.assertIn('"permission":"allow"', result.stdout)
 
 
 @unittest.skipUnless(

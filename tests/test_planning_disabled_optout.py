@@ -291,6 +291,7 @@ class CopilotPowerShellPlanningDisabledTests(unittest.TestCase):
 
 
 CURSOR_HOOK_NAMES = (
+    "session-start",
     "pre-tool-use",
     "post-tool-use",
     "stop",
@@ -299,11 +300,7 @@ CURSOR_HOOK_NAMES = (
 
 
 class CursorPlanningDisabledTests(unittest.TestCase):
-    """The Cursor hooks read task_plan.md directly instead of dispatching to
-    scripts/inject-plan.sh, so the #195 opt-out never reached them. Each guard
-    reproduces its own hook's no-plan-file output: PreToolUse still answers
-    {"decision": "allow"} because that is what it emits unconditionally today,
-    and the other three stay silent.
+    """Cursor hook opt-out responses stay valid for their event schemas.
     """
 
     def setUp(self) -> None:
@@ -316,7 +313,11 @@ class CursorPlanningDisabledTests(unittest.TestCase):
         self._tmp.cleanup()
 
     def _expected_disabled(self, name: str) -> str:
-        return '{"decision": "allow"}' if name == "pre-tool-use" else ""
+        return {
+            "session-start": "{}",
+            "pre-tool-use": '{"permission":"allow"}',
+            "post-tool-use": "{}",
+        }.get(name, "")
 
     def test_cursor_shell_hooks_go_inert_when_disabled(self) -> None:
         for name in CURSOR_HOOK_NAMES:
@@ -327,6 +328,12 @@ class CursorPlanningDisabledTests(unittest.TestCase):
                 self.assertEqual(0, enabled.returncode, enabled.stderr)
                 self.assertEqual(0, disabled.returncode, disabled.stderr)
                 inert = self._expected_disabled(name)
+                if name == "pre-tool-use":
+                    # Permission hooks must always return an allow response;
+                    # the opt-out only affects injected plan context.
+                    self.assertEqual(inert, disabled.stdout.strip())
+                    self.assertEqual(inert, enabled.stdout.strip())
+                    continue
                 self.assertNotEqual(
                     inert,
                     (enabled.stdout + enabled.stderr).strip(),
@@ -347,6 +354,10 @@ class CursorPlanningDisabledTests(unittest.TestCase):
                 self.assertEqual(0, enabled.returncode, enabled.stderr)
                 self.assertEqual(0, disabled.returncode, disabled.stderr)
                 inert = self._expected_disabled(name)
+                if name == "pre-tool-use":
+                    self.assertEqual(inert, disabled.stdout.strip().lstrip("﻿"))
+                    self.assertEqual(inert, enabled.stdout.strip().lstrip("﻿"))
+                    continue
                 self.assertNotEqual(
                     inert,
                     (enabled.stdout + enabled.stderr).strip().lstrip("﻿"),

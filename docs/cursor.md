@@ -29,13 +29,17 @@ Cursor now supports hooks natively via `.cursor/hooks.json`. This skill includes
 
 | Hook | Purpose | Cursor Feature |
 |------|---------|----------------|
-| `userPromptSubmit` | Injects the selected plan and recent progress | Restores state on every prompt |
-| `preToolUse` | Re-reads task_plan.md before tool operations | Keeps goals in context |
-| `postToolUse` | Reminds to update plan after file edits | Prevents forgetting updates |
+| `sessionStart` | Injects the selected plan and recent progress | Adds plan context when a conversation starts |
+| `preToolUse` | Allows tool operations using Cursor's permission schema | Keeps tools available |
+| `postToolUse` | Reminds to update plan after file edits through additional context | Prevents forgetting updates |
 | `stop` | Checks if all phases are complete | **Auto-continues** if incomplete |
 
-The native PowerShell hooks (`hooks.windows.json`) resolve the same selected
-plan directory as the planning scripts, through the shared
+The session start hooks return plan content in Cursor's `additional_context`
+field. They run when a conversation is created; `beforeSubmitPrompt` cannot
+inject context. Cursor Cloud Agents do not run `sessionStart`, so they do not
+receive plan context through this hook. The native PowerShell hooks
+(`hooks.windows.json`) resolve the
+same selected plan directory as the planning scripts, through the shared
 `.cursor/skills/planning-with-files/scripts/resolve-plan-dir.ps1`, which must
 therefore be present next to the hooks. The rules are the ones every route
 applies: an explicit `PLAN_ID` is binding and fails closed when it names no
@@ -74,7 +78,9 @@ your-project/
 │   ├── hooks.json                  ← Hook configuration (bash scripts)
 │   ├── hooks.windows.json          ← Hook configuration (PowerShell scripts)
 │   ├── hooks/
-│   │   ├── user-prompt-submit.sh   ← Plan context injection (root plan only)
+│   │   ├── session-start.sh        ← JSON session context response (bash)
+│   │   ├── session-start.ps1       ← JSON session context response (PowerShell)
+│   │   ├── user-prompt-submit.sh   ← Shared bash plan context renderer
 │   │   ├── pre-tool-use.sh         ← Pre-tool-use script
 │   │   ├── post-tool-use.sh        ← Post-tool-use script
 │   │   ├── stop.sh                 ← Completion check script
@@ -118,19 +124,26 @@ The `.cursor/hooks.windows.json` file uses PowerShell to execute the `.ps1` hook
 
 ## What Each Hook Does
 
+### SessionStart Hook
+
+**Triggers:** When Cursor creates a new conversation
+
+**What it does:** Returns the selected plan and recent progress in
+`additional_context`, which Cursor adds to the initial conversation context.
+The shell hook uses Python 3 to JSON-escape plan text; the PowerShell hook uses
+`ConvertTo-Json`.
+
 ### PreToolUse Hook
 
 **Triggers:** Before Write, Edit, Shell, or Read operations
 
-**What it does:** Reads the first 30 lines of `task_plan.md` for context (the bash hook writes them to stderr, the PowerShell hook to the host output). Always returns `{"decision": "allow"}` — it never blocks tools, not even when its helper is missing.
-
-**Claude Code equivalent:** `cat task_plan.md 2>/dev/null | head -30 || true`
+**What it does:** Always returns `{"permission":"allow"}`. It does not inject plan context because `preToolUse` only accepts permission responses.
 
 ### PostToolUse Hook
 
 **Triggers:** After Write or Edit operations
 
-**What it does:** Outputs a reminder to update `task_plan.md` if a phase was completed.
+**What it does:** Returns a reminder to update `progress.md` and `task_plan.md` in `additional_context` when a plan exists.
 
 **Claude Code equivalent:** `echo '[planning-with-files] File updated...'`
 

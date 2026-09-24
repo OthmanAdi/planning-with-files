@@ -1,29 +1,29 @@
 {
   "version": 1,
   "hooks": {
-    "userPromptSubmit": [
+    "sessionStart": [
       {
-        "command": "powershell -ExecutionPolicy Bypass -File .cursor/hooks/user-prompt-submit.ps1",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/session-start.ps1",
         "timeout": 5
       }
     ],
     "preToolUse": [
       {
-        "command": "powershell -ExecutionPolicy Bypass -File .cursor/hooks/pre-tool-use.ps1",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/pre-tool-use.ps1",
         "matcher": "Write|Edit|Shell|Read",
         "timeout": 5
       }
     ],
     "postToolUse": [
       {
-        "command": "powershell -ExecutionPolicy Bypass -File .cursor/hooks/post-tool-use.ps1",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/post-tool-use.ps1",
         "matcher": "Write|Edit",
         "timeout": 5
       }
     ],
     "stop": [
       {
-        "command": "powershell -ExecutionPolicy Bypass -File .cursor/hooks/stop.ps1",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/stop.ps1",
         "timeout": 10,
         "loop_limit": 3
       }

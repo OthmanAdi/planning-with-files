@@ -1,9 +1,9 @@
 {
   "version": 1,
   "hooks": {
-    "userPromptSubmit": [
+    "sessionStart": [
       {
-        "command": ".cursor/hooks/user-prompt-submit.sh",
+        "command": ".cursor/hooks/session-start.sh",
         "timeout": 5
       }
     ],
