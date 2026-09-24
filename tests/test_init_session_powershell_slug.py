@@ -346,6 +346,8 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             planning = root / ".planning"
             self.assertTrue((planning / ".active_plan").is_file())
             self.assertEqual([], list(planning.glob(".active_plan~RF*.TMP")))
+            self.assertEqual([], list(planning.glob(".active_plan.*.replace-backup")))
+            self.assertEqual([], list(planning.glob(".active_plan.*.tmp")))
 
     def test_transient_pointer_inspection_retries_after_root_verification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

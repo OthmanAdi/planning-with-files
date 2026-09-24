@@ -49,6 +49,75 @@ class SetActivePlanTests(unittest.TestCase):
                 f"can decode BOM-less UTF-8 as the active ANSI code page: {error}"
             )
 
+    def test_powershell_replace_uses_a_caller_owned_backup(self) -> None:
+        source = SET_ACTIVE_PS1.read_text(encoding="ascii")
+        self.assertIn(
+            "[IO.File]::Replace($tempFile, $ActiveFile, $backupFile)",
+            source,
+        )
+        self.assertIn(".replace-backup", source)
+        self.assertNotIn("[NullString]::Value", source)
+
+    @unittest.skipUnless(
+        POWERSHELL and os.name == "nt",
+        "requires native Windows PowerShell replacement semantics",
+    )
+    def test_final_replace_failure_restores_owned_backup_without_glob_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            scripts = base / "scripts"
+            scripts.mkdir()
+
+            source = SET_ACTIVE_PS1.read_text(encoding="ascii")
+            needle = "[IO.File]::Replace($tempFile, $ActiveFile, $backupFile)"
+            self.assertEqual(1, source.count(needle))
+            injected = source.replace(
+                needle,
+                "[IO.File]::Move($ActiveFile, $backupFile)\n"
+                "                throw [IO.IOException]::new(\"injected final replacement failure\")",
+            )
+            selector = scripts / "set-active-plan.ps1"
+            selector.write_text(injected, encoding="ascii", newline="\n")
+
+            planning = root / ".planning"
+            old_plan = planning / "old-plan"
+            new_plan = planning / "new-plan"
+            old_plan.mkdir(parents=True)
+            new_plan.mkdir()
+            (old_plan / "task_plan.md").write_text("# old\n", encoding="utf-8")
+            (new_plan / "task_plan.md").write_text("# new\n", encoding="utf-8")
+            pointer = planning / ".active_plan"
+            pointer.write_text("old-plan", encoding="utf-8")
+            foreign_rf = planning / ".active_plan~RFKEEP.TMP"
+            foreign_rf.write_bytes(b"foreign-owner")
+
+            result = subprocess.run(
+                [
+                    POWERSHELL,
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(selector),
+                    "new-plan",
+                ],
+                cwd=str(root),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("injected final replacement failure", result.stderr)
+            self.assertEqual(b"old-plan", pointer.read_bytes())
+            self.assertEqual(b"foreign-owner", foreign_rf.read_bytes())
+            self.assertEqual([], list(planning.glob(".active_plan.*.replace-backup")))
+            self.assertEqual([], list(planning.glob(".active_plan.*.tmp")))
+
     @unittest.skipUnless(
         POWERSHELL and SH,
         "requires Windows PowerShell and sh for the cross-shell regression test",

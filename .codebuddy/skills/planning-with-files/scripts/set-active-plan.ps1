@@ -132,6 +132,51 @@ function Test-SafeActiveFile {
         (Test-WithinRoot $ActiveFile)
 }
 
+function Test-SafeOwnedBackupFile {
+    param([string]$Path)
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $false }
+    $linked = ([string]$item.LinkType) -in @('SymbolicLink', 'Junction')
+    return -not $item.PSIsContainer -and -not $linked -and (Test-WithinRoot $Path)
+}
+
+function Resolve-OwnedPointerBackup {
+    param([string]$BackupFile)
+    # ReplaceFile can move the old destination before failing to move the new
+    # file. A caller-named backup makes that intermediate state attributable to
+    # this invocation, so recover or delete only this GUID path. Never glob for
+    # ~RF*.TMP: a concurrent selector may own those files.
+    $maxAttempts = 20
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        $backupItem = Get-Item -LiteralPath $BackupFile -Force -ErrorAction SilentlyContinue
+        if (-not $backupItem) { return $true }
+        if (-not (Test-SafeOwnedBackupFile $BackupFile)) { return $false }
+
+        $currentActive = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
+        if ($currentActive) {
+            if (-not (Test-SafeActiveFile)) { return $false }
+            try {
+                [IO.File]::Delete($BackupFile)
+                return $true
+            } catch {
+                if ($attempt -eq $maxAttempts) { return $false }
+            }
+        } else {
+            try {
+                [IO.File]::Move($BackupFile, $ActiveFile)
+                return $true
+            } catch {
+                # Another selector may have recreated the pointer between the
+                # absence check and Move. Reinspect before deciding whether the
+                # owned backup is now redundant.
+                if ($attempt -eq $maxAttempts) { return $false }
+            }
+        }
+        Start-Sleep -Milliseconds 25
+    }
+    return $false
+}
+
 function Get-CurrentActivePlan {
     if (-not (Test-SafeActiveFile -AllowLink)) { return "" }
     try {
@@ -306,9 +351,15 @@ if ($activeItem -and -not (Test-SafeActiveFile)) {
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 # Replace the directory entry instead of truncating an existing inode: a
 # hardlinked pointer must not overwrite another file. The exclusive temporary
-# file lives beside the pointer, keeping replacement on the same filesystem.
-$tempFile = Join-Path $PlanRoot ('.active_plan.' + [guid]::NewGuid().ToString('N') + '.tmp')
+# file and caller-owned backup live beside the pointer, keeping replacement on
+# the same filesystem. Naming the backup prevents ReplaceFile from inventing
+# an unowned ~RF*.TMP path if its final rename fails.
+$operationId = [guid]::NewGuid().ToString('N')
+$tempFile = Join-Path $PlanRoot ('.active_plan.' + $operationId + '.tmp')
+$backupFile = Join-Path $PlanRoot ('.active_plan.' + $operationId + '.replace-backup')
 $createdTemp = $false
+$failureMessage = ""
+$backupResolved = $true
 try {
     $stream = [IO.File]::Open($tempFile, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
     $createdTemp = $true
@@ -325,23 +376,36 @@ try {
                 if (-not (Test-SafeActiveFile)) {
                     throw [InvalidOperationException]::new("the active plan pointer became unsafe during replacement")
                 }
-                [IO.File]::Replace($tempFile, $ActiveFile, [NullString]::Value)
+                [IO.File]::Replace($tempFile, $ActiveFile, $backupFile)
             } else {
                 [IO.File]::Move($tempFile, $ActiveFile)
             }
             break
         } catch [IO.IOException] {
+            if (-not (Resolve-OwnedPointerBackup -BackupFile $backupFile)) {
+                throw [IO.IOException]::new("could not safely recover the active plan pointer after replacement failure")
+            }
             if ($attempt -eq $maxAttempts) { throw }
             Start-Sleep -Milliseconds 25
         }
     }
 } catch {
-    Write-Error "Error: could not set the active plan pointer: $($_.Exception.Message)"
-    exit 1
+    $failureMessage = $_.Exception.Message
 } finally {
+    if (-not (Resolve-OwnedPointerBackup -BackupFile $backupFile)) {
+        $backupResolved = $false
+    }
     if ($createdTemp -and (Test-Path -LiteralPath $tempFile)) {
         Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
     }
+}
+if (-not $backupResolved) {
+    Write-Error "Error: could not safely recover the active plan pointer backup."
+    exit 1
+}
+if ($failureMessage) {
+    Write-Error "Error: could not set the active plan pointer: $failureMessage"
+    exit 1
 }
 Write-Output "Active plan set to: $PlanId"
 Write-Output "Path: $PlanDir"
