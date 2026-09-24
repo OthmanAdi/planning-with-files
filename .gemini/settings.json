@@ -13,16 +13,15 @@
         ]
       }
     ],
-    "BeforeTool": [
+    "BeforeAgent": [
       {
-        "matcher": "write_file|edit_file|replace|create_file|patch|read_file|shell",
         "hooks": [
           {
-            "name": "planning-before-tool",
+            "name": "planning-before-agent",
             "type": "command",
-            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-tool.sh",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-agent.sh",
             "timeout": 5000,
-            "description": "Read plan context before tool use to keep goals in attention"
+            "description": "Inject task_plan.md context into the user turn"
           }
         ]
       }
@@ -37,19 +36,6 @@
             "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/after-tool.sh",
             "timeout": 5000,
             "description": "Remind agent to update progress after file changes"
-          }
-        ]
-      }
-    ],
-    "BeforeModel": [
-      {
-        "hooks": [
-          {
-            "name": "planning-before-model",
-            "type": "command",
-            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/before-model.sh",
-            "timeout": 5000,
-            "description": "Inject plan awareness before every model call"
           }
         ]
       }

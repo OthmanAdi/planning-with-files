@@ -20,8 +20,7 @@ GEMINI_HOOKS = REPO / ".gemini" / "hooks"
 COPILOT_HOOKS = REPO / ".github" / "hooks" / "scripts"
 
 PYTHON_SHELL_HOOKS = (
-    GEMINI_HOOKS / "before-model.sh",
-    GEMINI_HOOKS / "before-tool.sh",
+    GEMINI_HOOKS / "before-agent.sh",
     GEMINI_HOOKS / "session-start.sh",
     GEMINI_HOOKS / "session-end.sh",
     COPILOT_HOOKS / "session-start.sh",
@@ -88,7 +87,7 @@ class AdapterPythonIsolationTests(unittest.TestCase):
         return json.loads(result.stdout.lstrip("\ufeff"))
 
     def test_gemini_json_encoding_ignores_project_json_module(self) -> None:
-        for name in ("before-model.sh", "before-tool.sh"):
+        for name in ("before-agent.sh",):
             with self.subTest(hook=name):
                 marker = self.cwd / "PLANTED_json"
                 marker.unlink(missing_ok=True)

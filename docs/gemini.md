@@ -123,9 +123,14 @@ Gemini CLI supports [hooks](https://geminicli.com/docs/hooks/) — lifecycle eve
 | Hook Event | What It Does |
 |------------|-------------|
 | **SessionStart** | Recovers selected context from project planning files without reading agent session stores |
-| **BeforeTool** | Reads first 30 lines of `task_plan.md` before write/read/shell operations |
+| **BeforeAgent** | Injects the first 30 lines of `task_plan.md` into the user turn through `hookSpecificOutput.additionalContext` |
 | **AfterTool** | Reminds to update `progress.md` after file changes |
-| **BeforeModel** | Injects current phase awareness before every model call (unique to Gemini!) |
+| **SessionEnd** | Reports completion status during shutdown; this is advisory and user-facing only |
+
+Gemini's event-specific output schema matters here: `BeforeAgent` and `AfterTool`
+send model context through `hookSpecificOutput.additionalContext`. `BeforeTool`
+is reserved for tool validation/argument rewriting, and `BeforeModel` accepts
+request/response overrides rather than an `additionalContext` field.
 
 Local agent session history is not part of automatic startup. Explicit `session-catchup.py --metadata <project>` reads same-project local session records and emits aggregate counts only. Use `--replay` for bounded nonce-framed excerpts. The catchup path contains no network request or upload operation.
 
@@ -159,7 +164,7 @@ cp -r /path/to/planning-with-files/.gemini/hooks ~/.gemini/hooks
 2. **Task Detection**: When you describe a complex task, Gemini matches it to the skill
 3. **Activation Prompt**: You approve the skill activation
 4. **Instructions Loaded**: Full SKILL.md content is added to context
-5. **Execution**: Gemini follows the planning workflow with hooks enforcing discipline
+5. **Execution**: BeforeAgent re-injects `task_plan.md` context each user turn; AfterTool reminds the agent to record progress after file changes
 
 ## Skill Structure
 
@@ -168,9 +173,9 @@ cp -r /path/to/planning-with-files/.gemini/hooks ~/.gemini/hooks
 ├── settings.json             # Hook configuration (v2.26.0)
 ├── hooks/                    # Hook scripts
 │   ├── session-start.sh      # Session recovery
-│   ├── before-tool.sh        # Plan context injection
+│   ├── before-agent.sh       # Turn-level plan context injection
 │   ├── after-tool.sh         # Progress update reminder
-│   └── before-model.sh       # Phase awareness (unique to Gemini)
+│   └── session-end.sh        # Advisory completion status
 └── skills/planning-with-files/
     ├── SKILL.md              # Main skill instructions
     ├── templates/

@@ -1,6 +1,6 @@
 #!/bin/bash
-# planning-with-files: BeforeTool hook for Gemini CLI
-# Reads the first 30 lines of task_plan.md before tool use.
+# planning-with-files: BeforeAgent hook for Gemini CLI
+# Injects task_plan.md context into the user prompt once per turn.
 # Receives JSON on stdin, must output ONLY JSON to stdout.
 
 INPUT=$(cat)
@@ -23,7 +23,7 @@ PYTHON=$(command -v python3 || command -v python)
 if [ -n "$PYTHON" ]; then
     ESCAPED=$($PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" <<< "$CONTEXT" 2>/dev/null)
     if [ -n "$ESCAPED" ] && [ "$ESCAPED" != "\"\"" ]; then
-        printf '%s\n' "{\"systemMessage\":$ESCAPED}"
+        printf '%s\n' "{\"hookSpecificOutput\":{\"additionalContext\":$ESCAPED}}"
         exit 0
     fi
 fi

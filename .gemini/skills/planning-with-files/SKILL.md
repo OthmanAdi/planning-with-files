@@ -3,7 +3,7 @@ name: planning-with-files
 description: "Persistent file-based planning for multi-step AI-agent work. Keeps task_plan.md, findings.md, and progress.md on disk; Gemini lifecycle hooks inject selected project planning context. Automatic recovery reads project planning files only. Explicit session-catchup.py --metadata reads same-project local agent session records and emits aggregate counts only; --replay may emit bounded nonce-framed excerpts. The session-end hook reports status only; it does not request continuation or run commands declared in Markdown. The skill has no network upload path. Use for research or work needing 5+ tool calls."
 metadata:
   version: "2.43.0"
-  hooks: "Configured in .gemini/settings.json (SessionStart, BeforeTool, AfterTool, BeforeModel)"
+  hooks: "Configured in .gemini/settings.json (SessionStart, BeforeAgent, AfterTool, SessionEnd)"
 ---
 
 # Planning with Files

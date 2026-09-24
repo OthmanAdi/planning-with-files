@@ -12,5 +12,5 @@ if [ ! -f "$PLAN_FILE" ]; then
     exit 0
 fi
 
-echo '{"additionalContext":"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."}'
+echo '{"hookSpecificOutput":{"additionalContext":"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."}}'
 exit 0
