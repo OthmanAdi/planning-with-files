@@ -251,7 +251,14 @@ class CursorPowerShellNamedPlanTests(unittest.TestCase):
         for result in results.values():
             self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("ROOT-PLAN-MARKER", results["user-prompt-submit"].stdout)
-        self.assertIn("ROOT-PLAN-MARKER", results["pre-tool-use"].stdout)
+        self.assertIn(
+            "ROOT-PLAN-MARKER",
+            json.loads(results["session-start"].stdout)["additional_context"],
+        )
+        self.assertEqual(
+            {"permission": "allow"},
+            json.loads(results["pre-tool-use"].stdout),
+        )
         self.assertIn("Task incomplete (0/1 phases done)", results["stop"].stdout)
 
     def test_dot_named_and_invalid_slug_dirs_do_not_block_the_root_plan(self) -> None:
