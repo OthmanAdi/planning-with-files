@@ -96,6 +96,19 @@ class GeminiHookContractTests(unittest.TestCase):
         self.assertFalse((GEMINI_HOOKS / "before-tool.sh").exists())
         self.assertFalse((GEMINI_HOOKS / "before-model.sh").exists())
 
+    def test_skill_metadata_lists_registered_events(self) -> None:
+        hooks = json.loads(SETTINGS.read_text(encoding="utf-8"))["hooks"]
+        skill = (GEMINI_DIR / "skills" / "planning-with-files" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        frontmatter = skill.split("---", 2)[1]
+        line = next(
+            entry for entry in frontmatter.splitlines()
+            if entry.strip().startswith("hooks:")
+        )
+        listed = line[line.index("(") + 1:line.rindex(")")]
+        self.assertEqual(set(hooks), {event.strip() for event in listed.split(",")})
+
     def test_before_agent_injects_plan_as_hook_specific_context(self) -> None:
         if not shell_python_is_usable():
             self.skipTest("shell Python is not usable")
