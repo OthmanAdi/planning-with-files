@@ -389,6 +389,48 @@ exit $LASTEXITCODE
             expected = f"{date.today().isoformat()}-retry-case"
             self.assertEqual(expected, (root / ".planning" / ".active_plan").read_text())
 
+    def test_pointer_precheck_race_retries_after_root_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            scripts = base / "skill" / "scripts"
+            scripts.mkdir(parents=True)
+            shutil.copy2(INIT_PS1, scripts / "init-session.ps1")
+            shutil.copy2(REPO_ROOT / "scripts" / "set-active-plan.ps1",
+                         scripts / "set-active-plan-real.ps1")
+            (scripts / "set-active-plan.ps1").write_text(
+                r"""
+param([string]$PlanId = "", [switch]$VerifyRoot)
+$real = Join-Path $PSScriptRoot 'set-active-plan-real.ps1'
+if ($VerifyRoot) { & $real -VerifyRoot *> $null; exit $LASTEXITCODE }
+$marker = Join-Path (Get-Location).Path 'precheck-attempts.txt'
+if (-not (Test-Path -LiteralPath $marker)) {
+    [IO.File]::WriteAllText($marker, '1')
+    Write-Error 'Error: the active plan pointer must be a regular file within the project.'
+    exit 1
+}
+[IO.File]::AppendAllText($marker, '2')
+& $real $PlanId *> $null
+exit $LASTEXITCODE
+""",
+                encoding="ascii",
+            )
+
+            result = subprocess.run(
+                [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass",
+                 "-File", str(scripts / "init-session.ps1"), "Precheck Retry"],
+                cwd=root, text=True, encoding="utf-8-sig",
+                capture_output=True, check=False, env=child_env(),
+            )
+
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertEqual(
+                "12", (root / "precheck-attempts.txt").read_text(encoding="ascii")
+            )
+            expected = f"{date.today().isoformat()}-precheck-retry"
+            self.assertEqual(expected, (root / ".planning" / ".active_plan").read_text())
+
     def test_pointer_retry_stops_when_pointer_becomes_readonly(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
