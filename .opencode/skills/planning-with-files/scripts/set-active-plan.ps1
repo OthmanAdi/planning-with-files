@@ -141,7 +141,7 @@ function Test-SafeOwnedBackupFile {
 }
 
 function Resolve-OwnedPointerBackup {
-    param([string]$BackupFile)
+    param([string]$BackupFile, [switch]$ReplaceSucceeded)
     # ReplaceFile can move the old destination before failing to move the new
     # file. A caller-named backup makes that intermediate state attributable to
     # this invocation, so recover or delete only this GUID path. Never glob for
@@ -150,11 +150,14 @@ function Resolve-OwnedPointerBackup {
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $backupItem = Get-Item -LiteralPath $BackupFile -Force -ErrorAction SilentlyContinue
         if (-not $backupItem) { return $true }
-        if (-not (Test-SafeOwnedBackupFile $BackupFile)) { return $false }
+        # A failed inspection is transient under concurrent writers: retry.
+        if (-not (Test-SafeOwnedBackupFile $BackupFile)) { Start-Sleep -Milliseconds 25; continue }
 
         $currentActive = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
-        if ($currentActive) {
-            if (-not (Test-SafeActiveFile)) { return $false }
+        # After our own successful replacement the backup holds a superseded
+        # value: only delete it, never move it back over a newer pointer.
+        if ($ReplaceSucceeded -or $currentActive) {
+            if (-not $ReplaceSucceeded -and -not (Test-SafeActiveFile)) { Start-Sleep -Milliseconds 25; continue }
             try {
                 [IO.File]::Delete($BackupFile)
                 return $true
@@ -360,6 +363,7 @@ $backupFile = Join-Path $PlanRoot ('.active_plan.' + $operationId + '.replace-ba
 $createdTemp = $false
 $failureMessage = ""
 $backupResolved = $true
+$replaced = $false
 try {
     $stream = [IO.File]::Open($tempFile, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
     $createdTemp = $true
@@ -380,6 +384,7 @@ try {
             } else {
                 [IO.File]::Move($tempFile, $ActiveFile)
             }
+            $replaced = $true
             break
         } catch [IO.IOException] {
             if (-not (Resolve-OwnedPointerBackup -BackupFile $backupFile)) {
@@ -392,8 +397,10 @@ try {
 } catch {
     $failureMessage = $_.Exception.Message
 } finally {
-    if (-not (Resolve-OwnedPointerBackup -BackupFile $backupFile)) {
-        $backupResolved = $false
+    if (-not (Resolve-OwnedPointerBackup -BackupFile $backupFile -ReplaceSucceeded:$replaced)) {
+        # The pointer was written; a leftover backup is clutter, not failure.
+        if ($replaced) { Write-Warning "could not remove the replacement backup $backupFile" }
+        else { $backupResolved = $false }
     }
     if ($createdTemp -and (Test-Path -LiteralPath $tempFile)) {
         Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue

@@ -119,6 +119,71 @@ class SetActivePlanTests(unittest.TestCase):
             self.assertEqual([], list(planning.glob(".active_plan.*.tmp")))
 
     @unittest.skipUnless(
+        POWERSHELL and os.name == "nt",
+        "requires native Windows PowerShell replacement semantics",
+    )
+    def test_held_backup_after_successful_replace_still_reports_success(self) -> None:
+        # After a successful Replace the owned backup only holds the superseded
+        # pointer. When it cannot be deleted (here the selector itself keeps it
+        # open without delete sharing), the new pointer is already in place, so
+        # the call must warn and succeed rather than report a failed switch.
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "project"
+            root.mkdir()
+            scripts = base / "scripts"
+            scripts.mkdir()
+
+            source = SET_ACTIVE_PS1.read_text(encoding="ascii")
+            needle = "[IO.File]::Replace($tempFile, $ActiveFile, $backupFile)"
+            self.assertEqual(1, source.count(needle))
+            injected = source.replace(
+                needle,
+                needle + "\n"
+                "                $script:heldBackup = [IO.File]::Open($backupFile, 'Open', 'Read', 'Read')",
+            )
+            selector = scripts / "set-active-plan.ps1"
+            selector.write_text(injected, encoding="ascii", newline="\n")
+
+            planning = root / ".planning"
+            old_plan = planning / "old-plan"
+            new_plan = planning / "new-plan"
+            old_plan.mkdir(parents=True)
+            new_plan.mkdir()
+            (old_plan / "task_plan.md").write_text("# old\n", encoding="utf-8")
+            (new_plan / "task_plan.md").write_text("# new\n", encoding="utf-8")
+            pointer = planning / ".active_plan"
+            pointer.write_text("old-plan", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    POWERSHELL,
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(selector),
+                    "new-plan",
+                ],
+                cwd=str(root),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                check=False,
+            )
+
+            output = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, output)
+            self.assertIn("Active plan set to: new-plan", result.stdout)
+            self.assertIn("could not remove the replacement backup", output)
+            self.assertEqual(b"new-plan", pointer.read_bytes())
+            backups = list(planning.glob(".active_plan.*.replace-backup"))
+            self.assertEqual(1, len(backups))
+            self.assertEqual(b"old-plan", backups[0].read_bytes())
+            self.assertEqual([], list(planning.glob(".active_plan.*.tmp")))
+
+    @unittest.skipUnless(
         POWERSHELL and SH,
         "requires Windows PowerShell and sh for the cross-shell regression test",
     )
