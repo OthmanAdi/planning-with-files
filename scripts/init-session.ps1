@@ -368,8 +368,10 @@ if ($UsePlanDir) {
         # Another writer can replace the pointer between the selector's
         # Get-Item and final-path check. Retry only that transient result.
         $transientPointerRace = $selectorResult -is [System.Management.Automation.ErrorRecord] -and
-            $selectorResult.Exception.Message -ceq
-                'Error: could not set the active plan pointer: the active plan pointer became unsafe during replacement'
+            $selectorResult.Exception.Message -in @(
+                'Error: could not set the active plan pointer: the active plan pointer became unsafe during replacement',
+                'Error: the active plan pointer must be a regular file within the project.'
+            )
         if ($attempt -eq 5 -or -not $transientPointerRace) {
             break
         }
