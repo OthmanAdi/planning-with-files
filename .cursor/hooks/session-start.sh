@@ -13,16 +13,21 @@ if [ -z "${CONTEXT}" ]; then
     exit 0
 fi
 
-if command -v python3 >/dev/null 2>&1; then
-    RESPONSE="$(printf '%s' "${CONTEXT}" | python3 -c 'import json,sys; print(json.dumps({"additional_context": sys.stdin.buffer.read().decode("utf-8", "replace")}))' 2>/dev/null)" || RESPONSE=""
-    if [ -n "${RESPONSE}" ]; then
-        printf '%s\n' "${RESPONSE}"
-    else
-        echo '{}'
-    fi
+# JSON-escape the context with the first interpreter that actually runs:
+# python3 can be a stub (the Windows Store alias), so python is tried next.
+# -I keeps a json.py in the project directory from being imported.
+RESPONSE=""
+for PYTHON in "$(command -v python3 2>/dev/null)" "$(command -v python 2>/dev/null)"; do
+    [ -n "${PYTHON}" ] || continue
+    RESPONSE="$(printf '%s' "${CONTEXT}" | "$PYTHON" -I -X utf8 -c 'import json,sys; print(json.dumps({"additional_context": sys.stdin.buffer.read().decode("utf-8", "replace")}))' 2>/dev/null)" || RESPONSE=""
+    [ -n "${RESPONSE}" ] && break
+done
+
+# Keep the response valid when no Python runs; planning scripts require
+# Python for their normal context-injection path as well.
+if [ -n "${RESPONSE}" ]; then
+    printf '%s\n' "${RESPONSE}"
 else
-    # Keep the response valid when Python is unavailable; planning scripts
-    # require Python for their normal context-injection path as well.
     echo '{}'
 fi
 exit 0
