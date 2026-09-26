@@ -178,6 +178,83 @@ class PlanAttestationTests(unittest.TestCase):
                 self.assertFalse((plan_dir / ".attestation").exists())
                 self.assertFalse((plan_dir / ".plan-attestation").exists())
 
+    def test_target_root_attests_root_while_named_plan_is_active(self) -> None:
+        root_plan = self.tmp / "task_plan.md"
+        root_plan.write_text("root roadmap\n", encoding="utf-8")
+        plan_dir = self.tmp / ".planning" / "2026-09-26-live-ticket"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "task_plan.md").write_text("live ticket\n", encoding="utf-8")
+        (self.tmp / ".planning" / ".active_plan").write_text(
+            "2026-09-26-live-ticket\n", encoding="utf-8"
+        )
+
+        result = self._run("--target", "root")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        root_attest = self.tmp / ".plan-attestation"
+        self.assertEqual(sha256_of(root_plan), root_attest.read_text().strip())
+        self.assertFalse((plan_dir / ".attestation").exists())
+        self.assertIn("Plan: ./task_plan.md", result.stdout)
+        self.assertIn("Attestation: ./.plan-attestation", result.stdout)
+
+    def test_target_named_plan_attests_exact_plan(self) -> None:
+        selected = self.tmp / ".planning" / "2026-09-26-selected"
+        active = self.tmp / ".planning" / "2026-09-26-active"
+        selected.mkdir(parents=True)
+        active.mkdir(parents=True)
+        selected_plan = selected / "task_plan.md"
+        selected_plan.write_text("selected\n", encoding="utf-8")
+        (active / "task_plan.md").write_text("active\n", encoding="utf-8")
+        (self.tmp / ".planning" / ".active_plan").write_text(
+            "2026-09-26-active\n", encoding="utf-8"
+        )
+
+        result = self._run("--target", "2026-09-26-selected")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            sha256_of(selected_plan),
+            (selected / ".attestation").read_text().strip(),
+        )
+        self.assertFalse((active / ".attestation").exists())
+
+    def test_unresolvable_target_fails_without_fallback_or_write(self) -> None:
+        root_plan = self.tmp / "task_plan.md"
+        root_plan.write_text("root decoy\n", encoding="utf-8")
+        active = self.tmp / ".planning" / "2026-09-26-active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active decoy\n", encoding="utf-8")
+        (self.tmp / ".planning" / ".active_plan").write_text(
+            "2026-09-26-active\n", encoding="utf-8"
+        )
+
+        result = self._run("--target", "2026-09-26-missing")
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("--target 2026-09-26-missing", result.stderr)
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+        self.assertFalse((active / ".attestation").exists())
+
+    def test_default_target_resolution_is_unchanged(self) -> None:
+        root_plan = self.tmp / "task_plan.md"
+        root_plan.write_text("root roadmap\n", encoding="utf-8")
+        active = self.tmp / ".planning" / "2026-09-26-active"
+        active.mkdir(parents=True)
+        active_plan = active / "task_plan.md"
+        active_plan.write_text("active ticket\n", encoding="utf-8")
+        (self.tmp / ".planning" / ".active_plan").write_text(
+            "2026-09-26-active\n", encoding="utf-8"
+        )
+
+        result = self._run()
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            sha256_of(active_plan),
+            (active / ".attestation").read_text().strip(),
+        )
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+
     def test_no_plan_exits_nonzero(self) -> None:
         result = self._run()
         self.assertNotEqual(0, result.returncode)

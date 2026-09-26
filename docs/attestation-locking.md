@@ -37,6 +37,11 @@ file. It does not create the legacy `.plan-attestation` file beside a slug plan.
 does not resolve, the helper exits with an error instead of attesting a different
 plan through the current-directory fallback.
 
+`--target root` explicitly attests the legacy `./task_plan.md`, even while a
+named plan is active. `--target <plan-id>` explicitly attests that named plan.
+Like the environment selectors, an unresolved `--target` is a binding: the
+helper exits non-zero and does not fall back to another plan.
+
 The atomic rename is the correctness guarantee. It prevents readers from seeing
 a partially written attestation file. The `flock` call is only a cooperative
 gate for concurrent writers on systems that provide it.
