@@ -255,6 +255,150 @@ class PlanAttestationTests(unittest.TestCase):
         )
         self.assertFalse((self.tmp / ".plan-attestation").exists())
 
+    def test_empty_target_refuses_without_attesting_active_plan(self) -> None:
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("root", encoding="utf-8")
+        result = self._run("--target", "")
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((active / ".attestation").exists())
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+
+    def test_extra_arguments_refuse_without_clearing_another_plan(self) -> None:
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("root", encoding="utf-8")
+        root_attest = self.tmp / ".plan-attestation"
+        active_attest = active / ".attestation"
+        for args in (("--show", "--target", "root"),
+                     ("--clear", "--target", "root"),
+                     ("--target", "root", "--clear"), ("", "extra")):
+            with self.subTest(args=args):
+                root_attest.write_text("root sentinel", encoding="utf-8")
+                active_attest.write_text("active sentinel", encoding="utf-8")
+                result = self._run(*args)
+                self.assertNotEqual(0, result.returncode)
+                self.assertEqual("root sentinel", root_attest.read_text())
+                self.assertEqual("active sentinel", active_attest.read_text())
+
+    def test_targets_honor_project_pin_and_preserve_active_pointer(self) -> None:
+        pinned = self.tmp / "pinned"
+        for project in (self.tmp, pinned):
+            active = project / ".planning" / "active"
+            active.mkdir(parents=True)
+            (active / "task_plan.md").write_text(str(project), encoding="utf-8")
+            (project / "task_plan.md").write_text("root " + str(project), encoding="utf-8")
+            (project / ".planning" / ".active_plan").write_bytes(b"active\r\n")
+        for target, plan, attestation in (
+            ("root", pinned / "task_plan.md", pinned / ".plan-attestation"),
+            ("active", pinned / ".planning/active/task_plan.md", pinned / ".planning/active/.attestation"),
+        ):
+            with self.subTest(target=target):
+                result = self._run("--target", target, env={
+                    "PWF_PLAN_ROOT": pinned.as_posix(), "PLAN_ID": "missing"})
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertTrue(attestation.exists(), result.stdout)
+                self.assertEqual(sha256_of(plan), attestation.read_text().strip())
+                self.assertFalse((self.tmp / ".plan-attestation").exists())
+                self.assertFalse((self.tmp / ".planning/active/.attestation").exists())
+                self.assertEqual(b"active\r\n", (pinned / ".planning/.active_plan").read_bytes())
+                self.assertEqual(b"active\r\n", (self.tmp / ".planning/.active_plan").read_bytes())
+
+    def test_targets_reject_invalid_project_pin_without_cwd_fallback(self) -> None:
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("root", encoding="utf-8")
+        for pin in ((self.tmp / "missing").as_posix(), "."):
+            for target in ("root", "active"):
+                with self.subTest(pin=pin, target=target):
+                    result = self._run("--target", target, env={"PWF_PLAN_ROOT": pin})
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertFalse((self.tmp / ".plan-attestation").exists())
+                    self.assertFalse((active / ".attestation").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows native path spelling")
+    def test_named_target_hashes_native_windows_project_pin(self) -> None:
+        pinned = self.tmp / "pinned"
+        active = pinned / ".planning" / "active"
+        active.mkdir(parents=True)
+        plan = active / "task_plan.md"
+        plan.write_text("pinned plan", encoding="utf-8")
+        result = self._run("--target", "active", env={"PWF_PLAN_ROOT": str(pinned)})
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(sha256_of(plan), (active / ".attestation").read_text().strip())
+
+    def _make_directory_link(self, link: Path, target: Path) -> None:
+        if os.name == "nt":
+            made = subprocess.run(
+                ["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                capture_output=True, text=True, check=False,
+            )
+            if made.returncode:
+                self.skipTest("junction creation unavailable: " + made.stderr.strip())
+        else:
+            try:
+                link.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink creation unavailable: {exc}")
+
+    def test_target_rejects_linked_plan_directory(self) -> None:
+        project = self.tmp / "project"
+        (project / ".planning").mkdir(parents=True)
+        outside = self.tmp / "outside"
+        outside.mkdir()
+        (outside / "task_plan.md").write_text("outside", encoding="utf-8")
+        self._make_directory_link(project / ".planning/linked", outside)
+        result = self._run("--target", "linked", cwd=project)
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((outside / ".attestation").exists())
+
+    def test_target_rejects_planning_directory_escape(self) -> None:
+        project = self.tmp / "project"
+        project.mkdir()
+        outside = self.tmp / "outside"
+        active = outside / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("outside", encoding="utf-8")
+        self._make_directory_link(project / ".planning", outside)
+        result = self._run("--target", "active", cwd=project)
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((active / ".attestation").exists())
+
+    def test_root_target_accepts_valid_linked_project_pin(self) -> None:
+        project = self.tmp / "project"
+        project.mkdir()
+        plan = project / "task_plan.md"
+        plan.write_text("pinned root", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("cwd decoy", encoding="utf-8")
+        link = self.tmp / "project-link"
+        self._make_directory_link(link, project)
+        result = self._run("--target", "root", env={"PWF_PLAN_ROOT": link.as_posix()})
+        self.assertEqual(0, result.returncode, result.stderr)
+        attestation = project / ".plan-attestation"
+        self.assertTrue(attestation.exists(), result.stdout)
+        self.assertEqual(sha256_of(plan), attestation.read_text().strip())
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+
+    def test_targets_reject_linked_plan_files(self) -> None:
+        outside = self.tmp / "outside.md"
+        outside.write_text("outside", encoding="utf-8")
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        for target, plan in (("root", self.tmp / "task_plan.md"),
+                             ("active", active / "task_plan.md")):
+            try:
+                plan.symlink_to(outside)
+            except OSError as exc:
+                self.skipTest(f"file symlink creation unavailable: {exc}")
+            with self.subTest(target=target):
+                result = self._run("--target", target)
+                self.assertNotEqual(0, result.returncode)
+                self.assertFalse((self.tmp / ".plan-attestation").exists())
+                self.assertFalse((active / ".attestation").exists())
+
     def test_no_plan_exits_nonzero(self) -> None:
         result = self._run()
         self.assertNotEqual(0, result.returncode)
