@@ -322,9 +322,11 @@ For a "babysit until done" workflow, combine `/plan-loop` (cadence) with `/plan-
 
 For skill-only installs (no `commands/` folder) or sessions where the slash command refuses to fire, the model can produce the same effect by executing the wrapper steps inline.
 
+For parallel tasks, pin each host with its task's `PLAN_ID` before starting it, or use separate worktrees. Set `PWF_PLAN_ROOT` when the project root differs from the host's working directory. `.planning/.active_plan` is a shared default; switching it does not bind parallel sessions to their tasks.
+
 **Manual `/plan-goal` procedure:**
 
-1. Resolve the active plan: prefer `${PLAN_ID}` env var, then `.planning/.active_plan`, then newest `.planning/<dir>/`, then legacy `./task_plan.md`.
+1. Use the installed `scripts/resolve-plan-dir.sh` (or `.ps1`) with the task's `PLAN_ID` and `PWF_PLAN_ROOT` to resolve its plan directory. If a selector is rejected or selection is ambiguous, stop plan recovery and correct the pin. Use legacy project-root files only when the resolver selects that directory.
 2. Read the resolved `task_plan.md`.
 3. Compose a goal condition. Default: `"all phases in task_plan.md report Status: complete and check-complete.sh reports ALL PHASES COMPLETE"`. If the user passed additional clauses, append them.
 4. Issue Claude Code's native `/goal <condition>` (CC primitive, always available).
