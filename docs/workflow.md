@@ -224,10 +224,16 @@ multiple unrelated topics, prefer isolated planning directories:
     progress.md
 ```
 
-Use `scripts/init-session.sh <slug>` to create a scoped plan and
-`scripts/set-active-plan.sh <plan-id>` to switch the active plan. Hooks resolve
-the active plan from `$PLAN_ID`, `.planning/.active_plan`, the newest scoped
-plan, then the legacy root files.
+Use the installed `scripts/init-session.sh <slug>` to create a scoped plan.
+Resolve it with the installed `scripts/resolve-plan-dir.sh` (or `.ps1`), using
+the task's `PLAN_ID` and `PWF_PLAN_ROOT`. If a selector is rejected or selection
+is ambiguous, stop plan recovery and correct the pin. Use legacy project-root files only when the resolver selects that directory.
+
+Pin each parallel host with its task's `PLAN_ID` before starting it, or use
+separate worktrees. Set `PWF_PLAN_ROOT` when the project root differs from the
+host's working directory. `scripts/set-active-plan.sh <plan-id>` switches
+`.planning/.active_plan`, but `.planning/.active_plan` is a shared default;
+switching it does not bind parallel sessions to their tasks.
 
 Some teams also keep durable topic handoffs alongside the root planning files:
 
