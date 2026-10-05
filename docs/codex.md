@@ -141,8 +141,9 @@ PLANNING_DISABLED=1 codex exec -C <repo> -s read-only '<research prompt>'
 
 With the variable set, every hook (SessionStart, UserPromptSubmit, PreToolUse,
 PermissionRequest, PostToolUse, PreCompact, Stop) exits before reading the plan: no context
-injection, no follow-up messages, no plan-file writes. PreToolUse still emits
-its `allow` decision so tool calls proceed normally. Interactive sessions in
+injection, no follow-up messages, no plan-file writes. PreToolUse exits silently
+without adding planning context or a permission decision; Codex's normal permission
+handling remains unchanged. Interactive sessions in
 the same directory are unaffected. The same variable is honored by the
 canonical Claude Code dispatchers (`inject-plan.sh`, `gate-stop.sh`,
 `check-complete.sh`/`.ps1`), so it works for CI automation on any platform
