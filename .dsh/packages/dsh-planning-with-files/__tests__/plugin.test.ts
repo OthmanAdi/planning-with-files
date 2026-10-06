@@ -102,12 +102,15 @@ function entered(decision: PreStepDecision): UserMessage[] {
   return decision.kind === "enter" ? decision.messages : []
 }
 
+function expectV4Injection(message: UserMessage): void {
+  expect(message.source).toEqual({ kind: `plugin:${name}` })
+  expect(() => assertV4RowAdmission({ type: "user/message", data: message } as never)).not.toThrow()
+}
+
 function injected(decision: PreStepDecision): UserMessage {
   const messages = entered(decision)
   expect(messages).toHaveLength(2)
-  // V4 producer-owned source: `plugin:<name>`, never the retired `{kind:'plugin'}` wrapper.
-  expect(messages[1].source).toEqual({ kind: `plugin:${name}` })
-  expect(() => assertV4RowAdmission({ type: "user/message", data: messages[1] } as never)).not.toThrow()
+  expectV4Injection(messages[1])
   return messages[1]
 }
 
@@ -266,6 +269,7 @@ describe("agent/pre-step", () => {
     fs.writeFileSync(path.join(root, "task_plan.md"), "# Plan\n")
     const loaded = load()
     const legacy = [legacyPluginMessage(`${BANNER}\n\n# Plan`), userPrompt()]
+    expect(() => assertV4RowAdmission({ type: "user/message", data: legacy[0] } as never)).toThrow("format v4 message requires a producer-owned source kind")
     expect(entered(await preStep(loaded, agentFor(root), legacy))).toEqual(legacy)
     // whatever the queue held, a fresh injection always carries the V4 producer-owned kind
     const fresh = textOf(injected(await preStep(loaded, agentFor(root), [userPrompt()])))
@@ -353,7 +357,7 @@ describe("tools/post-execute", () => {
       const attached = contexts(await postExecute(loaded, agent, toolName, args))
       expect(attached).toHaveLength(1)
       expect(textOf(attached[0])).toBe(REMINDER)
-      expect(attached[0].source).toEqual({ kind: `plugin:${name}` })
+      expectV4Injection(attached[0])
     }
     for (const [toolName, args] of [
       ["str_replace_editor", { command: "view", path: "a.ts" }],
@@ -407,7 +411,7 @@ describe("compaction", () => {
     expect(entered1).toHaveLength(2)
     expect(entered1[0]).toBe(continuation[0])
     const message = entered1[1]
-    expect(message.source).toEqual({ kind: `plugin:${name}` })
+    expectV4Injection(message)
     expect(message.content).toHaveLength(2)
     expect(textOf(message, 0)).toContain("Compaction in progress")
     expect(textOf(message, 0)).toContain("task_plan.md in the project root")
@@ -478,7 +482,7 @@ describe("agent/turn-stopping", () => {
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(1)
     const first = agent.steer.mock.calls[0][0] as UserMessage
-    expect(first.source).toEqual({ kind: `plugin:${name}` })
+    expectV4Injection(first)
     expect(textOf(first)).toContain("phase 'Phase 2: B' is in_progress (1/2 complete, gate block 1/20)")
     expect(fs.readFileSync(path.join(root, ".stop_blocks"), "utf8")).toBe("1\n")
 
@@ -569,7 +573,7 @@ describe("commands", () => {
 
     expect(agent.inject).toHaveBeenCalledTimes(1)
     const message = agent.inject.mock.calls[0][0] as UserMessage
-    expect(message.source).toEqual({ kind: `plugin:${name}` })
+    expectV4Injection(message)
     expect(textOf(message).startsWith(BANNER)).toBe(true)
     expect(textOf(message)).toContain(`[planning-with-files] plan: ${id}`)
     const batch = [message, userPrompt()]
