@@ -2,6 +2,10 @@
 
 This directory contains real-world examples showing how the 3-file planning pattern works in practice.
 
+## File-only recovery fixture
+
+[file-only-recovery/](file-only-recovery/README.md) is a disposable task for the current project-file-only recovery protocol. It does not replace the historical recovery figures in [docs/evals.md](../docs/evals.md).
+
 ## Example: Building a Todo App
 
 This walkthrough demonstrates a complete task from start to finish, showing how `task_plan.md`, `findings.md`, and `progress.md` evolve together.
@@ -628,6 +632,7 @@ COMPLETE TASK
 ## More Examples
 
 Want to see more examples? Check out:
+- [file-only-recovery/](file-only-recovery/README.md) - public fixture for the current file-only recovery protocol
 - [examples.md](../skills/planning-with-files/examples.md) - Additional patterns and use cases
 
 ---

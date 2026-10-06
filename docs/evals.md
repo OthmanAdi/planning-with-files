@@ -272,6 +272,8 @@ Trigger rates under varied natural phrasing (two unforced tasks only). Long-hori
 
 The harness (cell runner with pinned flags and isolated home, wave orchestrator, deterministic graders, aggregator with 95% CIs, task specs committed before any run, arm sources at pinned SHAs) and all 77 raw run directories (transcripts, file-tree hashes, per-run grades) live in the benchmark workspace, not tracked in this repo. The grading and aggregation scripts are deterministic; re-running them on the raw runs reproduces every number above.
 
+A public fixture for the current project-file-only protocol is [examples/file-only-recovery/](../examples/file-only-recovery/README.md). It is a disposable task with a halfway checkpoint, a baseline arm that has no planning files, and an optional transcript-replay arm that is not mixed into the file-only results. Automatic runs read the project files only. The 5.0 and 13.3 figures above are unchanged and stay historical until a new measurement exists.
+
 ---
 
 ## Summary
