@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { PreStepDecision } from "@deepseek-ai/dsh-agent"
 import type { CommandDefinition, CommandResult } from "@deepseek-ai/dsh-commands"
 import { createUserMessage } from "@deepseek-ai/dsh-llm"
+import { assertV4RowAdmission } from "@deepseek-ai/dsh-session-format-v3-to-v4"
 import type { UserMessage } from "@deepseek-ai/dsh-session"
 import type { PostToolDecision, ToolDefinition } from "@deepseek-ai/dsh-tools"
 import { Config, apply, inject, name } from "../src/index.js"
@@ -79,6 +80,10 @@ function userPrompt(text = "hi"): UserMessage {
 }
 
 function pluginMessage(text: string, plugin = name): UserMessage {
+  return createUserMessage({ content: [{ type: "text", text }], source: { kind: `plugin:${plugin}` } })
+}
+
+function legacyPluginMessage(text: string, plugin = name): UserMessage {
   return createUserMessage({ content: [{ type: "text", text }], source: { kind: "plugin", plugin } })
 }
 
@@ -100,7 +105,9 @@ function entered(decision: PreStepDecision): UserMessage[] {
 function injected(decision: PreStepDecision): UserMessage {
   const messages = entered(decision)
   expect(messages).toHaveLength(2)
-  expect(messages[1].source).toEqual({ kind: "plugin", plugin: name })
+  // V4 producer-owned source: `plugin:<name>`, never the retired `{kind:'plugin'}` wrapper.
+  expect(messages[1].source).toEqual({ kind: `plugin:${name}` })
+  expect(() => assertV4RowAdmission({ type: "user/message", data: messages[1] } as never)).not.toThrow()
   return messages[1]
 }
 
@@ -255,6 +262,16 @@ describe("agent/pre-step", () => {
     expect(entered(await preStep(loaded, agentFor(root), []))).toEqual([])
   })
 
+  it("recognises a legacy V3-wrapped queued message as its own, while injecting only the V4 producer kind", async () => {
+    fs.writeFileSync(path.join(root, "task_plan.md"), "# Plan\n")
+    const loaded = load()
+    const legacy = [legacyPluginMessage(`${BANNER}\n\n# Plan`), userPrompt()]
+    expect(entered(await preStep(loaded, agentFor(root), legacy))).toEqual(legacy)
+    // whatever the queue held, a fresh injection always carries the V4 producer-owned kind
+    const fresh = textOf(injected(await preStep(loaded, agentFor(root), [userPrompt()])))
+    expect(fresh.startsWith(BANNER)).toBe(true)
+  })
+
   it("announces an ambiguous cwd once per prompt instead of a plan, and injects the plan once the root is pinned", async () => {
     fs.writeFileSync(path.join(root, "task_plan.md"), "# Plan\n")
     fs.mkdirSync(path.join(root, "svc", ".planning", "2026-09-02-child"), { recursive: true })
@@ -336,7 +353,7 @@ describe("tools/post-execute", () => {
       const attached = contexts(await postExecute(loaded, agent, toolName, args))
       expect(attached).toHaveLength(1)
       expect(textOf(attached[0])).toBe(REMINDER)
-      expect(attached[0].source).toEqual({ kind: "plugin", plugin: name })
+      expect(attached[0].source).toEqual({ kind: `plugin:${name}` })
     }
     for (const [toolName, args] of [
       ["str_replace_editor", { command: "view", path: "a.ts" }],
@@ -390,7 +407,7 @@ describe("compaction", () => {
     expect(entered1).toHaveLength(2)
     expect(entered1[0]).toBe(continuation[0])
     const message = entered1[1]
-    expect(message.source).toEqual({ kind: "plugin", plugin: name })
+    expect(message.source).toEqual({ kind: `plugin:${name}` })
     expect(message.content).toHaveLength(2)
     expect(textOf(message, 0)).toContain("Compaction in progress")
     expect(textOf(message, 0)).toContain("task_plan.md in the project root")
@@ -461,7 +478,7 @@ describe("agent/turn-stopping", () => {
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(1)
     const first = agent.steer.mock.calls[0][0] as UserMessage
-    expect(first.source).toEqual({ kind: "plugin", plugin: name })
+    expect(first.source).toEqual({ kind: `plugin:${name}` })
     expect(textOf(first)).toContain("phase 'Phase 2: B' is in_progress (1/2 complete, gate block 1/20)")
     expect(fs.readFileSync(path.join(root, ".stop_blocks"), "utf8")).toBe("1\n")
 
@@ -552,7 +569,7 @@ describe("commands", () => {
 
     expect(agent.inject).toHaveBeenCalledTimes(1)
     const message = agent.inject.mock.calls[0][0] as UserMessage
-    expect(message.source).toEqual({ kind: "plugin", plugin: name })
+    expect(message.source).toEqual({ kind: `plugin:${name}` })
     expect(textOf(message).startsWith(BANNER)).toBe(true)
     expect(textOf(message)).toContain(`[planning-with-files] plan: ${id}`)
     const batch = [message, userPrompt()]
