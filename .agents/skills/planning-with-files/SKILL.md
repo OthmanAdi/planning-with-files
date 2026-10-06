@@ -326,7 +326,7 @@ For parallel tasks, pin each host with its task's `PLAN_ID` before starting it, 
 
 **Manual `/plan-goal` procedure:**
 
-1. Use the installed `scripts/resolve-plan-dir.sh` (or `.ps1`) with the task's `PLAN_ID` and `PWF_PLAN_ROOT` to resolve its plan directory. If a selector is rejected or selection is ambiguous, stop plan recovery and correct the pin. Use legacy project-root files only when the resolver selects that directory.
+1. If set, validate `PWF_PLAN_ROOT` as an absolute, existing project root. When `PLAN_ID` is set, use the installed `scripts/resolve-plan-dir.sh` (or `.ps1`) and stop if it returns no directory; the explicit pin was rejected. With `PLAN_ID` unset, first run the resolver with `--check-ambiguity` (`-CheckAmbiguity` in PowerShell); if it returns `PWF_PLAN_AMBIGUOUS_V1`, stop and set a task-specific `PLAN_ID`. Then run the resolver normally and read the selected directory. If it returns no directory and the project root has `task_plan.md`, use the legacy root files; otherwise stop recovery.
 2. Read the resolved `task_plan.md`.
 3. Compose a goal condition. Default: `"all phases in task_plan.md report Status: complete and check-complete.sh reports ALL PHASES COMPLETE"`. If the user passed additional clauses, append them.
 4. Issue Claude Code's native `/goal <condition>` (CC primitive, always available).

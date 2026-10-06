@@ -225,9 +225,14 @@ multiple unrelated topics, prefer isolated planning directories:
 ```
 
 Use the installed `scripts/init-session.sh <slug>` to create a scoped plan.
-Resolve it with the installed `scripts/resolve-plan-dir.sh` (or `.ps1`), using
-the task's `PLAN_ID` and `PWF_PLAN_ROOT`. If a selector is rejected or selection
-is ambiguous, stop plan recovery and correct the pin. Use legacy project-root files only when the resolver selects that directory.
+Resolve it with the installed `scripts/resolve-plan-dir.sh` (or `.ps1`). If
+set, validate `PWF_PLAN_ROOT` as an absolute, existing project root. When
+`PLAN_ID` is set, stop if the resolver returns no directory because the
+explicit pin was rejected. With `PLAN_ID` unset, first run the resolver with
+`--check-ambiguity` (`-CheckAmbiguity` in PowerShell); if it returns `PWF_PLAN_AMBIGUOUS_V1`, stop and set a
+task-specific `PLAN_ID`. Then run the resolver normally and read the selected
+directory. If it returns no directory and the project root has `task_plan.md`,
+use the legacy root files; otherwise stop recovery.
 
 Pin each parallel host with its task's `PLAN_ID` before starting it, or use
 separate worktrees. Set `PWF_PLAN_ROOT` when the project root differs from the
