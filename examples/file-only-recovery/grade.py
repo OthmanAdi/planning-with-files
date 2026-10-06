@@ -265,6 +265,11 @@ def _grade_loaded(
         result["reads"] = list(reader.paths)
         return result
 
+    if receipt_outcome == "inconclusive":
+        result["reason"] = "receipt marks trial inconclusive"
+        result["reads"] = list(reader.paths)
+        return result
+
     if arm == "file-only" and forbidden_flags(flags):
         result["reason"] = "file-only receipt records --metadata or --replay"
         result["reads"] = list(reader.paths)
@@ -602,6 +607,18 @@ def self_check() -> int:
         _expect(errors, "aborted", aborted["outcome"] == "inconclusive", aborted["outcome"])
         _expect(errors, "aborted", aborted["reason"] == "aborted trial", aborted["reason"])
         _expect(errors, "aborted", not counts_in_file_only_tally(aborted), "tally")
+
+        for trial_arm in ARMS:
+            inconclusive_receipt = _write_receipt(
+                root,
+                "receipt-inconclusive-%s.md" % trial_arm,
+                _base_rows(trial_arm, outcome="inconclusive"),
+            )
+            inconclusive = grade(happy, receipt=inconclusive_receipt)
+            label = "inconclusive-%s" % trial_arm
+            reports.append((label, inconclusive, format_report(inconclusive)))
+            _expect(errors, label, inconclusive["outcome"] == "inconclusive", inconclusive["outcome"])
+            _expect(errors, label, not counts_in_file_only_tally(inconclusive), "tally")
 
         metadata_receipt = _write_receipt(
             root, "receipt-metadata.md", _base_rows("file-only", flags="--metadata")
