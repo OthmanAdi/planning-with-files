@@ -74,8 +74,23 @@ type RootOrError = string | { ok: false; error: string }
 type PwfInput = { ok: true; opts: { name?: string; mode?: string; template?: string } } | { ok: false; error: string }
 
 const NOTHING: Located = { root: null, planDir: null, conflicts: [] }
-/** The `{kind:'plugin'}` source stamped on every message this plugin injects. */
-const PLUGIN_SOURCE: MessageSource = { kind: "plugin", plugin: name }
+/**
+ * The producer-owned source kind stamped on every message this plugin injects.
+ *
+ * DSH session format V4 refuses the retired V3 `{kind:'plugin'}` wrapper at
+ * encoding time (SessionFormatError: "format v4 message requires a
+ * producer-owned source kind"), so every DSH 0.1.7+ turn that carries one of
+ * this plugin's injected messages fails to persist. The MessageSourceMap
+ * contract is merge-extensible — each producer declares its own `kind` in its
+ * own module — and `plugin:<name>` is the exact shape the V3-to-V4 lifter
+ * (`producerKind`) produces for released plugin sources.
+ */
+declare module "@deepseek-ai/dsh-llm" {
+  interface MessageSourceMap {
+    "plugin:planning-with-files": { kind: "plugin:planning-with-files" }
+  }
+}
+const PLUGIN_SOURCE: MessageSource = { kind: `plugin:${name}` }
 /** Every planning tool returns one JSON document as text, the OpenCode tool contract. */
 const JSON_TEXT = {
   schema: { type: "string" },
@@ -99,7 +114,8 @@ function message(texts: string[]): UserMessage {
 }
 
 function isOurs(candidate: UserMessage): boolean {
-  return candidate.source.kind === "plugin" && candidate.source.plugin === name
+  const source = candidate.source as { kind?: string; plugin?: string }
+  return source.kind === `plugin:${name}` || (source.kind === "plugin" && source.plugin === name)
 }
 
 /**
