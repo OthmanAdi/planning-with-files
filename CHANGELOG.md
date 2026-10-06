@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.23.0] - 2026-10-06
+
+### Added
+- A public file-only recovery fixture with a halfway checkpoint, completed reference task, receipt template and standard-library grader. File-only, baseline and replay trials are scored separately; explicitly inconclusive receipts stay out of the file-only tally. Historical recovery measurements remain labeled as historical (#303, PR #310).
+
+### Fixed
+- `dsh-planning-with-files` 1.0.1 stamps the producer-owned `plugin:planning-with-files` source required by DSH V4, while recognizing queued legacy messages for deduplication. The DSH development dependencies form a consistent V4 test baseline and the regression checks every injection route (#306, PR #309).
+- Manual `/plan-goal` and topic-handoff instructions use the installed resolver, refuse invalid pins and ambiguous selection, and handle its empty legacy-root result explicitly (#300, PR #304).
+- The Codex opt-out guide describes the registered Python `PreToolUse` adapter's successful silent exit with `PLANNING_DISABLED=1` (#302, PR #308).
+
+### Thanks
+- @as992949791, for correcting manual plan-selection instructions (PR #304).
+- Shaun Lin (@ShaunLinTW), for correcting the Codex opt-out guide (PR #308).
+- Jin Zhengyu (@shuoxuekeji), for the DSH V4 source and regression fix (PR #309).
+- @Jinzy, for reporting the DSH failure and submitting the fix (#306, PR #309).
+- Matt Van Horn (@mvanhorn), for the public file-only recovery fixture (PR #310).
+
 ## [3.22.0] - 2026-10-01
 
 ### Added

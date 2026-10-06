@@ -238,6 +238,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.23.0** | Public file-only recovery fixture with separate trial arms (#303). DSH V4 message-source compatibility (#306), resolver-based manual workflows (#300), and accurate Codex opt-out documentation (#302). |
 | **v3.22.0** | OpenCode 2 support with native plugin registration, context injection, planning tools and the completion gate. OpenCode 1 remains supported; moved v2 sessions follow their current project (#298). |
 | **v3.21.0** | Explicit root and named attestation targets preserve active selection and project containment (#296). PowerShell initialization retries the concurrent pointer pre-check race with bounded, validated attempts (#294). |
 | **v3.20.8** | Claude Code sessions without a plan no longer end every reply with a Stop notice (#288). Cursor hooks move to the current schema with `sessionStart` injection (#262), Gemini CLI hooks inject through `BeforeAgent` and `AfterTool` `hookSpecificOutput` (#292), and both adapters' hook scripts are now executable on macOS and Linux; the Cursor stop hook stays silent once every phase is complete. PowerShell pointer replacement recovers or removes only its own `ReplaceFile` backup (#254). |
@@ -823,6 +824,9 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
   <a href="https://github.com/mvanhorn" title="@mvanhorn"><img src="https://github.com/mvanhorn.png?size=56" width="48" height="48" alt="@mvanhorn"></a>
   <a href="https://github.com/ebrevdo" title="@ebrevdo"><img src="https://github.com/ebrevdo.png?size=56" width="48" height="48" alt="@ebrevdo"></a>
   <a href="https://github.com/bailob" title="@bailob"><img src="https://github.com/bailob.png?size=56" width="48" height="48" alt="@bailob"></a>
+  <a href="https://github.com/as992949791" title="@as992949791"><img src="https://github.com/as992949791.png?size=56" width="48" height="48" alt="@as992949791"></a>
+  <a href="https://github.com/shuoxuekeji" title="@shuoxuekeji"><img src="https://github.com/shuoxuekeji.png?size=56" width="48" height="48" alt="@shuoxuekeji"></a>
+  <a href="https://github.com/Jinzy" title="@Jinzy"><img src="https://github.com/Jinzy.png?size=56" width="48" height="48" alt="@Jinzy"></a>
   <a href="https://github.com/SomSamantray" title="@SomSamantray"><img src="https://github.com/SomSamantray.png?size=56" width="48" height="48" alt="@SomSamantray"></a>
   <a href="https://github.com/mmychu" title="@mmychu"><img src="https://github.com/mmychu.png?size=56" width="48" height="48" alt="@mmychu"></a>
   <a href="https://github.com/ericshunhinglee-cloud" title="@ericshunhinglee-cloud"><img src="https://github.com/ericshunhinglee-cloud.png?size=56" width="48" height="48" alt="@ericshunhinglee-cloud"></a>

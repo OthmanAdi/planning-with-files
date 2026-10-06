@@ -1,6 +1,6 @@
 {
   "name": "dsh-planning-with-files",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native DeepSeek Harness (dsh) plugin for planning-with-files: per-turn plan injection, write reminders, compaction recovery, a turn-stopping completion gate, /pwf and /pwf-status commands, and pwf_init / pwf_status / pwf_check tools.",
   "type": "module",
   "main": "dist/index.js",

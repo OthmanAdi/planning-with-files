@@ -83,7 +83,8 @@ These amazing people have contributed code, documentation, or significant improv
   - Added Pi Agent support with full skill integration
   - **Impact:** Expands the skill to the Pi Agent ecosystem
 
-- **[@mvanhorn](https://github.com/mvanhorn)** (Matt Van Horn) - [PR #115](https://github.com/OthmanAdi/planning-with-files/pull/115), [PR #174](https://github.com/OthmanAdi/planning-with-files/pull/174), [PR #175](https://github.com/OthmanAdi/planning-with-files/pull/175)
+- **[@mvanhorn](https://github.com/mvanhorn)** (Matt Van Horn) - [PR #115](https://github.com/OthmanAdi/planning-with-files/pull/115), [PR #174](https://github.com/OthmanAdi/planning-with-files/pull/174), [PR #175](https://github.com/OthmanAdi/planning-with-files/pull/175), [PR #310](https://github.com/OthmanAdi/planning-with-files/pull/310)
+  - Added the public file-only recovery fixture with separate trial arms, run receipts and an objective grader.
   - Added analytics workflow template with `--template analytics` flag on `init-session.sh` and `init-session.ps1`
   - Created `analytics_task_plan.md` with 4 analytics-specific phases (Data Discovery, Exploratory Analysis, Hypothesis Testing, Synthesis)
   - Created `analytics_findings.md` with Data Sources table, Hypothesis Log, Query Results, and Statistical Findings sections
@@ -106,6 +107,15 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[@as992949791](https://github.com/as992949791)**, [PR #304](https://github.com/OthmanAdi/planning-with-files/pull/304)
+  - Updated manual planning and topic-handoff instructions to use the installed resolver and require explicit selection for parallel tasks.
+
+- **[Jin Zhengyu](https://github.com/shuoxuekeji)**, [PR #309](https://github.com/OthmanAdi/planning-with-files/pull/309)
+  - Fixed DSH V4 message-source admission with a producer-owned source kind, preserved legacy deduplication and added regression coverage.
+
+- **[@Jinzy](https://github.com/Jinzy)**, [Issue #306](https://github.com/OthmanAdi/planning-with-files/issues/306), [PR #309](https://github.com/OthmanAdi/planning-with-files/pull/309)
+  - Reported the DSH V4 session-persistence failure and submitted the compatibility fix authored by Jin Zhengyu.
+
 - **[Som Samantray](https://github.com/SomSamantray)**, [PR #291](https://github.com/OthmanAdi/planning-with-files/pull/291)
   - Moved the Cursor hooks to Cursor's current hook schema: plan context through `sessionStart` `additional_context`, `preToolUse` answering with `permission`, the progress reminder as `postToolUse` `additional_context`, valid JSON on every failure path and `-NoProfile` for the PowerShell hooks, with schema tests for the shell and PowerShell hooks.
 
@@ -115,7 +125,8 @@ These amazing people have contributed code, documentation, or significant improv
 - **[@ericshunhinglee-cloud](https://github.com/ericshunhinglee-cloud)**, [Issue #272](https://github.com/OthmanAdi/planning-with-files/issues/272)
   - Reported and traced the Hermes 0.21.3 first-turn `TERMINAL_CWD` rewrite that made the Hermes plugin resolve the home directory as the project root, with a setter stack trace, on-the-wire token evidence and the upstream cross-references.
 
-- **[Shaun Lin](https://github.com/ShaunLinTW)**, [PR #245](https://github.com/OthmanAdi/planning-with-files/pull/245), [PR #247](https://github.com/OthmanAdi/planning-with-files/pull/247), [PR #263](https://github.com/OthmanAdi/planning-with-files/pull/263), [PR #271](https://github.com/OthmanAdi/planning-with-files/pull/271), [PR #280](https://github.com/OthmanAdi/planning-with-files/pull/280), [PR #293](https://github.com/OthmanAdi/planning-with-files/pull/293)
+- **[Shaun Lin](https://github.com/ShaunLinTW)**, [PR #245](https://github.com/OthmanAdi/planning-with-files/pull/245), [PR #247](https://github.com/OthmanAdi/planning-with-files/pull/247), [PR #263](https://github.com/OthmanAdi/planning-with-files/pull/263), [PR #271](https://github.com/OthmanAdi/planning-with-files/pull/271), [PR #280](https://github.com/OthmanAdi/planning-with-files/pull/280), [PR #293](https://github.com/OthmanAdi/planning-with-files/pull/293), [PR #308](https://github.com/OthmanAdi/planning-with-files/pull/308)
+  - Corrected the Codex opt-out guide to match the registered Python adapter's silent exit.
   - Isolated Python calls in the Codex, Gemini, and GitHub Copilot shell adapters and added regression coverage for project-local import shadowing.
   - Added named-plan slug mode to the PowerShell initializer with root-mode policy inheritance, host-aware attestation, and Windows PowerShell regression coverage.
   - Made the OpenCode session catchup adapter skip malformed part rows instead of raising, with regression coverage for the string-state and invalid-JSON shapes.
@@ -465,6 +476,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 79 (78 community contributors plus the maintainer)
+**Total Contributors:** 82 (81 community contributors plus the maintainer)
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-06*
