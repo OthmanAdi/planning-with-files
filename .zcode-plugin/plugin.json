@@ -1,0 +1,10 @@
+{
+  "name": "planning-with-files",
+  "version": "3.23.0",
+  "description": "Persistent project planning files with lifecycle hooks that inject selected plan context. Works across 60+ agents including ZCode.",
+  "author": {
+    "name": "Ahmad Adi"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/OthmanAdi/planning-with-files"
+}
