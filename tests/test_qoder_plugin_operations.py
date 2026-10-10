@@ -12,6 +12,7 @@ def test_qoder_manifest_exposes_canonical_skill_and_hooks():
     assert manifest["name"] == "planning-with-files"
     assert manifest["skills"] == "./skills/planning-with-files/"
     assert manifest["hooks"] == "./hooks/qoder-hooks.json"
+    assert manifest["commands"] == []
 
 
 def test_qoder_hooks_use_qoder_plugin_root_and_supported_events():
@@ -24,7 +25,9 @@ def test_qoder_hooks_use_qoder_plugin_root_and_supported_events():
         for group in groups:
             for hook in group["hooks"]:
                 assert hook["type"] == "command"
-                assert any("${QODER_PLUGIN_ROOT}" in arg for arg in hook["args"])
+                assert hook["shell"] == "bash"
+                assert hook["command"] == '. "${QODER_PLUGIN_ROOT}/.qoder-plugin/run-hook.sh"'
+                assert "args" not in hook
 
 
 def test_qoder_session_start_recovers_all_fresh_context_sources():

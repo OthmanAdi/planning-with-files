@@ -9,5 +9,6 @@
   "repository": "https://github.com/OthmanAdi/planning-with-files",
   "license": "MIT",
   "skills": "./skills/planning-with-files/",
-  "hooks": "./hooks/qoder-hooks.json"
+  "hooks": "./hooks/qoder-hooks.json",
+  "commands": []
 }

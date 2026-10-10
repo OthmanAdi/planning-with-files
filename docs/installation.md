@@ -20,7 +20,7 @@ Not every route delivers every surface. This matrix is the difference between "i
 | Route | SKILL.md + scripts + templates | Slash commands (`/plan-goal`, `/plan-loop`, `/plan-attest`, `/plan-doctor`) | Hooks (plan injection, Stop check, PreCompact) |
 |---|---|---|---|
 | Plugin: `/plugin marketplace add` + `/plugin install` | Yes | **Yes** | **Yes**, through plugin-level lifecycle hooks, including quiet `SessionStart` recovery |
-| Qoder plugin: `qoder plugins marketplace add` + `qoder plugins install` | Yes | **Yes** | **Yes**, through Qoder lifecycle hooks, including `SessionStart`, `PreCompact`, and the Stop gate |
+| Qoder CLI plugin: `qoder plugins marketplace add` + `qoder plugins install` | Yes | No (Claude-specific command prompts are excluded) | **Yes**, through Qoder CLI lifecycle hooks, including `SessionStart`, `PreCompact`, and the Stop gate |
 | `npx skills add OthmanAdi/planning-with-files` | Yes | No (`commands/` is not copied) | Activation-scoped frontmatter hooks after the skill is invoked; no `SessionStart` |
 | ClawHub / manual skill copy to `~/.claude/skills/` | Yes | No | Activation-scoped frontmatter hooks after the skill is invoked; no `SessionStart` |
 | OpenCode: `npx skills add OthmanAdi/planning-with-files --skill planning-with-files -g` (lands in `~/.agents/skills/`, which OpenCode reads) + `"plugin": ["opencode-planning-with-files"]` in `opencode.json` | Yes | `/pwf`, `/pwf-status` after copying the two command files from `.opencode/commands/` | **Yes**, native plugin hooks `chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle` gate; see [docs/opencode.md](opencode.md) |
@@ -72,27 +72,29 @@ Install directly using the Claude Code CLI:
 
 ### 2. Qoder Plugin
 
-Install the same repository through Qoder CLI:
+The native integration targets **Qoder CLI**. Hooks require Bash and Python 3.10 or newer. On Windows, install Git for Windows and make its Bash available on `PATH`; the launcher probes `python3`, `python`, then `py -3`, skipping nonworking interpreters such as the Microsoft Store alias.
+
+Install through Qoder CLI:
 
 ```bash
 qoder plugins marketplace add OthmanAdi/planning-with-files
 qoder plugins install planning-with-files@planning-with-files
+qoder plugins list
 ```
 
-Verify the installed plugin and its lifecycle hooks:
+Restart Qoder CLI or run `/plugins reload` after installation. To validate the source checkout separately:
 
 ```bash
-qoder plugins list
+git clone https://github.com/OthmanAdi/planning-with-files.git
+cd planning-with-files
 qoder plugins validate .
 ```
 
-Qoder loads the canonical skill from `skills/` and uses `hooks/qoder-hooks.json` for startup recovery, per-prompt injection, compaction reminders, and completion gating.
+Qoder loads the canonical planning skill and `hooks/qoder-hooks.json`. The hooks recover planning context at startup, inject it for prompts and tool calls, display compaction reminders, and block Stop in opt-in gated mode. The Qoder adapter maps an incomplete gated plan to exit code 2 with the reason on stderr, as required by the CLI. Plain advisory plans can still stop. The repository's Claude-specific slash command prompts are excluded from this plugin.
 
-For Qoder IDE, build a root-level plugin archive and import it from **Extensions → Plugins → Add Plugins → Upload Plugin**:
+Qoder IDE plugin import is a separate surface. Its lifecycle hook contract differs from the CLI; IDE hook execution and completion gating have not been validated for this package. Use the CLI route above for the native integration.
 
-```bash
-git archive --format=zip --output=planning-with-files-qoder.zip HEAD
-```
+Official references: [Qoder CLI plugins](https://docs.qoder.com/cli/plugins), [CLI hooks](https://docs.qoder.com/cli/hooks), and [IDE hooks](https://docs.qoder.com/extensions/hooks).
 
 ### 3. Local Plugin Development
 
@@ -224,7 +226,7 @@ See [docs/codex.md](codex.md) for Codex IDE installation.
 
 ### Qoder
 
-Use the Qoder plugin commands above. Qoder requires Python 3 on `PATH` for the lifecycle hooks.
+Use the Qoder CLI plugin commands above. Lifecycle hooks require Bash and Python 3.10 or newer; IDE lifecycle behavior remains unverified.
 
 ### OpenCode
 
