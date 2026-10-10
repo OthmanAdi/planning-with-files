@@ -1,6 +1,6 @@
 {
   "name": "planning-with-files",
-  "version": "3.23.0",
+  "version": "3.24.0",
   "description": "Persistent project planning for Qoder. Lifecycle hooks inject selected plan context, preserve progress through compaction, and gate incomplete work without uploading project data.",
   "author": {
     "name": "OthmanAdi",

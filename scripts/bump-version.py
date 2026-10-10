@@ -11,7 +11,7 @@ Run before tagging a release:
     python scripts/bump-version.py 2.37.0
     python scripts/bump-version.py 2.37.0 --dry-run
 
-Maintained targets (21 entries: 20 tracked files plus optional local staging):
+Maintained targets (22 entries: 21 tracked files plus optional local staging):
     skills/planning-with-files/SKILL.md            (canonical)
     skills/i18n/planning-with-files-{ar,de,es,zh,zht}/SKILL.md
     .{codebuddy,codex,cursor,factory,hermes,mastracode,opencode}/skills/planning-with-files/SKILL.md
@@ -21,6 +21,7 @@ Maintained targets (21 entries: 20 tracked files plus optional local staging):
     .claude-plugin/plugin.json
     .claude-plugin/marketplace.json
     .codex-plugin/plugin.json
+    .qoder-plugin/plugin.json
     CITATION.cff
     .pi/skills/planning-with-files/package.json    (npm package "planning-with-files"; publish after tagging)
 
@@ -74,7 +75,7 @@ PARITY_FILES = [
 # Publish staging that remains parity-locked whenever it exists, but is
 # intentionally absent from clean clones because the directory is gitignored.
 # Keep these paths in PARITY_FILES so maintainer worktrees still bump and
-# validate them as part of the canonical 21-entry release set.
+# validate them as part of the canonical release set.
 OPTIONAL_PARITY_FILES = {
     "clawhub-upload/SKILL.md": "optional gitignored ClawHub publish staging",
 }

@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
+Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
 </p>
 
 <p align="center">
@@ -108,7 +108,7 @@ The pattern is the one Manus described before [Meta acquired it for $2 billion o
 ## First-class hosts: native plugins
 
 > [!TIP]
-> **On these hosts planning-with-files runs as a native plugin: per-turn plan injection, progress reminders, the completion gate, `/pwf` commands and model-callable tools, with no shell hooks to register.** Every other platform gets the skill through the Agent Skills standard and, where the host supports it, the frontmatter or config-file hooks listed in the [platform setup guides](#enhanced-support-per-ide-setup-guides).
+> Native integrations load planning context, provide progress reminders and support a completion gate. Commands and model-callable tools depend on the host; Qoder CLI loads the skill and lifecycle hooks without the Claude-specific command prompts. The [platform setup guides](#enhanced-support-per-ide-setup-guides) describe each integration and the standard Agent Skills routes.
 
 
 <details>
@@ -159,7 +159,7 @@ They live under `skills/i18n/`, one directory deeper than the canonical skill. T
 | Gemini CLI | [Gemini Setup](docs/gemini.md) | Skills + [Hooks](https://geminicli.com/docs/hooks/) |
 | Kiro | [Kiro Setup](docs/kiro.md) | [Agent Skills](https://kiro.dev/docs/skills/) |
 | Codex | [Codex Setup](docs/codex.md) | [Skills + Hooks](https://developers.openai.com/codex/skills) |
-| Qoder | [Installation](docs/installation.md#2-qoder-plugin) | Skills + lifecycle Hooks |
+| Qoder CLI | [Installation](docs/installation.md#2-qoder-plugin) | Skill + seven lifecycle hooks; Bash and Python 3.10+ required |
 | Hermes Agent | [Hermes Setup](docs/hermes.md) | Skill + native plugin (tools, `/pwf`, `pre_llm_call`, `post_tool_call`, `pre_verify` gate), CLI and Desktop |
 | CodeBuddy | [CodeBuddy Setup](docs/codebuddy.md) | [Skills + Hooks](https://www.codebuddy.ai/docs/cli/skills) |
 | FactoryAI Droid | [Factory Setup](docs/factory.md) | [Skills + Hooks](https://docs.factory.ai/cli/configuration/skills) |
@@ -239,6 +239,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.24.0** | Native Qoder CLI plugin with isolated hook execution and the CLI completion gate (PR #313). Claude Code refreshes PreToolUse context only when the selected view changes, with session isolation, recovery resets and an always-inject opt-out (#312). |
 | **v3.23.0** | Public file-only recovery fixture with separate trial arms (#303). DSH V4 message-source compatibility (#306), resolver-based manual workflows (#300), and accurate Codex opt-out documentation (#302). |
 | **v3.22.0** | OpenCode 2 support with native plugin registration, context injection, planning tools and the completion gate. OpenCode 1 remains supported; moved v2 sessions follow their current project (#298). |
 | **v3.21.0** | Explicit root and named attestation targets preserve active selection and project containment (#296). PowerShell initialization retries the concurrent pointer pre-check race with bounded, validated attempts (#294). |
@@ -452,6 +453,7 @@ What each route actually ships:
 | Route | Skill + scripts + templates | Slash commands | Hooks |
 |---|---|---|---|
 | Claude Code plugin | yes | **yes** | **yes** |
+| Qoder CLI plugin | yes | no, Claude-specific prompts excluded | **yes**, seven lifecycle hooks; IDE behavior unverified |
 | `npx skills add` | yes | no | frontmatter hooks, see note |
 | `npm install` | yes, under `node_modules/` | no | no, copy the skill in yourself |
 | `pi install npm:` | yes | **yes**, Pi commands | **yes**, via the Pi extension |
@@ -477,7 +479,7 @@ One skill, three integration tiers. Know what your agent gets before you install
 
 | Tier | Platforms | What you get |
 |------|-----------|--------------|
-| **Enhanced** (hooks + lifecycle automation) | Claude Code, Cursor, GitHub Copilot, Mastra Code, Gemini CLI, Kiro, Codex, Hermes Agent, CodeBuddy, Factory Droid, OpenCode, DeepSeek Harness | Plan injection every turn (Cursor: at session start), progress reminders, completion check |
+| **Enhanced** (hooks + lifecycle automation) | Claude Code, Qoder CLI, Cursor, GitHub Copilot, Mastra Code, Gemini CLI, Kiro, Codex, Hermes Agent, CodeBuddy, Factory Droid, OpenCode, DeepSeek Harness | Plan injection every turn (Cursor: at session start), progress reminders, completion check |
 | **Standard Agent Skills** | Continue, Pi, OpenClaw, Autohand Code, Antigravity, Kilocode, AdaL CLI | SKILL.md discovery via `npx skills add`; the pattern without lifecycle hooks |
 | **Agent Skills standard path** (in-tree since v3.7.0) | Zed, Amp, Warp, Devin, Antigravity, Gemini CLI, Cursor | `.agents/skills/planning-with-files/` discovered from a plain `git clone`, no per-tool setup |
 
@@ -621,7 +623,7 @@ On the plugin route the model-invocable SKILL is `planning-with-files:planning-w
 
 ## v3 Long-Running Agent Features
 
-The v3 line adds features aimed at long-running agentic runs. Each one is listed with the command or flag that turns it on. With no mode marker set, the hooks produce the same output as v2.43, so nothing changes for existing setups.
+The v3 line adds features aimed at long-running agentic runs. Each one is listed with the command or flag that turns it on. Without a mode marker, hooks retain the legacy content format. Since v3.24.0, Claude Code suppresses repeated unchanged PreToolUse views when session identity and private cache storage are available.
 
 - **Autonomous mode** (`/pwf --autonomous`, or `init-session.sh --autonomous`): drops the per-tool-call plan recitation, keeps the turn-start injection, and turns attestation on by default.
 - **Gated mode** (`--gated`): adds a Stop completion gate that blocks only when all completion conditions hold at once, so an incomplete plan alone never traps a session.
@@ -642,8 +644,9 @@ The v3 line adds features aimed at long-running agentic runs. Each one is listed
 | `PLANNING_DISABLED=1` | v3.4.0 | Skips all plan reading for this invocation. For one-shot or CI sessions that share a cwd with a plan they never opted into. |
 | `PLAN_ID=<slug>` | v2.36.0 | Pins the terminal to one plan under `$(pwd)/.planning`. Slug only, resolved against the current directory. |
 | `PWF_PLAN_ROOT=<abs path>` | v3.9.0 | Pins the thread to a project root by absolute path, which `PLAN_ID` cannot express. Use it when the agent's cwd is a shared parent such as `/workspace` while the work lives in `/workspace/project`. A pin that does not resolve stops injection instead of falling back. |
-| `PWF_SESSION_ID=<id>` | v2.36.0 | Identifies the session for plan attachment. Only consulted when `.planning/sessions/` exists, in which case a session sees plan context only if `.planning/sessions/<id>.attached` exists. Delete that directory to turn session isolation off. |
+| `PWF_SESSION_ID=<id>` | v2.36.0 | Identifies the session for hook state and plan attachment. When `.planning/sessions/` exists, a session sees plan context only if `.planning/sessions/<id>.attached` exists. Claude Code uses its native event identity for repeated-view suppression. |
 | `PWF_INJECT=smart` | v3.8.0 | Replaces the fixed `head -50` injection window with the goal, next step, current phase, the full in-progress phase, and the last three decisions. |
+| `PWF_PRETOOL=always` | v3.24.0 | Repeats the selected PreToolUse view on every matched Claude Code tool call. By default an unchanged view is suppressed after successful prompt injection; a changed view refreshes once. Missing session identity or an unavailable cache keeps repeated injection. Selection and attestation checks still run. |
 | `PWF_FAST_PATH=0` | v3.17.0 | Forces the Claude Code plugin and standalone skill hooks through the reference shell chain instead of `scripts/inject-plan.py`, the single-process twin that runs whenever a CPython 3 is on PATH. Both produce identical output; the twin is what keeps a hook fire under a second on Windows. |
 | `PWF_PLAN_GUARD=0` | v3.10.0 | Turns off the parallel-write guard, which is on by default. The guard compares checked items and completed phases against the previous hook fire and prints one advisory line when they go DOWN, meaning a second session overwrote work. A `plan-guard-off` token in `.mode` does the same. |
 | `PWF_MODE` | v2.39.0 | Pi extension runtime mode: `auto`, `parity`, `cache-safe`, `notify`. Also settable in `.pi/settings.json` under `planningWithFiles.mode`. |
@@ -655,6 +658,7 @@ The v3 line adds features aimed at long-running agentic runs. Each one is listed
 |----------|-----------------|------------------|
 | Claude Code | 6: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop | Plugin installs use `hooks/hooks.json` with cache-safe `${CLAUDE_PLUGIN_ROOT}` paths. Standalone skill hooks are activation-scoped and have no SessionStart. |
 | Codex CLI | 7: SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PreCompact, Stop | Workspace installs use `.codex/hooks.json`; the Codex plugin selects `hooks/codex-hooks.json` and resolves through `${PLUGIN_ROOT}`. Both routes use `commandWindows` on Windows. |
+| Qoder CLI | 7: SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PreCompact, Stop | `.qoder-plugin/plugin.json` selects `hooks/qoder-hooks.json`; Bash launches isolated Python through `${QODER_PLUGIN_ROOT}`. The adapter maps gated Stop to the CLI's exit-code-2 contract. |
 | Pi | 8 lifecycle handlers in the bundled extension | The injection and recitation handlers stay passive until `/plan-execute` |
 | Hermes Agent | 3: `pre_llm_call`, `post_tool_call`, `pre_verify` | Native plugin under `<HERMES_HOME>/plugins/planning-with-files/`, opt-in through `plugins.enabled`; the gate answers `pre_verify` in gated mode only |
 | OpenCode | 4: `chat.message`, `tool.execute.after`, `experimental.session.compacting`, `event` on `session.idle` | npm plugin `opencode-planning-with-files` listed in `opencode.json`; commands from `.opencode/commands/`; the gate re-prompts the session in gated mode only |
