@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.24.0] - 2026-10-10
+
+### Added
+- Native Qoder CLI plugin with the canonical planning skill, seven lifecycle hooks and the opt-in completion gate (PR #313). The launcher supports Python 3.10+ through Bash, isolates Python startup and excludes relative executable search paths. The adapter translates gated Stop into Qoder CLI's exit-code-2 contract. Claude-specific command prompts are excluded; Qoder IDE hook behavior remains unverified.
+
+### Fixed
+- Claude Code plugin and standalone skill hooks suppress unchanged PreToolUse plan views after successful prompt injection. A changed visible view refreshes once, with separate state for sessions, agents, plans and rendering modes. Recovery resets the state even when the plan is temporarily absent. Missing identity or an unsafe or unavailable cache preserves repeated injection; `PWF_PRETOOL=always` opts into per-call context. Selection, snapshot and attestation checks still run before suppression (#312).
+
+### Security
+- File-only SessionStart recovery now starts its catch-up child with isolated Python startup, matching the parent hook's import policy and preventing `PYTHONPATH` startup code from loading in that child.
+
+### Thanks
+- calm (@shouldnotappearcalm), for the Qoder plugin integration and lifecycle tests (PR #313).
+- @mfehlhaber, for reproducing repeated plan injection and specifying its recovery cases (#312), and for the earlier report that established the maintained npm package route (#213).
+
 ## [3.23.0] - 2026-10-06
 
 ### Added
