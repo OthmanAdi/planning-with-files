@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "bump-version.py"
 CLAWHUB_SKILL = "clawhub-upload/SKILL.md"
 CODEX_PLUGIN_MANIFEST = ".codex-plugin/plugin.json"
+QODER_PLUGIN_MANIFEST = ".qoder-plugin/plugin.json"
 
 
 def load_bump_version():
@@ -36,6 +37,10 @@ def test_optional_parity_scope_is_exact_and_maintained(bumper) -> None:
 
 def test_codex_plugin_manifest_is_parity_locked(bumper) -> None:
     assert (CODEX_PLUGIN_MANIFEST, "plugin_json") in bumper.PARITY_FILES
+
+
+def test_qoder_plugin_manifest_is_parity_locked(bumper) -> None:
+    assert (QODER_PLUGIN_MANIFEST, "plugin_json") in bumper.PARITY_FILES
 
 
 def test_absent_optional_clawhub_staging_succeeds(

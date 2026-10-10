@@ -1,0 +1,70 @@
+{
+  "description": "Qoder lifecycle hooks for planning-with-files plugin installs",
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "startup|resume|clear|compact|new",
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/run_sh.py", "session-start.sh"],
+        "timeout": 10,
+        "statusMessage": "Loading planning context"
+      }]
+    }],
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/run_sh.py", "user-prompt-submit.sh"],
+        "timeout": 10
+      }]
+    }],
+    "PreToolUse": [{
+      "matcher": "Bash|Edit|Write|Read|Glob|Grep",
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/pre_tool_use.py"],
+        "timeout": 10,
+        "statusMessage": "Checking plan before tool use"
+      }]
+    }],
+    "PermissionRequest": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/permission_request.py"],
+        "timeout": 10
+      }]
+    }],
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/post_tool_use.py"],
+        "timeout": 10,
+        "statusMessage": "Reviewing changes against plan"
+      }]
+    }],
+    "PreCompact": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/run_sh.py", "pre-compact.sh"],
+        "timeout": 10,
+        "statusMessage": "Preparing planning context before compact"
+      }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "python3",
+        "args": ["${QODER_PLUGIN_ROOT}/.codex/hooks/stop.py"],
+        "timeout": 30,
+        "statusMessage": "Checking planning completion"
+      }]
+    }]
+  }
+}
