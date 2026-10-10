@@ -61,6 +61,7 @@ PARITY_FILES = [
     (".claude-plugin/plugin.json", "plugin_json"),
     (".claude-plugin/marketplace.json", "marketplace_json"),
     (".codex-plugin/plugin.json", "plugin_json"),
+    (".qoder-plugin/plugin.json", "plugin_json"),
     ("CITATION.cff", "citation_cff"),
     # npm package for the official skill and Pi extension (issue #213: it sat at a third-party 1.1.0
     # for 15 releases because nothing bumped it). Same single-"version" JSON
