@@ -19,22 +19,17 @@ def _hook(event: str) -> dict[str, object]:
 
 def _run_hook(event: str, payload: dict[str, object], cwd: Path):
     hook = _hook(event)
-    assert hook["command"] == "python3"
-    executable = shutil.which(str(hook["command"]))
-    assert executable is not None, "Qoder hooks require python3 on PATH"
-    args = [
-        str(arg).replace("${QODER_PLUGIN_ROOT}", str(ROOT))
-        for arg in hook["args"]
-    ]
+    bash = shutil.which("bash")
+    if os.name == "nt":
+        git_bash = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Git/bin/bash.exe"
+        if git_bash.is_file():
+            bash = str(git_bash)
+    assert bash is not None, "Qoder hooks require bash"
     return subprocess.run(
-        [executable, *args],
-        input=json.dumps(payload),
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        cwd=cwd,
-        env={**os.environ, "QODER_PLUGIN_ROOT": str(ROOT)},
-        check=False,
+        [bash, "-c", str(hook["command"])],
+        input=json.dumps(payload), text=True, encoding="utf-8",
+        capture_output=True, cwd=cwd,
+        env={**os.environ, "QODER_PLUGIN_ROOT": str(ROOT)}, check=False,
     )
 
 
@@ -92,3 +87,29 @@ def test_qoder_executes_every_declared_hook_and_emits_valid_output(tmp_path: Pat
     assert outputs["PostToolUse"]["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
     assert outputs["PreCompact"]["continue"] is True
     assert "Task in progress" in outputs["Stop"]["systemMessage"]
+
+
+def test_qoder_gated_stop_uses_exit_two_and_stderr(tmp_path: Path):
+    project = _project(tmp_path)
+    (project / ".mode").write_text("autonomous gate\n", encoding="utf-8")
+    result = _run_hook("Stop", {"cwd": str(project), "hook_event_name": "Stop", "stop_hook_active": False}, project)
+    assert result.returncode == 2, (result.stdout, result.stderr)
+    assert "Gated plan incomplete" in result.stderr
+    assert result.stdout == ""
+
+
+def test_qoder_recursive_stop_does_not_block(tmp_path: Path):
+    project = _project(tmp_path)
+    (project / ".mode").write_text("autonomous gate\n", encoding="utf-8")
+    result = _run_hook("Stop", {"cwd": str(project), "hook_event_name": "Stop", "stop_hook_active": True}, project)
+    assert result.returncode == 0, result.stderr
+    assert "decision" not in json.loads(result.stdout)
+
+
+def test_qoder_completed_plan_does_not_block(tmp_path: Path):
+    project = _project(tmp_path)
+    (project / "task_plan.md").write_text("### Phase 1\n- **Status:** complete\n", encoding="utf-8")
+    (project / ".mode").write_text("autonomous gate\n", encoding="utf-8")
+    result = _run_hook("Stop", {"cwd": str(project), "hook_event_name": "Stop", "stop_hook_active": False}, project)
+    assert result.returncode == 0, result.stderr
+    assert not result.stdout.strip()
