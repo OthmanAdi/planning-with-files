@@ -1,5 +1,30 @@
 # Performance Notes
 
+## Repeated plan context
+
+Since v3.24.0, Claude Code's plugin and standalone skill hooks suppress an
+unchanged PreToolUse view when a usable session identity and private cache are
+available. UserPromptSubmit still injects the selected plan and progress once
+per prompt. It records the corresponding tool view from the same validated
+snapshot, so subsequent matched tool calls do not append it again.
+
+A change within the emitted view refreshes it once. The cache distinguishes
+sessions, agents, selected plans and rendering modes. A plain head contains
+30 lines; editing a later line does not change that view. `PWF_INJECT=smart`
+selects a structured view, which can be larger than the plain head when the
+active phase is long. It is not a fixed token budget.
+
+The suppression cache stores hashes rather than plan content under
+`${XDG_CACHE_HOME:-$HOME/.cache}/pwf-pretool`. Recovery events invalidate the
+session's entry. Missing identity or an unsafe or unavailable cache preserves
+repeated injection. Use `PWF_PRETOOL=always` in the host's environment to keep
+the per-call behavior. This controls repeated context, not plan selection or
+attestation: those checks still run on every call. Autonomous and gated modes
+continue to omit PreToolUse context.
+
+This reduces repeated context bytes. It does not remove hook process startup
+or promise a fixed token saving for every plan.
+
 ## Attestation SHA cache
 
 When plan attestation is enabled, the hooks compare the approved SHA-256 hash

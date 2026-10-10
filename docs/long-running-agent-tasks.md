@@ -10,9 +10,9 @@ The same files make context death survivable mid-run. If the session dies at hou
 
 ## Autonomous mode
 
-Started with `/pwf --autonomous` or `sh scripts/init-session.sh --autonomous "Task name"`. It keeps the turn-start plan injection and drops the per-tool-call plan recitation, which costs about 90 tokens per matched tool call and is the component that scales with tool use. Strong models drift less, so once-per-turn anchoring is enough; dropping the anchor entirely is not supported by the evidence. Autonomous mode also turns attestation on by default and replaces the raw `progress.md` tail with a structured ledger summary.
+Started with `/pwf --autonomous` or `sh scripts/init-session.sh --autonomous "Task name"`. It keeps the turn-start plan injection and omits PreToolUse plan context. Legacy Claude Code mode instead refreshes the tool view when it changes, with repeated injection as a fallback when session identity or private cache storage is unavailable. See [performance notes](perf-notes.md) for that policy and its opt-out. Autonomous mode also turns attestation on by default and replaces the raw `progress.md` tail with a structured ledger summary.
 
-With no mode marker set, the hooks produce the same output as v2.43. Both v3 modes are opt-in.
+Without a mode marker, hooks retain the legacy content format. Claude Code may suppress repeated unchanged PreToolUse views as described above. Both v3 modes remain opt-in.
 
 ## Gated mode and the completion gate
 

@@ -96,15 +96,30 @@ find_python() {
 
 case "$EVENT" in
     session-start|user-prompt-submit|pre-tool-use|post-tool-use|pre-compact)
+        # A recovery with a temporarily missing plan must invalidate a view
+        # delivered to the old context. With no cache, keep the zero-probe exit.
+        _pretool_recovery=0
+        case "$EVENT" in
+            session-start|user-prompt-submit|pre-compact)
+                if [ -n "${XDG_CACHE_HOME:-}" ]; then
+                    [ ! -d "${XDG_CACHE_HOME}/pwf-pretool" ] || _pretool_recovery=1
+                elif [ -n "${HOME:-}" ]; then
+                    [ ! -d "${HOME}/.cache/pwf-pretool" ] || _pretool_recovery=1
+                fi
+                ;;
+        esac
         # No planning state where the resolver will look and no selector to
         # validate: every route below answers with nothing, so answer with
         # nothing now, before any interpreter or fork. Byte-identical to the
         # reference chain, which reaches the same silence about ten forks
         # later. A set PLAN_ID or PWF_PLAN_ROOT still gets its refusal notice.
         if [ -z "${PLAN_ID:-}" ] && [ -z "${PWF_PLAN_ROOT:-}" ] \
-            && [ ! -f task_plan.md ] && [ ! -d .planning ]; then
+            && [ ! -f task_plan.md ] && [ ! -d .planning ] && [ "$_pretool_recovery" = 0 ]; then
             exit 0
         fi
+        # Own one native payload for these events. Keep Stop's stdin untouched.
+        # Preserve it for the shell fallback if the Python twin cannot run.
+        HOOK_PAYLOAD="$(cat 2>/dev/null)" || HOOK_PAYLOAD=""
         if [ "${PWF_FAST_PATH:-}" != "0" ] && [ -f "$FAST_PATH" ] && find_python; then
             # -I: isolated mode, so the project directory is never on
             # sys.path and a repository's own secrets.py or hashlib.py cannot
@@ -118,11 +133,33 @@ case "$EVENT" in
             # another fork, the very thing this block exists to remove. The
             # contract that makes this safe is the twin's: it writes nothing
             # until its answer is complete, and exits non-zero otherwise.
-            if PWF_SHELL_PWD="$PWD" \
+            if printf '%s' "$HOOK_PAYLOAD" | PWF_SHELL_PWD="$PWD" \
                 MSYS2_ENV_CONV_EXCL="${MSYS2_ENV_CONV_EXCL:+${MSYS2_ENV_CONV_EXCL};}PWF_SHELL_PWD" \
                 "$FOUND_PYTHON" -I -B "$FAST_PATH" "--claude-event=${EVENT}" 2>/dev/null; then
                 exit 0
             fi
+        fi
+        # Native session identity is needed on the reference route too. Only
+        # use the same trusted interpreter selection as the existing fast path.
+        if [ -f "$FAST_PATH" ] && find_python; then
+            _identity=$(printf '%s' "$HOOK_PAYLOAD" | "$FOUND_PYTHON" -I -B "$FAST_PATH" --hook-identity 2>/dev/null) || _identity=""
+            case "$_identity" in
+                *"|"*"|"*)
+                    PWF_SESSION_ID="${_identity%%|*}"
+                    _identity_tail="${_identity#*|}"
+                    PWF_PRETOOL_AGENT="${_identity_tail%%|*}"
+                    PWF_PRETOOL_PROMPT="${_identity_tail#*|}"
+                    export PWF_SESSION_ID PWF_PRETOOL_AGENT PWF_PRETOOL_PROMPT
+                    ;;
+                *) unset PWF_SESSION_ID PWF_PRETOOL_AGENT PWF_PRETOOL_PROMPT ;;
+            esac
+            case "$EVENT" in
+                session-start|user-prompt-submit|pre-compact)
+                    "$FOUND_PYTHON" -I -B "$FAST_PATH" --pretool-cache clear >/dev/null 2>&1 || :
+                    ;;
+            esac
+        else
+            unset PWF_SESSION_ID PWF_PRETOOL_AGENT PWF_PRETOOL_PROMPT
         fi
         ;;
 esac
