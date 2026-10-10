@@ -51,6 +51,7 @@ PARITY_JSON_LIKE = [
     ".claude-plugin/plugin.json",
     ".claude-plugin/marketplace.json",
     ".codex-plugin/plugin.json",
+    ".qoder-plugin/plugin.json",
     # npm package for the official skill and Pi extension (issue #213: stayed at a third-party
     # 1.1.0 for 15 releases because no test locked it to the release version)
     ".pi/skills/planning-with-files/package.json",

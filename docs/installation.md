@@ -20,6 +20,7 @@ Not every route delivers every surface. This matrix is the difference between "i
 | Route | SKILL.md + scripts + templates | Slash commands (`/plan-goal`, `/plan-loop`, `/plan-attest`, `/plan-doctor`) | Hooks (plan injection, Stop check, PreCompact) |
 |---|---|---|---|
 | Plugin: `/plugin marketplace add` + `/plugin install` | Yes | **Yes** | **Yes**, through plugin-level lifecycle hooks, including quiet `SessionStart` recovery |
+| Qoder plugin: `qoder plugins marketplace add` + `qoder plugins install` | Yes | **Yes** | **Yes**, through Qoder lifecycle hooks, including `SessionStart`, `PreCompact`, and the Stop gate |
 | `npx skills add OthmanAdi/planning-with-files` | Yes | No (`commands/` is not copied) | Activation-scoped frontmatter hooks after the skill is invoked; no `SessionStart` |
 | ClawHub / manual skill copy to `~/.claude/skills/` | Yes | No | Activation-scoped frontmatter hooks after the skill is invoked; no `SessionStart` |
 | OpenCode: `npx skills add OthmanAdi/planning-with-files --skill planning-with-files -g` (lands in `~/.agents/skills/`, which OpenCode reads) + `"plugin": ["opencode-planning-with-files"]` in `opencode.json` | Yes | `/pwf`, `/pwf-status` after copying the two command files from `.opencode/commands/` | **Yes**, native plugin hooks `chat.message`, `tool.execute.after`, `experimental.session.compacting`, `session.idle` gate; see [docs/opencode.md](opencode.md) |
@@ -69,7 +70,31 @@ Install directly using the Claude Code CLI:
 
 ---
 
-### 2. Local Plugin Development
+### 2. Qoder Plugin
+
+Install the same repository through Qoder CLI:
+
+```bash
+qoder plugins marketplace add OthmanAdi/planning-with-files
+qoder plugins install planning-with-files@planning-with-files
+```
+
+Verify the installed plugin and its lifecycle hooks:
+
+```bash
+qoder plugins list
+qoder plugins validate .
+```
+
+Qoder loads the canonical skill from `skills/` and uses `hooks/qoder-hooks.json` for startup recovery, per-prompt injection, compaction reminders, and completion gating.
+
+For Qoder IDE, build a root-level plugin archive and import it from **Extensions → Plugins → Add Plugins → Upload Plugin**:
+
+```bash
+git archive --format=zip --output=planning-with-files-qoder.zip HEAD
+```
+
+### 3. Local Plugin Development
 
 For a local checkout, use Claude Code's supported session-only plugin path:
 
@@ -80,7 +105,7 @@ claude --plugin-dir ./planning-with-files
 
 ---
 
-### 3. Standalone Installation (Skill Only)
+### 4. Standalone Installation (Skill Only)
 
 If you only want the skill without the full plugin structure:
 
@@ -92,7 +117,7 @@ cp -r planning-with-files/skills/planning-with-files ~/.claude/skills/
 
 ---
 
-### 4. One-Line Installer (Skills Only)
+### 5. One-Line Installer (Skills Only)
 
 Extract just the skill directly into your current directory:
 
@@ -133,6 +158,13 @@ After installation, verify the intended route:
 /plugin update planning-with-files@planning-with-files
 ```
 
+### Qoder Plugin Installation
+
+```bash
+qoder plugins marketplace update planning-with-files
+qoder plugins update planning-with-files@planning-with-files
+```
+
 ### Local Plugin Checkout
 
 Update the checkout you pass to `claude --plugin-dir`, then start a new session.
@@ -152,6 +184,13 @@ git pull origin master
 
 ```bash
 /plugin uninstall planning-with-files@planning-with-files
+```
+
+### Qoder Plugin
+
+```bash
+qoder plugins uninstall planning-with-files@planning-with-files
+qoder plugins marketplace remove planning-with-files
 ```
 
 ### Skills Only
@@ -182,6 +221,10 @@ See [docs/cursor.md](cursor.md) for Cursor IDE installation.
 ### Codex
 
 See [docs/codex.md](codex.md) for Codex IDE installation.
+
+### Qoder
+
+Use the Qoder plugin commands above. Qoder requires Python 3 on `PATH` for the lifecycle hooks.
 
 ### OpenCode
 
