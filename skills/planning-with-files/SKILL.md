@@ -364,25 +364,31 @@ After install, bare `/loop <interval>` runs the planning-aware tick.
 
 ## Autonomous and Gated Modes (v3)
 
-v3 adds two opt-in modes for long-running agentic work with strong models (Opus 4.8, Fable 5, GPT 5.5 class). Both key off an explicit marker file in the plan directory. With no marker present, behavior is exactly v2.43: nothing in this section changes the legacy path.
+v3 adds two opt-in modes for long-running agentic work with strong models (Opus 4.8, Fable 5, GPT 5.5 class). Both key off an explicit marker file in the plan directory. Without a mode marker, the legacy content format remains active. Since v3.24.0, Claude Code suppresses repeated unchanged PreToolUse views when session identity and private cache storage are available.
 
 The mode is set by writing a `.mode` file next to the plan (`.planning/<id>/.mode`, or `./.mode` in legacy root mode). `init-session` writes it for you when you pass `--autonomous` or `--gated`.
 
 ### The legacy invariant (promise)
 
-With no `.mode` file and no other v3 marker, plan injection preserves the v2.43 output, including the raw `progress.md` tail and the `===BEGIN PLAN DATA===` / `===END PLAN DATA===` delimiters. Autonomous and gated behavior remains opt-in. Since v3.18.3, completed plans are silent through the shared Stop gate and Codex Stop hook. Explicit `check-complete.sh` or `check-complete.ps1` calls without the gate flag still report completion; incomplete-plan notices and gate decisions are unchanged.
+With no `.mode` file and no other v3 marker, plan injection preserves the v2.43 content format, including the raw `progress.md` tail and the `===BEGIN PLAN DATA===` / `===END PLAN DATA===` delimiters. Autonomous and gated behavior remains opt-in. Since v3.18.3, completed plans are silent through the shared Stop gate and Codex Stop hook. Explicit `check-complete.sh` or `check-complete.ps1` calls without the gate flag still report completion; incomplete-plan notices and gate decisions are unchanged.
+
+### Unchanged-view suppression (v3.24.0)
+
+Claude Code's plugin and standalone skill hooks remember the last successfully emitted PreToolUse view for each session and agent. UserPromptSubmit seeds that view from the same validated plan snapshot, so unchanged tool calls add no repeated plan context. A change inside the selected head or smart view, a plan switch, or a rendering-mode change refreshes it once. Edits outside a plain 30-line head do not change that view; the full plan remains on disk.
+
+Recovery and compaction events reset this state. Missing session identity, an unavailable interpreter, or an unsafe or unavailable private cache keeps repeated injection. Set `PWF_PRETOOL=always` in the host environment before starting Claude Code to request a view on every matched tool call. Path selection and attestation checks still run before suppression; this option does not bypass them. Autonomous and gated modes keep their existing PreToolUse behavior.
 
 ### What each mode does
 
 | | Legacy (default) | Autonomous | Gated |
 |---|---|---|---|
 | Turn-start injection (UserPromptSubmit) | Full plan head + raw progress tail | Full plan head + structured ledger summary | Full plan head + structured ledger summary |
-| Per-tool-call injection (PreToolUse) | Plan head every call | Dropped (recitation policy) | Dropped (recitation policy) |
+| Per-tool-call injection (PreToolUse) | Claude Code: refreshes each changed view; repeats without a usable cache | Dropped (recitation policy) | Dropped (recitation policy) |
 | Stop event | Advisory only, never blocks | Advisory only, never blocks | Completion gate may block (host-aware) |
 | Attestation | Opt-in | Default-on at init | Default-on at init |
 | Progress injection | Raw `tail -20 progress.md` | `ledger-summary.sh` synthesized block | `ledger-summary.sh` synthesized block |
 
-Autonomous mode answers the recitation question: strong models drift less, so the per-tool-call plan re-injection (about 90 tokens per matched tool call, the component that scales with tool use) is dropped. Turn-start injection stays because the evidence (arxiv 2603.03258, claudefa.st on Opus 4.7+ subagents) shows drift is real and the full plan file still matters once per turn. Eliminating recitation entirely is not supported by evidence.
+Autonomous mode omits PreToolUse plan context, including changes to the view during a turn. Turn-start injection remains in every mode so the agent can recover the selected plan from disk.
 
 Gated mode adds the completion gate on top of autonomous behavior. The gate is the termination oracle: it judges the plan artifact on disk, not the conversation transcript, which is why it beats a transcript-bound evaluator that can be hallucinated.
 

@@ -38,12 +38,23 @@ FAST_PATH="${SCRIPT_DIR}/inject-plan.py"
 [ "${PLANNING_DISABLED:-}" = "1" ] && exit 0
 [ -f "$INJECT_PLAN" ] || exit 0
 
+_pretool_recovery=0
+case "$EVENT" in
+    userprompt|precompact)
+        if [ -n "${XDG_CACHE_HOME:-}" ]; then
+            [ ! -d "${XDG_CACHE_HOME}/pwf-pretool" ] || _pretool_recovery=1
+        elif [ -n "${HOME:-}" ]; then
+            [ ! -d "${HOME}/.cache/pwf-pretool" ] || _pretool_recovery=1
+        fi
+        ;;
+esac
+
 # No planning state where the resolver will look and no selector to validate:
 # every event below answers with nothing (and Stop is not consumed until a
 # plan is accepted), so answer with nothing now, before any fork. A set
 # PLAN_ID or PWF_PLAN_ROOT still gets its refusal notice from the injector.
 if [ -z "${PLAN_ID:-}" ] && [ -z "${PWF_PLAN_ROOT:-}" ] \
-    && [ ! -f task_plan.md ] && [ ! -d .planning ]; then
+    && [ ! -f task_plan.md ] && [ ! -d .planning ] && [ "$_pretool_recovery" = 0 ]; then
     exit 0
 fi
 
@@ -144,6 +155,21 @@ run_inject() {
 # stay on the shell chain; the twin runs only once the plan is accepted.
 _preflight="$(sh "$INJECT_PLAN" --context=preflight 2>/dev/null)" || exit 0
 if [ "$_preflight" != "PWF_PLAN_ELIGIBLE_V1" ]; then
+    # No project data is read by this recovery-only operation. A pre-existing
+    # cache may describe context lost while the plan was temporarily absent.
+    # Missing helper/interpreter preserves the dependency-free refusal path.
+    if [ "$_pretool_recovery" = 1 ] && [ -n "$PWF_PYTHON" ] && [ -f "$FAST_PATH" ]; then
+        _recovery_identity=$("$PWF_PYTHON" -I -B "$FAST_PATH" --hook-identity 2>/dev/null) || _recovery_identity=""
+        case "$_recovery_identity" in
+            *"|"*"|"*)
+                _recovery_tail="${_recovery_identity#*|}"
+                PWF_SESSION_ID="${_recovery_identity%%|*}" \
+                    PWF_PRETOOL_AGENT="${_recovery_tail%%|*}" \
+                    PWF_PRETOOL_PROMPT="${_recovery_tail#*|}" \
+                    "$PWF_PYTHON" -I -B "$FAST_PATH" --pretool-cache clear >/dev/null 2>&1 || :
+                ;;
+        esac
+    fi
     case "$EVENT" in
         userprompt) sh "$INJECT_PLAN" --context=userprompt 2>/dev/null || : ;;
         precompact) sh "$INJECT_PLAN" --context=precompact 2>/dev/null || : ;;
@@ -218,7 +244,7 @@ else
 fi
 
 # Never trust a manually inherited PWF_SESSION_ID over the hook's own payload.
-unset PWF_SESSION_ID
+unset PWF_SESSION_ID PWF_PRETOOL_AGENT PWF_PRETOOL_PROMPT
 SESSION_ID=""
 TURN_KEY=""
 PROMPT_ID=""
@@ -230,6 +256,12 @@ case "$PARSED_IDENTITY" in
         PROMPT_ID="${_identity_tail#*|}"
         PWF_SESSION_ID="$SESSION_ID"
         export PWF_SESSION_ID
+        # TURN_KEY already includes the native agent identity and is absent
+        # for subagents whose host did not provide a usable prompt identity.
+        # Use it as a bounded identity component for the shared view cache.
+        PWF_PRETOOL_AGENT="${TURN_KEY:-!invalid}"
+        PWF_PRETOOL_PROMPT="${PROMPT_ID:-legacy}"
+        export PWF_PRETOOL_AGENT PWF_PRETOOL_PROMPT
         ;;
 esac
 
