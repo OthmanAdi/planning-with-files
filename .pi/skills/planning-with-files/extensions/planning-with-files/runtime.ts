@@ -37,11 +37,20 @@ export type HookMode = "auto" | "parity" | "cache-safe" | "notify";
 
 type EffectiveMode = Exclude<HookMode, "auto">;
 
+interface PlanViewDelivery {
+	selection: string;
+	deliveredView?: string;
+	pending?: { view: string; content: string; queued: boolean };
+}
+
 interface RuntimeState {
 	autoContinueCountBySessionPlan: Map<string, number>;
 	loopTimersBySession: Map<string, ReturnType<typeof setInterval>>;
 	goalBySession: Map<string, string>;
 	preToolQueuedByLeaf: Set<string>;
+	// Disposable delivery bookkeeping, not shared planning state. Plans remain
+	// Markdown on disk; losing this optimization only causes extra reminders.
+	planViewBySession: Map<string, PlanViewDelivery>;
 	executionApprovedBySessionPlan: Set<string>;
 }
 
@@ -110,16 +119,19 @@ function getPlanSessionKey(ctx: ExtensionContext, status: PlanStatus): string {
 	return `${getSessionId(ctx)}:${status.planPath ?? "none"}`;
 }
 
-function clearSessionPrefixMap(state: RuntimeState, sessionId: string): void {
-	for (const key of state.autoContinueCountBySessionPlan.keys()) {
-		if (key.startsWith(`${sessionId}:`)) {
-			state.autoContinueCountBySessionPlan.delete(key);
-		}
-	}
+function clearSessionDelivery(state: RuntimeState, sessionId: string): void {
+	state.planViewBySession.delete(sessionId);
 	for (const key of Array.from(state.preToolQueuedByLeaf)) {
 		if (key.startsWith(`${sessionId}:`)) {
 			state.preToolQueuedByLeaf.delete(key);
 		}
+	}
+}
+
+function clearSessionPrefixMap(state: RuntimeState, sessionId: string): void {
+	clearSessionDelivery(state, sessionId);
+	for (const key of state.autoContinueCountBySessionPlan.keys()) {
+		if (key.startsWith(`${sessionId}:`)) state.autoContinueCountBySessionPlan.delete(key);
 	}
 }
 
@@ -293,6 +305,23 @@ function buildPreToolParityRecitation(status: PlanStatus): string {
 	].join("\n");
 }
 
+function selectPlanView(
+	state: RuntimeState, ctx: ExtensionContext, status: PlanStatus, mode: EffectiveMode,
+): PlanViewDelivery | undefined {
+	const sessionId = getSessionId(ctx);
+	if (!sessionId || !status.exists || !status.planPath || !isExecutionApproved(state, ctx, status)) {
+		state.planViewBySession.delete(sessionId);
+		return undefined;
+	}
+	const selection = JSON.stringify([status.planPath, mode, process.env.PWF_PRETOOL === "always"]);
+	let record = state.planViewBySession.get(sessionId);
+	if (record?.selection !== selection) {
+		record = { selection };
+		state.planViewBySession.set(sessionId, record);
+	}
+	return record;
+}
+
 function isExecutionApproved(state: RuntimeState, ctx: ExtensionContext, status: PlanStatus): boolean {
 	return state.executionApprovedBySessionPlan.has(getPlanSessionKey(ctx, status));
 }
@@ -430,6 +459,7 @@ function registerCommands(pi: ExtensionAPI, state: RuntimeState): void {
 			const normalized = args.trim().toLowerCase();
 			if (["clear", "off", "reset", "disable"].includes(normalized)) {
 				state.executionApprovedBySessionPlan.delete(planKey);
+				state.planViewBySession.delete(getSessionId(ctx));
 				ctx.ui.notify(`Plan execution approval cleared: ${summarizePlan(status)}`, "info");
 				setPassivePlanStatus(ctx, status);
 				return;
@@ -516,6 +546,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		loopTimersBySession: new Map(),
 		goalBySession: new Map(),
 		preToolQueuedByLeaf: new Set(),
+		planViewBySession: new Map(),
 		executionApprovedBySessionPlan: new Set(),
 	};
 
@@ -559,7 +590,27 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		clearSessionPrefixMap(state, getSessionId(ctx));
 	});
 
+	// A queued nextTurn message is not delivered until Pi starts a fresh run.
+	// message_end confirms insertion into session context, not provider billing.
+	pi.on("message_end", async (event, ctx) => {
+		const record = state.planViewBySession.get(getSessionId(ctx));
+		const message = event.message;
+		if (record?.pending && message.role === "custom" && message.customType === CUSTOM_TYPE &&
+			message.content === record.pending.content) {
+			record.deliveredView = record.pending.view;
+			record.pending = undefined;
+		}
+	});
+
+	pi.on("session_tree", async (_event, ctx) => {
+		clearSessionDelivery(state, getSessionId(ctx));
+	});
+	pi.on("session_compact", async (_event, ctx) => {
+		clearSessionDelivery(state, getSessionId(ctx));
+	});
+
 	pi.on("before_agent_start", async (_event, ctx) => {
+		state.planViewBySession.delete(getSessionId(ctx));
 		if (!isAttachedSession(ctx)) return;
 
 		const status = readPlanStatus(ctx.cwd);
@@ -600,6 +651,12 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		}
 
 		const content = mode === "parity" ? buildParityPlanInjection(status) : CACHE_SAFE_REMINDER;
+		const record = selectPlanView(state, ctx, status, mode);
+		if (mode === "parity" && record) {
+			// Compare the 30-line view from this same snapshot, not differently
+			// framed 50-line turn-start content or progress-only changes.
+			record.pending = { view: buildPreToolParityRecitation(status), content, queued: false };
+		}
 		return {
 			message: {
 				customType: CUSTOM_TYPE,
@@ -610,7 +667,10 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("tool_call", async (event, ctx) => {
-		if (!isAttachedSession(ctx)) return;
+		if (!isAttachedSession(ctx)) {
+			state.planViewBySession.delete(getSessionId(ctx));
+			return;
+		}
 
 		const mode = deriveEffectiveMode(resolveConfiguredMode(anchorCwd(ctx)), ctx);
 		const status = readPlanStatus(ctx.cwd);
@@ -618,42 +678,33 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 		const leafId = ctx.sessionManager.getLeafId() ?? "leaf";
 		const leafKey = `${sessionId}:${leafId}`;
 
+		const record = selectPlanView(state, ctx, status, mode);
 		const trackableTools = new Set(["write", "edit", "bash", "read", "grep", "find", "ls"]);
-		if (
-			status.exists &&
-			isExecutionApproved(state, ctx, status) &&
-			trackableTools.has(event.toolName) &&
-			!state.preToolQueuedByLeaf.has(leafKey)
-		) {
-			state.preToolQueuedByLeaf.add(leafKey);
+		if (status.exists && isExecutionApproved(state, ctx, status) && trackableTools.has(event.toolName)) {
+			// Validation precedes both content and legacy leaf suppression.
 			const attestation = checkPlanAttestation(status);
-			if (attestation.tampered) {
-				pi.sendMessage(
-					{
-						customType: CUSTOM_TYPE,
-						content: buildTamperMessage(status),
-						display: true,
-					},
-					{ deliverAs: "nextTurn", triggerTurn: false },
-				);
-			} else if (mode === "parity") {
-				pi.sendMessage(
-					{
-						customType: CUSTOM_TYPE,
-						content: buildPreToolParityRecitation(status),
-						display: false,
-					},
-					{ deliverAs: "nextTurn", triggerTurn: false },
-				);
-			} else if (mode === "cache-safe") {
-				pi.sendMessage(
-					{
-						customType: CUSTOM_TYPE,
-						content: PRE_TOOL_CACHE_SAFE_REMINDER,
-						display: false,
-					},
-					{ deliverAs: "nextTurn", triggerTurn: false },
-				);
+			const view = buildPreToolParityRecitation(status);
+			const suppressUnchanged = mode === "parity" && process.env.PWF_PRETOOL !== "always";
+			const unchanged = record && (record.deliveredView === view ||
+				(record.pending?.queued && record.pending.view === view));
+			const skip = suppressUnchanged ? unchanged : state.preToolQueuedByLeaf.has(leafKey);
+			const content = attestation.tampered ? buildTamperMessage(status) :
+				mode === "parity" ? view : mode === "cache-safe" ? PRE_TOOL_CACHE_SAFE_REMINDER : undefined;
+			if (attestation.tampered) state.planViewBySession.delete(sessionId);
+			if (content && (attestation.tampered || !skip)) {
+				try {
+					pi.sendMessage({ customType: CUSTOM_TYPE, content, display: attestation.tampered },
+						{ deliverAs: "nextTurn", triggerTurn: false });
+					state.preToolQueuedByLeaf.add(leafKey);
+					if (!attestation.tampered && mode === "parity" && record) {
+						record.pending = { view, content, queued: true };
+					}
+				} catch {
+					// The public API is void: only synchronous send failures are
+					// observable. Never leave a suppression marker after one.
+					state.planViewBySession.delete(sessionId);
+					state.preToolQueuedByLeaf.delete(leafKey);
+				}
 			}
 		}
 
@@ -696,6 +747,9 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("agent_end", async (event, ctx) => {
+		const record = state.planViewBySession.get(getSessionId(ctx));
+		if (isFailedTurn(event) || ctx.signal?.aborted) clearSessionDelivery(state, getSessionId(ctx));
+		else if (record) record.pending = undefined;
 		if (!isAttachedSession(ctx)) return;
 
 		const status = readPlanStatus(ctx.cwd);
@@ -782,6 +836,7 @@ export default function planningWithFilesExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("session_before_compact", async (_event, ctx) => {
+		clearSessionDelivery(state, getSessionId(ctx));
 		if (!isAttachedSession(ctx)) return;
 
 		const status = readPlanStatus(ctx.cwd);

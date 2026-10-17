@@ -27,6 +27,7 @@ interface MockPi {
 
 interface MockContext {
 	cwd: string;
+	signal?: AbortSignal;
 	fs: {
 		readFile: ReturnType<typeof vi.fn>;
 	};
@@ -171,10 +172,20 @@ async function approvePlan(pi: MockPi, ctx: MockContext): Promise<void> {
 	await runCommand(pi, "plan-execute", "", ctx);
 }
 
+async function deliverStart(pi: MockPi, ctx: MockContext): Promise<void> {
+	const result = await emit(pi, "before_agent_start", {}, ctx);
+	if (result?.message) await emit(pi, "message_end", { message: { role: "custom", ...result.message } }, ctx);
+}
+
+async function readTool(pi: MockPi, ctx: MockContext): Promise<void> {
+	await emit(pi, "tool_call", { toolName: "read", input: {} }, ctx);
+}
+
 beforeEach(() => {
 	originalEnv = { ...process.env };
 	process.env.PWF_MODE = "parity";
 	delete process.env.PLAN_ID;
+	delete process.env.PWF_PRETOOL;
 });
 
 afterEach(() => {
@@ -195,9 +206,12 @@ describe("Pi extension runtime handlers", () => {
 			"agent_end",
 			"before_agent_start",
 			"input",
+			"message_end",
 			"session_before_compact",
+			"session_compact",
 			"session_shutdown",
 			"session_start",
+			"session_tree",
 			"tool_call",
 			"tool_result",
 		]);
@@ -313,6 +327,20 @@ describe("Pi extension runtime handlers", () => {
 
 		expect(result.message.content).toContain("# Test plan");
 		expect(result.message.content).not.toContain("Wrong selected plan");
+	});
+
+	it("does not repeat the delivered turn-start view across advancing leaves", async () => {
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		const start = await emit(pi, "before_agent_start", {}, ctx);
+		await emit(pi, "message_end", { message: { role: "custom", ...start.message } }, ctx);
+		for (const leaf of ["one", "two", "three"]) {
+			ctx.sessionManager.getLeafId.mockReturnValue(leaf);
+			await emit(pi, "tool_call", { toolName: "read", input: {} }, ctx);
+		}
+		expect(pi.sendMessage).not.toHaveBeenCalled();
 	});
 
 	it("tool_call records a pre-tool reminder against the active leaf", async () => {
@@ -469,6 +497,263 @@ describe("Pi extension runtime handlers", () => {
 			"[planning-with-files] ALL PHASES COMPLETE (2/2).",
 			"info",
 		);
+	});
+});
+
+describe("Pi parity visible-view delivery", () => {
+	it("refreshes visible edits once even without a leaf transition, then confirms delivery", async () => {
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		writeFileSync(join(cwd, ".planning", "demo", "task_plan.md"), incompletePlan() + "visible edit\n");
+		await readTool(pi, ctx);
+		await readTool(pi, ctx);
+		ctx.sessionManager.getLeafId.mockReturnValue("next-leaf");
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+		const message = pi.sendMessage.mock.calls[0][0];
+		await emit(pi, "message_end", { message: { role: "custom", ...message } }, ctx);
+		await emit(pi, "agent_end", agentEndEvent("stop"), ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("ignores progress-only and outside-head edits but still checks whole-plan attestation", async () => {
+		const plan = incompletePlan() + Array.from({ length: 60 }, (_, i) => `line ${i}`).join("\n");
+		const cwd = makeWorkspace(plan);
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		writeFileSync(join(cwd, ".planning", "demo", "progress.md"), "progress changed\n");
+		writeFileSync(join(cwd, ".planning", "demo", "task_plan.md"), plan + "\noutside head\n");
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).not.toHaveBeenCalled();
+		attestPlan(cwd, plan);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+			content: expect.stringContaining("[PLAN TAMPERED"), display: true,
+		}), { deliverAs: "nextTurn", triggerTurn: false });
+	});
+
+	it("does not treat an unobserved turn-start return as delivered", async () => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await emit(pi, "before_agent_start", {}, ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not let one session suppress another", async () => {
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const first = createContext(cwd);
+		const second = createContext(cwd);
+		second.sessionManager.getSessionId.mockReturnValue("session-2");
+		await approvePlan(pi, first);
+		await approvePlan(pi, second);
+		await deliverStart(pi, first);
+		await readTool(pi, second);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+		await readTool(pi, first);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("invalidates selection on equal-text A-to-B-to-A switches", async () => {
+		const cwd = makeWorkspace();
+		const other = join(cwd, ".planning", "other");
+		mkdirSync(other);
+		writeFileSync(join(other, "task_plan.md"), incompletePlan());
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		process.env.PLAN_ID = "demo";
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		process.env.PLAN_ID = "other";
+		await approvePlan(pi, ctx);
+		await readTool(pi, ctx);
+		process.env.PLAN_ID = "demo";
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+		expect(pi.sendMessage.mock.calls[0][0].content).toContain("plan: other");
+		expect(pi.sendMessage.mock.calls[1][0].content).toContain("plan: demo");
+	});
+
+	it("checks approval and invalidates even when the intervening plan is unapproved", async () => {
+		const cwd = makeWorkspace();
+		const other = join(cwd, ".planning", "other");
+		mkdirSync(other);
+		writeFileSync(join(other, "task_plan.md"), incompletePlan());
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		process.env.PLAN_ID = "demo";
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		process.env.PLAN_ID = "other";
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).not.toHaveBeenCalled();
+		process.env.PLAN_ID = "demo";
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+		await runCommand(pi, "plan-execute", "off", ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("invalidates auto mode when the model changes effective mode", async () => {
+		process.env.PWF_MODE = "auto";
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		ctx.model = { provider: "deepseek", id: "deepseek-chat" };
+		await readTool(pi, ctx);
+		ctx.model = { provider: "openai", id: "gpt-5" };
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+		expect(pi.sendMessage.mock.calls[1][0].content).toContain("PreToolUse recitation");
+	});
+
+	it.each(["cache-safe", "notify"])("invalidates suppression through %s mode", async (mode) => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		process.env.PWF_MODE = mode;
+		await readTool(pi, ctx);
+		process.env.PWF_MODE = "parity";
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+			content: expect.stringContaining("PreToolUse recitation"),
+		}), { deliverAs: "nextTurn", triggerTurn: false });
+	});
+
+	it.each(["session_before_compact", "session_compact", "session_tree"])("invalidates at %s even while the plan is absent", async (event) => {
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		const path = join(cwd, ".planning", "demo", "task_plan.md");
+		rmSync(path);
+		await emit(pi, event, {}, ctx);
+		writeFileSync(path, incompletePlan());
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("invalidates when a tool observes a temporarily absent plan", async () => {
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		const path = join(cwd, ".planning", "demo", "task_plan.md");
+		rmSync(path);
+		await readTool(pi, ctx);
+		writeFileSync(path, incompletePlan());
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it.each(["resume", "fork", "reload"])("requires fresh approval and permits reinjection after %s", async (reason) => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		await emit(pi, "session_start", { reason }, ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).not.toHaveBeenCalled();
+		await approvePlan(pi, ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it.each(["aborted", "error"])("invalidates delivered context after an %s turn", async (reason) => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		await emit(pi, "agent_end", agentEndEvent(reason), ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("invalidates on an aborted operation signal even without an aborted assistant entry", async () => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		ctx.signal = AbortSignal.abort();
+		await emit(pi, "agent_end", agentEndEvent("toolUse"), ctx);
+		ctx.signal = undefined;
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it.each(["error", "session_before_compact", "session_compact", "session_tree"])("does not reset existing auto-continue budget during %s invalidation", async (boundary) => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		for (let i = 0; i < 3; i++) await emit(pi, "agent_end", agentEndEvent("stop"), ctx);
+		if (boundary === "error") await emit(pi, "agent_end", agentEndEvent("error"), ctx);
+		else await emit(pi, boundary, {}, ctx);
+		await emit(pi, "agent_end", agentEndEvent("stop"), ctx);
+		expect(pi.sendUserMessage).toHaveBeenCalledTimes(3);
+	});
+
+	it("does not retain undelivered queued context past agent_end", async () => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		await readTool(pi, ctx);
+		await emit(pi, "agent_end", agentEndEvent("stop"), ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries after synchronous send errors without poisoning suppression", async () => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		await approvePlan(pi, ctx);
+		pi.sendMessage.mockImplementationOnce(() => { throw new Error("send failed"); });
+		await readTool(pi, ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+	});
+
+	it("fails open to reminders when session or leaf identity is unavailable", async () => {
+		const pi = loadExtension();
+		const ctx = createContext(makeWorkspace());
+		ctx.sessionManager.getSessionId.mockReturnValue(undefined);
+		ctx.sessionManager.getLeafId.mockReturnValue(null);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		await readTool(pi, ctx);
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+	});
+
+	it("always restores per-leaf behavior without bypassing attestation", async () => {
+		process.env.PWF_PRETOOL = "always";
+		const cwd = makeWorkspace();
+		const pi = loadExtension();
+		const ctx = createContext(cwd);
+		await approvePlan(pi, ctx);
+		await deliverStart(pi, ctx);
+		await readTool(pi, ctx);
+		await readTool(pi, ctx);
+		ctx.sessionManager.getLeafId.mockReturnValue("next-leaf");
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenCalledTimes(2);
+		attestPlan(cwd, incompletePlan() + "tampered");
+		await readTool(pi, ctx);
+		expect(pi.sendMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+			content: expect.stringContaining("[PLAN TAMPERED"), display: true,
+		}), { deliverAs: "nextTurn", triggerTurn: false });
 	});
 });
 
