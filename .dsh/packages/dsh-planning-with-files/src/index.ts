@@ -160,7 +160,12 @@ function parsePwfInput(rawInput: string): PwfInput {
 
 function statusText(status: StatusResult): string {
   const nested = status.conflicts?.length ? `\nnested plans below this root: ${status.conflicts.join(", ")}` : ""
-  if (!status.exists || !status.counts) return `planning-with-files: no plan in ${status.project_dir}. Run /pwf [plan name] to create one.${nested}`
+  if (!status.exists || !status.counts) {
+    const message = status.message?.startsWith("Multiple plans are available.")
+      ? status.message
+      : `no plan in ${status.project_dir}. Run /pwf [plan name] to create one.`
+    return `planning-with-files: ${message}${nested}`
+  }
   const counts = status.counts
   return [
     `planning-with-files: plan ${status.plan_id} (${status.mode}${status.attested ? ", attested" : ""}) at ${status.plan_dir}`,

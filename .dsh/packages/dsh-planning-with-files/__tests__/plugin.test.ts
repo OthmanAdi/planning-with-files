@@ -587,6 +587,28 @@ describe("commands", () => {
     expect(report).toContain("phases: 0 complete, 1 in_progress, 4 pending of 5")
   })
 
+  it("/pwf-status reports the selector requirement when several plans exist", async () => {
+    namedPlan("2026-09-02-a", "# PLAN-A\n")
+    namedPlan("2026-09-02-b", "# PLAN-B\n", false)
+    const loaded = load()
+    const agent = agentFor(root)
+
+    const ambiguous = await command(loaded, "pwf-status", agent)
+    expect(ambiguous.kind).toBe("success")
+    const report = ambiguous.kind === "success" ? ambiguous.text ?? "" : ""
+    expect(report).toContain("Multiple plans are available")
+    expect(report).toContain("Set PLAN_ID=<slug>")
+    expect(report).not.toContain("no plan in")
+    expect(report).not.toContain("Run /pwf")
+
+    process.env.PLAN_ID = "2026-09-02-a"
+    const selected = await command(loaded, "pwf-status", agent)
+    expect(selected.kind).toBe("success")
+    const selectedReport = selected.kind === "success" ? selected.text ?? "" : ""
+    expect(selectedReport).toContain("plan 2026-09-02-a")
+    expect(selectedReport).not.toContain("Multiple plans are available")
+  })
+
   it("keeps existing files, reports errors instead of throwing, and names the missing plan", async () => {
     const loaded = load()
     const agent = agentFor(root)
