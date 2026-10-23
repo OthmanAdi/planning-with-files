@@ -198,9 +198,12 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
                     input_data='{"error":{"message":"fixture failure"}}',
                 )
                 self.assertEqual(0, enabled.returncode, enabled.stderr)
-                enabled_output = json.loads(
-                    enabled.stdout.lstrip("\ufeff")
-                ).get("hookSpecificOutput", {})
+                # sessionStart and postToolUse return additionalContext at the
+                # top level; the other Copilot hooks still nest it.
+                enabled_payload = json.loads(enabled.stdout.lstrip("\ufeff"))
+                enabled_output = enabled_payload.get(
+                    "hookSpecificOutput", enabled_payload
+                )
                 if "additionalContext" in enabled_output:
                     live += 1
 
@@ -270,9 +273,12 @@ class CopilotPowerShellPlanningDisabledTests(unittest.TestCase):
                     COPILOT_HOOKS / name, self.cwd, disabled=False
                 )
                 self.assertEqual(0, enabled.returncode, enabled.stderr)
-                enabled_output = json.loads(
-                    enabled.stdout.lstrip("\ufeff")
-                ).get("hookSpecificOutput", {})
+                # sessionStart and postToolUse return additionalContext at the
+                # top level; the other Copilot hooks still nest it.
+                enabled_payload = json.loads(enabled.stdout.lstrip("\ufeff"))
+                enabled_output = enabled_payload.get(
+                    "hookSpecificOutput", enabled_payload
+                )
                 self.assertIn(
                     "additionalContext",
                     enabled_output,

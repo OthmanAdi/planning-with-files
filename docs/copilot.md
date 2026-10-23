@@ -100,8 +100,16 @@ Local agent session history is not part of automatic startup. Explicit `session-
 
 ## Compatibility
 
-This setup works across the entire GitHub Copilot ecosystem:
+These hooks target the current Copilot harness, which these clients share:
 
 - GitHub Copilot CLI (terminal)
 - VS Code Copilot Chat (agent mode)
 - GitHub Copilot Coding Agent (github.com)
+
+`sessionStart` and `postToolUse` return their context in the top-level `additionalContext` field, as the [Copilot hooks reference](https://docs.github.com/en/copilot/reference/hooks-reference) documents:
+
+```json
+{"additionalContext": "..."}
+```
+
+The legacy VS Code Local hook harness is not supported. It reads context from a nested `hookSpecificOutput` object, so it does not receive startup or post-tool context from these scripts. The VS Code [migration guide](https://code.visualstudio.com/docs/agent-customization/migrate-customizations) explains how to move hooks to the Copilot harness.

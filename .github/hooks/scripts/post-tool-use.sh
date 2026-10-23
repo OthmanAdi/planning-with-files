@@ -8,5 +8,6 @@ INPUT=$(cat)
 
 [ "${PLANNING_DISABLED:-}" = "1" ] && { echo '{}'; exit 0; }
 
-echo '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."}}'
+# Copilot reads postToolUse context from the top-level additionalContext field.
+echo '{"additionalContext":"[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."}'
 exit 0

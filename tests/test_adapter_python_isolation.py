@@ -107,7 +107,10 @@ class AdapterPythonIsolationTests(unittest.TestCase):
                 marker.unlink(missing_ok=True)
                 payload = self.run_hook(COPILOT_HOOKS / name, input_data)
                 self.assertFalse(marker.exists(), f"{name} imported project json.py")
-                self.assertIn("additionalContext", payload.get("hookSpecificOutput", {}))
+                # session-start.sh returns additionalContext at the top level.
+                self.assertIn(
+                    "additionalContext", payload.get("hookSpecificOutput", payload)
+                )
 
     def test_copilot_unicode_error_survives_isolated_python(self) -> None:
         message = "中文 العربية русский Grüße"

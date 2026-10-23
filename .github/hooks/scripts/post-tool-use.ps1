@@ -12,11 +12,9 @@ if ($env:PLANNING_DISABLED -eq '1') {
     exit 0
 }
 
+# Copilot reads postToolUse context from the top-level additionalContext field.
 $output = @{
-    hookSpecificOutput = @{
-        hookEventName = "PostToolUse"
-        additionalContext = "[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."
-    }
+    additionalContext = "[planning-with-files] Update progress.md with what you just did. If a phase is now complete, update task_plan.md status."
 }
-$output | ConvertTo-Json -Depth 3 -Compress
+$output | ConvertTo-Json -Compress
 exit 0

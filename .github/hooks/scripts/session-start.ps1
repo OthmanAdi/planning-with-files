@@ -45,11 +45,9 @@ if (-not $Context) {
     exit 0
 }
 
+# Copilot reads sessionStart context from the top-level additionalContext field.
 $output = @{
-    hookSpecificOutput = @{
-        hookEventName = "SessionStart"
-        additionalContext = $Context
-    }
+    additionalContext = $Context
 }
-$output | ConvertTo-Json -Depth 3 -Compress
+$output | ConvertTo-Json -Compress
 exit 0

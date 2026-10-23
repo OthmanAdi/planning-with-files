@@ -45,5 +45,6 @@ fi
 # Escape context for JSON
 ESCAPED=$(echo "$CONTEXT" | $PYTHON -I -X utf8 -c "import sys,json; print(json.dumps(sys.stdin.read(), ensure_ascii=False))" 2>/dev/null || echo "\"\"")
 
-printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":$ESCAPED}}"
+# Copilot reads sessionStart context from the top-level additionalContext field.
+printf '%s\n' "{\"additionalContext\":$ESCAPED}"
 exit 0
