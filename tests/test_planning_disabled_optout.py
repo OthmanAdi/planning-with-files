@@ -219,11 +219,13 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
                 # permission decision either, so Copilot's own flow decides.
                 self.assertEqual({}, payload)
 
+        # pre-tool-use intentionally emits {} (no PreToolUse context API).
         # error-occurred.sh JSON-escapes through python3 and goes quiet where
-        # that probe finds nothing, so four is the floor, not five.
+        # that probe finds nothing, so three is the floor among the remaining
+        # context-bearing hooks.
         self.assertGreaterEqual(
             live,
-            4,
+            3,
             "no Copilot shell hook produced context with the opt-out unset; "
             "the disabled-run assertions above cannot mean anything",
         )
@@ -273,18 +275,22 @@ class CopilotPowerShellPlanningDisabledTests(unittest.TestCase):
                     COPILOT_HOOKS / name, self.cwd, disabled=False
                 )
                 self.assertEqual(0, enabled.returncode, enabled.stderr)
-                # sessionStart and postToolUse return additionalContext at the
-                # top level; the other Copilot hooks still nest it.
                 enabled_payload = json.loads(enabled.stdout.lstrip("\ufeff"))
-                enabled_output = enabled_payload.get(
-                    "hookSpecificOutput", enabled_payload
-                )
-                self.assertIn(
-                    "additionalContext",
-                    enabled_output,
-                    f"{name} emitted no context with the opt-out unset, so the "
-                    "disabled-run assertion below proves nothing",
-                )
+                if name == "pre-tool-use.ps1":
+                    # PreToolUse has no documented plan-context transport.
+                    self.assertEqual({}, enabled_payload)
+                else:
+                    # sessionStart and postToolUse return additionalContext at
+                    # the top level; the other Copilot hooks still nest it.
+                    enabled_output = enabled_payload.get(
+                        "hookSpecificOutput", enabled_payload
+                    )
+                    self.assertIn(
+                        "additionalContext",
+                        enabled_output,
+                        f"{name} emitted no context with the opt-out unset, so "
+                        "the disabled-run assertion below proves nothing",
+                    )
 
                 result = run_powershell(
                     COPILOT_HOOKS / name, self.cwd, disabled=True

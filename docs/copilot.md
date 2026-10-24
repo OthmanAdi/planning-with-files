@@ -44,7 +44,7 @@ Hooks will auto-activate for all team members. This works across Copilot CLI, VS
 | Hook | Purpose | Behavior |
 |------|---------|----------|
 | `sessionStart` | Initialization | Recovers selected context from project planning files without reading agent session stores |
-| `preToolUse` | Context injection | Reads `task_plan.md` before tool operations |
+| `preToolUse` | No-op (contract alignment) | Emits `{}`; does not inject plan text or permission decisions |
 | `postToolUse` | Update reminders | Prompts to update plan after file edits |
 | `agentStop` | Completion check | Verifies if all phases are complete before stopping |
 
@@ -61,7 +61,7 @@ Local agent session history is not part of automatic startup. Explicit `session-
     └── scripts/
         ├── session-start.sh        # Session initialization
         ├── session-start.ps1
-        ├── pre-tool-use.sh         # Plan context injection
+        ├── pre-tool-use.sh         # Empty object (no PreToolUse context API)
         ├── pre-tool-use.ps1
         ├── post-tool-use.sh        # Update reminders
         ├── post-tool-use.ps1
@@ -74,7 +74,7 @@ Local agent session history is not part of automatic startup. Explicit `session-
 ## How It Works
 
 1. **Session starts**: The hooks recover selected context from project planning files. Automatic startup does not inspect agent session stores.
-2. **Before tool use**: The `pre-tool-use` hook injects `task_plan.md` into the context. This keeps goals visible to the agent.
+2. **Before tool use**: The `pre-tool-use` hook emits `{}`. Copilot's PreToolUse command-hook contract documents permission decisions and argument rewriting, not plan-context injection, so this route leaves the host's normal permission handling unchanged. Plan text is delivered on `sessionStart` and the post-tool reminder path instead. A JSON shape alone is not proof that a model received context.
 3. **After file edits**: A reminder appears after any write or edit operations. This helps ensure the plan stays updated.
 4. **Agent tries to stop**: The `agent-stop` hook checks the phase status in `task_plan.md`. It prevents stopping if tasks remain.
 

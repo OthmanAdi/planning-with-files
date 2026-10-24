@@ -1,9 +1,11 @@
-"""Copilot sessionStart and postToolUse hooks return context at the top level.
+"""Copilot hook stdout shapes match the documented command-hook contracts.
 
-The GitHub Copilot hooks reference documents `{"additionalContext": "..."}` as
-the output of both events. Context nested under `hookSpecificOutput` is the
-legacy VS Code Local shape, which the current Copilot harness does not read.
-These tests run the real scripts and parse the stdout the host would consume.
+sessionStart and postToolUse return top-level `{"additionalContext": "..."}`.
+PreToolUse has no documented plan-context transport; those scripts emit `{}`
+and must not nest permissionDecision or additionalContext. Context nested under
+`hookSpecificOutput` is the legacy VS Code Local shape, which the current
+Copilot harness does not read. These tests run the real scripts and parse the
+stdout the host would consume.
 """
 from __future__ import annotations
 
@@ -90,6 +92,33 @@ class CopilotHookSchemaMixin:
         payload = self.run_hook("post-tool-use")
         self.assertEqual({"additionalContext"}, set(payload))
         self.assertIn(POST_TOOL_REMINDER, payload["additionalContext"])
+
+
+    def _assert_pre_tool_is_empty(self, payload: dict) -> None:
+        self.assertEqual({}, payload)
+        nested = payload.get("hookSpecificOutput")
+        if isinstance(nested, dict):
+            for forbidden in (
+                "permissionDecision",
+                "permissionDecisionReason",
+                "additionalContext",
+                "modifiedArgs",
+            ):
+                self.assertNotIn(forbidden, nested)
+
+    def test_pre_tool_use_empty_with_nonempty_plan(self) -> None:
+        self._assert_pre_tool_is_empty(self.run_hook("pre-tool-use"))
+
+    def test_pre_tool_use_empty_with_empty_plan(self) -> None:
+        (self.cwd / "task_plan.md").write_text("", encoding="utf-8")
+        self._assert_pre_tool_is_empty(self.run_hook("pre-tool-use"))
+
+    def test_pre_tool_use_empty_with_no_plan(self) -> None:
+        (self.cwd / "task_plan.md").unlink()
+        self._assert_pre_tool_is_empty(self.run_hook("pre-tool-use"))
+
+    def test_pre_tool_use_empty_when_disabled(self) -> None:
+        self._assert_pre_tool_is_empty(self.run_hook("pre-tool-use", disabled=True))
 
     def test_disabled_hooks_return_empty_json(self) -> None:
         for name in ("session-start", "post-tool-use"):
