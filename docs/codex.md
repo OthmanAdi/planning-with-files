@@ -34,11 +34,32 @@ git clone https://github.com/OthmanAdi/planning-with-files.git /tmp/planning-wit
 mkdir -p .agents/skills
 cp -r /tmp/planning-with-files/.agents/skills/planning-with-files .agents/skills/
 
-# Copy the standalone hook integration
-mkdir -p .codex
-cp /tmp/planning-with-files/.codex/hooks.json .codex/hooks.json
-cp -r /tmp/planning-with-files/.codex/hooks .codex/hooks
+# Copy the hook scripts into .codex/hooks/
+mkdir -p .codex/hooks
+cp -r /tmp/planning-with-files/.codex/hooks/. .codex/hooks/
 
+# Copy hooks.json, or keep an existing one and merge into it
+if [ -e .codex/hooks.json ]; then
+  echo "Kept the existing .codex/hooks.json. Merge the planning-with-files entries into it."
+else
+  cp /tmp/planning-with-files/.codex/hooks.json .codex/hooks.json
+fi
+```
+
+The scripts land directly in `.codex/hooks/`, where `.codex/hooks.json` points,
+whether or not the directory already exists. Do not use
+`cp -r /tmp/planning-with-files/.codex/hooks .codex/hooks`. When `.codex/hooks`
+already exists, `cp` copies into it and creates `.codex/hooks/hooks/`, where the
+registered commands do not look. Other scripts in `.codex/hooks/` stay as they
+are, and running the commands again updates the planning-with-files scripts in
+place. A script of yours with the same name as one of ours (for example
+`stop.py`) is overwritten, so rename it first.
+
+The commands never overwrite an existing `hooks.json`. If they printed the
+"Kept the existing" message, merge the entries now, as described in
+[Existing hooks.json](#existing-hooksjson). Then commit and clean up:
+
+```bash
 # Commit to share with team
 git add .agents/skills/planning-with-files .codex/hooks.json .codex/hooks
 git commit -m "Add planning-with-files skill for Codex"
@@ -60,19 +81,76 @@ git clone https://github.com/OthmanAdi/planning-with-files.git /tmp/planning-wit
 mkdir -p ~/.agents/skills
 cp -r /tmp/planning-with-files/.agents/skills/planning-with-files ~/.agents/skills/
 
-# Copy the hook scripts
+# Copy the hook scripts into ~/.codex/hooks/
 mkdir -p ~/.codex/hooks
 cp -r /tmp/planning-with-files/.codex/hooks/* ~/.codex/hooks/
 
-# Copy hooks.json
-# If you already have ~/.codex/hooks.json, merge the planning-with-files entries manually
-cp /tmp/planning-with-files/.codex/hooks.json ~/.codex/hooks.json
+# Copy hooks.json, or keep an existing one and merge into it
+if [ -e ~/.codex/hooks.json ]; then
+  echo "Kept the existing ~/.codex/hooks.json. Merge the planning-with-files entries into it."
+else
+  cp /tmp/planning-with-files/.codex/hooks.json ~/.codex/hooks.json
+fi
+```
 
-# Clean up
+If you already have a `~/.codex/hooks.json`, the commands keep it. Merge the
+planning-with-files entries into it as described in
+[Existing hooks.json](#existing-hooksjson), then clean up:
+
+```bash
 rm -rf /tmp/planning-with-files
 ```
 
-> **Note:** If you already have a `~/.codex/hooks.json`, do not overwrite it blindly. Merge all seven entries: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, and `Stop`.
+### Existing hooks.json
+
+If `.codex/hooks.json` (or `~/.codex/hooks.json`) already exists, keep it and
+add the planning-with-files registrations to it:
+
+1. `/tmp/planning-with-files/.codex/hooks.json` has one entry under each of
+   seven events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`,
+   `PermissionRequest`, `PostToolUse`, `PreCompact`, and `Stop`. Append each
+   entry, unchanged, to the array with the same event name under `"hooks"` in
+   your file. Create the array if your file has no such event.
+2. Leave your existing entries and other events as they are.
+
+For example, a project that already registered its own `SessionStart` hook ends
+up with both entries in that array, followed by the other six events copied
+from `/tmp/planning-with-files/.codex/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "echo KEEP_EXISTING_HOOK" }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/run_sh.py session-start.sh 2>/dev/null || python3 \"$HOME/.codex/hooks/run_sh.py\" session-start.sh 2>/dev/null || true",
+            "commandWindows": "cmd /c .codex\\hooks\\pwf-hook.cmd run_sh.py session-start.sh",
+            "statusMessage": "Loading planning context"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [ ... ],
+    "PreToolUse": [ ... ],
+    "PermissionRequest": [ ... ],
+    "PostToolUse": [ ... ],
+    "PreCompact": [ ... ],
+    "Stop": [ ... ]
+  }
+}
+```
+
+If the seven entries are already there from an earlier install, replace them
+with the current entries from `/tmp/planning-with-files/.codex/hooks.json` so
+that changed command definitions take effect, then review them with `/hooks`.
 
 ### Plugin Package
 
