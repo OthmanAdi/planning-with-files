@@ -9,3 +9,8 @@
 Before: nonempty plan emitted nested `hookSpecificOutput.permissionDecision=allow` + `additionalContext`.
 After: all four cases emit `{}` with no nested permission/context fields.
 Docs no longer claim pre-tool injects the plan; sessionStart/post-tool remain the context routes.
+
+## CI follow-up (PT18)
+- fix-root-causes: PreToolUse stub removed Python, but isolation tests still required `$PYTHON -I -X utf8` and `additionalContext`; sync those expectations to issue #344.
+- Laziness Protocol: keep unconditional `{}` stubs; only drop pre-tool-use from Python isolation lists and replace em-dashes so the .ps1 stays pure ASCII (no BOM needed).
+- Prove It Works: pytest isolation + BOM + schema + opt-out green locally; full suite 1019 passed (1 unrelated local `python` binary miss).

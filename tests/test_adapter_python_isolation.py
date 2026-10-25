@@ -24,7 +24,7 @@ PYTHON_SHELL_HOOKS = (
     GEMINI_HOOKS / "session-start.sh",
     GEMINI_HOOKS / "session-end.sh",
     COPILOT_HOOKS / "session-start.sh",
-    COPILOT_HOOKS / "pre-tool-use.sh",
+    # Copilot pre-tool-use.sh emits {} with no Python (issue #344 / PR #346).
     COPILOT_HOOKS / "error-occurred.sh",
 )
 
@@ -98,7 +98,7 @@ class AdapterPythonIsolationTests(unittest.TestCase):
     def test_copilot_python_paths_ignore_project_json_module(self) -> None:
         cases = (
             ("session-start.sh", "{}"),
-            ("pre-tool-use.sh", "{}"),
+            # pre-tool-use.sh no longer uses Python or additionalContext (#344).
             ("error-occurred.sh", '{"error":{"message":"fixture failure"}}'),
         )
         for name, input_data in cases:
@@ -112,7 +112,16 @@ class AdapterPythonIsolationTests(unittest.TestCase):
                     "additionalContext", payload.get("hookSpecificOutput", payload)
                 )
 
+    def test_copilot_pre_tool_use_stays_empty_without_python(self) -> None:
+        """Issue #344: PreToolUse has no plan-context transport; emit {}."""
+        marker = self.cwd / "PLANTED_json"
+        marker.unlink(missing_ok=True)
+        payload = self.run_hook(COPILOT_HOOKS / "pre-tool-use.sh", "{}")
+        self.assertFalse(marker.exists(), "pre-tool-use.sh imported project json.py")
+        self.assertEqual({}, payload)
+
     def test_copilot_unicode_error_survives_isolated_python(self) -> None:
+
         message = "中文 العربية русский Grüße"
         # Escaped JSON becomes real Unicode inside the Python parser. Isolated
         # mode ignores PYTHONUTF8, so a Windows locale encoding loses this event.
