@@ -21,6 +21,7 @@ REPO = Path(__file__).resolve().parent.parent
 CODEX_HOOKS = REPO / ".codex" / "hooks"
 COPILOT_HOOKS = REPO / ".github" / "hooks" / "scripts"
 CURSOR_HOOKS = REPO / ".cursor" / "hooks"
+GEMINI_HOOKS = REPO / ".gemini" / "hooks"
 SCRIPTS = REPO / "scripts"
 POWERSHELL = (
     shutil.which("pwsh")
@@ -392,6 +393,86 @@ class CursorPlanningDisabledTests(unittest.TestCase):
         result = run_powershell(CURSOR_HOOKS / "stop.ps1", self.cwd, disabled=False)
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("", (result.stdout + result.stderr).strip().lstrip("﻿"))
+
+
+
+class GeminiPlanningDisabledOptOutTests(unittest.TestCase):
+    """Issue #329: Gemini lifecycle hooks ignored PLANNING_DISABLED=1."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.cwd = Path(self._tmp.name)
+        self.plan = (
+            "# OPT_OUT_PROBE\n### Phase 1\n**Status:** in_progress\n"
+        )
+        (self.cwd / "task_plan.md").write_text(self.plan, encoding="utf-8")
+        (self.cwd / "progress.md").write_text("progress line\n", encoding="utf-8")
+        (self.cwd / "findings.md").write_text("findings line\n", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _run(self, name: str, disabled: bool) -> subprocess.CompletedProcess:
+        # Gemini hooks use bashisms (here-strings); match test_gemini_hook_contract.
+        bash = shutil.which("bash")
+        if not bash:
+            self.skipTest("bash is not available")
+        env = dict(os.environ)
+        env.pop("PLANNING_DISABLED", None)
+        if disabled:
+            env["PLANNING_DISABLED"] = "1"
+        return subprocess.run(
+            [bash, str(GEMINI_HOOKS / name)],
+            cwd=str(self.cwd),
+            env=env,
+            input="{}",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=60,
+        )
+
+    def test_gemini_hooks_emit_empty_object_when_disabled(self) -> None:
+        for name in ("session-start.sh", "before-agent.sh", "after-tool.sh"):
+            with self.subTest(hook=name):
+                enabled = self._run(name, disabled=False)
+                disabled = self._run(name, disabled=True)
+                self.assertEqual(0, enabled.returncode, enabled.stderr)
+                self.assertEqual(0, disabled.returncode, disabled.stderr)
+                self.assertEqual("{}", disabled.stdout.strip())
+                # Positive control: with a real plan the hooks must inject
+                # context when the opt-out is unset (BeforeAgent needs usable
+                # Python so an interpreter failure cannot make this pass).
+                if name == "before-agent.sh":
+                    self.assertIn("OPT_OUT_PROBE", enabled.stdout)
+                else:
+                    self.assertNotEqual("{}", enabled.stdout.strip())
+
+    def test_gemini_disabled_pass_leaves_plan_files_unchanged(self) -> None:
+        before = {
+            path.name: path.read_bytes()
+            for path in self.cwd.iterdir()
+            if path.is_file()
+        }
+        for name in ("session-start.sh", "before-agent.sh", "after-tool.sh"):
+            result = self._run(name, disabled=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual("{}", result.stdout.strip())
+        after = {
+            path.name: path.read_bytes()
+            for path in self.cwd.iterdir()
+            if path.is_file()
+        }
+        self.assertEqual(before, after)
+
+    def test_gemini_hooks_stay_empty_without_a_plan(self) -> None:
+        (self.cwd / "task_plan.md").unlink()
+        for name in ("session-start.sh", "before-agent.sh", "after-tool.sh"):
+            with self.subTest(hook=name):
+                enabled = self._run(name, disabled=False)
+                self.assertEqual(0, enabled.returncode, enabled.stderr)
+                self.assertEqual("{}", enabled.stdout.strip())
 
 
 if __name__ == "__main__":

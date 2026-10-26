@@ -6,6 +6,9 @@
 
 INPUT=$(cat)
 
+# issue #329: per-invocation opt-out (PLANNING_DISABLED=1)
+[ "${PLANNING_DISABLED:-}" = "1" ] && { echo '{}'; exit 0; }
+
 PLAN_FILE="task_plan.md"
 SCRIPT_DIR="${GEMINI_PROJECT_DIR:-.}/.gemini/skills/planning-with-files/scripts"
 

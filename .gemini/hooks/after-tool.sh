@@ -5,6 +5,9 @@
 
 INPUT=$(cat)
 
+# issue #329: per-invocation opt-out (PLANNING_DISABLED=1)
+[ "${PLANNING_DISABLED:-}" = "1" ] && { echo '{}'; exit 0; }
+
 PLAN_FILE="task_plan.md"
 
 if [ ! -f "$PLAN_FILE" ]; then
