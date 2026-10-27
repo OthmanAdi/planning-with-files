@@ -121,7 +121,6 @@ class AdapterPythonIsolationTests(unittest.TestCase):
         self.assertEqual({}, payload)
 
     def test_copilot_unicode_error_survives_isolated_python(self) -> None:
-
         message = "中文 العربية русский Grüße"
         # Escaped JSON becomes real Unicode inside the Python parser. Isolated
         # mode ignores PYTHONUTF8, so a Windows locale encoding loses this event.

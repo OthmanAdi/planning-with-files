@@ -93,18 +93,8 @@ class CopilotHookSchemaMixin:
         self.assertEqual({"additionalContext"}, set(payload))
         self.assertIn(POST_TOOL_REMINDER, payload["additionalContext"])
 
-
     def _assert_pre_tool_is_empty(self, payload: dict) -> None:
         self.assertEqual({}, payload)
-        nested = payload.get("hookSpecificOutput")
-        if isinstance(nested, dict):
-            for forbidden in (
-                "permissionDecision",
-                "permissionDecisionReason",
-                "additionalContext",
-                "modifiedArgs",
-            ):
-                self.assertNotIn(forbidden, nested)
 
     def test_pre_tool_use_empty_with_nonempty_plan(self) -> None:
         self._assert_pre_tool_is_empty(self.run_hook("pre-tool-use"))

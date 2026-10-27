@@ -74,7 +74,7 @@ Local agent session history is not part of automatic startup. Explicit `session-
 ## How It Works
 
 1. **Session starts**: The hooks recover selected context from project planning files. Automatic startup does not inspect agent session stores.
-2. **Before tool use**: The `pre-tool-use` hook emits `{}`. Copilot's PreToolUse command-hook contract documents permission decisions and argument rewriting, not plan-context injection, so this route leaves the host's normal permission handling unchanged. Plan text is delivered on `sessionStart` and the post-tool reminder path instead. A JSON shape alone is not proof that a model received context.
+2. **Before tool use**: The `pre-tool-use` hook emits `{}`. Copilot's PreToolUse command-hook contract documents permission decisions and argument rewriting, not plan-context injection, so this route leaves the host's normal permission handling unchanged. The hook stays registered as a no-op placeholder for a future permission feature; empty output uses default behavior, and removing it would be equivalent today. Plan text is delivered on `sessionStart` and the post-tool reminder path instead. A JSON shape alone is not proof that a model received context.
 3. **After file edits**: A reminder appears after any write or edit operations. This helps ensure the plan stays updated.
 4. **Agent tries to stop**: The `agent-stop` hook checks the phase status in `task_plan.md`. It prevents stopping if tasks remain.
 
