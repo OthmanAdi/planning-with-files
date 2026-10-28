@@ -24,7 +24,7 @@ Hooks are enabled by default in current Codex. A user or administrator can expli
 
 ### Method 1: Workspace Installation (Recommended)
 
-Share the canonical skill and standalone hooks with your team by committing `.agents/skills/planning-with-files/`, `.codex/hooks.json`, and `.codex/hooks/` to your repository:
+Share the canonical skill and standalone hooks with your team by committing `.agents/skills/planning-with-files/`, the team-safe planning-with-files registrations in `.codex/hooks.json`, and the planning-with-files hook scripts to your repository:
 
 ```bash
 # In your project repository
@@ -57,11 +57,38 @@ place. A script of yours with the same name as one of ours (for example
 
 The commands never overwrite an existing `hooks.json`. If they printed the
 "Kept the existing" message, merge the entries now, as described in
-[Existing hooks.json](#existing-hooksjson). Then commit and clean up:
+[Existing hooks.json](#existing-hooksjson). Before committing, inspect the
+whole change. The existing hook file and directory may contain personal
+registrations or scripts; preserve those locally, but do not include them in a
+team commit. Keep credentials, tokens, and other secrets out of the repository.
+Only commit a `hooks.json` that contains registrations intended for everyone on
+the team. If your merged file also has local-only registrations, move those to
+your personal `~/.codex/hooks.json` and leave them out of the team version.
+
+Stage the planning-with-files scripts by name, not the whole hooks directory,
+so unrelated local scripts are not added:
 
 ```bash
+# Review all changes before staging
+git status --short
+git diff -- .codex/hooks.json .codex/hooks
+
+# Stage the skill, the team-safe merged registrations, and shipped scripts
+git add .agents/skills/planning-with-files .codex/hooks.json \
+  .codex/hooks/context_frame.py .codex/hooks/codex_hook_adapter.py \
+  .codex/hooks/permission_request.py .codex/hooks/plugin_dispatch.py \
+  .codex/hooks/post_tool_use.py .codex/hooks/pre_tool_use.py \
+  .codex/hooks/pwf-hook.cmd .codex/hooks/resolve-plan-dir.sh \
+  .codex/hooks/run_sh.py .codex/hooks/session-start.sh \
+  .codex/hooks/stop.py .codex/hooks/stop.sh \
+  .codex/hooks/user-prompt-submit.sh .codex/hooks/pre-compact.sh \
+  .codex/hooks/pre-tool-use.sh .codex/hooks/post-tool-use.sh
+
+# Inspect exactly what will be committed; unstage anything local or private
+git diff --cached -- .agents/skills/planning-with-files .codex/hooks.json .codex/hooks
+git status --short
+
 # Commit to share with team
-git add .agents/skills/planning-with-files .codex/hooks.json .codex/hooks
 git commit -m "Add planning-with-files skill for Codex"
 git push
 
