@@ -128,6 +128,21 @@ select_python_into_var() {
 }
 select_python_into_var
 
+# Preserve stdin for identity parsing after the early isolation gate.
+_TOOL_PAYLOAD_CAPTURED=0
+_TOOL_PAYLOAD=""
+if [ "${PWF_SKIP_SUBAGENTS:-}" = "1" ]; then
+    case "$EVENT" in
+        pretool|posttool)
+            _TOOL_PAYLOAD="$(cat 2>/dev/null)" || exit 0
+            _TOOL_PAYLOAD_CAPTURED=1
+            [ -n "$PWF_PYTHON" ] && [ -f "$FAST_PATH" ] || exit 0
+            _main_agent=$(printf '%s' "$_TOOL_PAYLOAD" | "$PWF_PYTHON" -I -B "$FAST_PATH" --hook-main-agent 2>/dev/null) || exit 0
+            [ "$_main_agent" = "main" ] || exit 0
+            ;;
+    esac
+fi
+
 # Run the injector for one context. scripts/inject-plan.py is a byte-identical
 # twin of inject-plan.sh in one interpreter process (about 130 forks fewer per
 # event; see the header of hooks/claude-hook.sh). It exits 0 only when its
@@ -234,6 +249,8 @@ if [ -n "$PWF_PYTHON" ]; then
     if [ "$EVENT" = "stop" ]; then
         PARSED_IDENTITY="$(printf '%s' "$HOOK_PAYLOAD" | parse_identity)" \
             || PARSED_IDENTITY=""
+    elif [ "$_TOOL_PAYLOAD_CAPTURED" = 1 ]; then
+        PARSED_IDENTITY="$(printf '%s' "$_TOOL_PAYLOAD" | parse_identity)" || PARSED_IDENTITY=""
     else
         PARSED_IDENTITY="$(parse_identity)" || PARSED_IDENTITY=""
     fi

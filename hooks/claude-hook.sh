@@ -120,6 +120,17 @@ case "$EVENT" in
         # Own one native payload for these events. Keep Stop's stdin untouched.
         # Preserve it for the shell fallback if the Python twin cannot run.
         HOOK_PAYLOAD="$(cat 2>/dev/null)" || HOOK_PAYLOAD=""
+        # Classify before plan resolution or cache mutation, even on fallback.
+        # Missing/broken parsing fails closed only for opted-in tool events.
+        if [ "${PWF_SKIP_SUBAGENTS:-}" = "1" ]; then
+            case "$EVENT" in
+                pre-tool-use|post-tool-use)
+                    [ -f "$FAST_PATH" ] && find_python || exit 0
+                    _main_agent=$(printf '%s' "$HOOK_PAYLOAD" | "$FOUND_PYTHON" -I -B "$FAST_PATH" --hook-main-agent 2>/dev/null) || exit 0
+                    [ "$_main_agent" = "main" ] || exit 0
+                    ;;
+            esac
+        fi
         if [ "${PWF_FAST_PATH:-}" != "0" ] && [ -f "$FAST_PATH" ] && find_python; then
             # -I: isolated mode, so the project directory is never on
             # sys.path and a repository's own secrets.py or hashlib.py cannot
