@@ -768,8 +768,10 @@ def hook_is_main(payload):
         return False
     if not isinstance(data, dict):
         return False
-    agent = data.get("agent_id")
-    return agent is None or (isinstance(agent, str) and not agent)
+    if "agent_id" not in data:
+        return True
+    agent = data["agent_id"]
+    return isinstance(agent, str) and not agent
 
 
 def hook_identity(payload, env):

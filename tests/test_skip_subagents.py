@@ -71,3 +71,10 @@ class SkipSubagentTests(unittest.TestCase):
                 self.assertEqual(0, result.returncode, result.stderr)
                 self.assertEqual('', result.stdout)
                 self.assertEqual([], list(self.cache.iterdir()))
+
+    def test_present_null_agent_id_fails_closed(self):
+        for route in ('python', 'shell', 'standalone', 'standalone-shell'):
+            for event in ('pretool', 'posttool'):
+                with self.subTest(route=route, event=event):
+                    self.assertEqual('', self.call(event, route, payload='{"agent_id":null}', PWF_SKIP_SUBAGENTS='1'))
+                    self.assertEqual([], list(self.cache.iterdir()))
