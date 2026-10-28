@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.26.0] - 2026-10-28
+
+### Added
+- Claude Code users can set `PWF_SKIP_SUBAGENTS=1` to suppress PreToolUse plan context and PostToolUse progress reminders for payloads with a non-empty raw `agent_id`. The default stays unchanged. With this opt-in, malformed payloads or an unavailable JSON parser also suppress these tool hooks to preserve isolation (#348).
+
+### Fixed
+- Codex setup copies scripts into an existing hooks directory without nesting it and preserves existing hook registrations with explicit merge instructions (PR #345, #343).
+- Copilot PreToolUse hooks emit `{}` instead of an unsupported context envelope or permission decision. Startup and post-tool plan context remain available (PR #346, #344).
+- Gemini lifecycle hooks honor `PLANNING_DISABLED=1`, including SessionEnd, before reading plans or running the completion checker (PR #347, #329).
+
+### Thanks
+- Parman Mohammadalizadeh (@MannXo), for the Codex installation and hook-merge guidance (PR #345).
+- WU Leizhi (@MbappeWU), for the Copilot PreToolUse contract correction and Gemini opt-out guards (PRs #346, #347).
+- @mfehlhaber, for reporting subagent plan-context leakage and requesting an opt-in isolation setting (#348).
+
 ## [3.25.2] - 2026-10-24
 
 ### Added
