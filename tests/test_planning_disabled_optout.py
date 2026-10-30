@@ -97,6 +97,57 @@ def run_powershell(
     )
 
 
+
+# Scratch trees under the gitignored .planning/ are not shipped (#352).
+_EXCLUDED_PARTS = {".planning", ".git", "node_modules", "__pycache__", "clawhub-upload"}
+
+
+def shipped_check_complete_copies() -> list[Path]:
+    """Tracked check-complete helpers; filtered walk only without git metadata.
+
+    A stale foreign copy under ignored `.planning/` must not fail validation
+    of the shipped inventory (#352), matching the session-catchup approach (#274).
+    """
+    copies: list[Path] = []
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-c",
+                "core.quotepath=off",
+                "ls-files",
+                "--",
+                "*check-complete.sh",
+                "*check-complete.ps1",
+            ],
+            cwd=str(REPO),
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            candidates = [REPO / line for line in proc.stdout.splitlines() if line]
+        else:
+            candidates = list(REPO.rglob("check-complete.sh")) + list(
+                REPO.rglob("check-complete.ps1")
+            )
+    except OSError:
+        candidates = list(REPO.rglob("check-complete.sh")) + list(
+            REPO.rglob("check-complete.ps1")
+        )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        if path.name not in {"check-complete.sh", "check-complete.ps1"}:
+            continue
+        relative = path.relative_to(REPO)
+        if _EXCLUDED_PARTS.intersection(relative.parts):
+            continue
+        copies.append(path)
+    return sorted(copies)
+
+
 class PlanningDisabledOptOutTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -252,19 +303,33 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
     # --- Every distributed copy carries the guard ---
 
     def test_all_check_complete_copies_carry_the_guard(self) -> None:
-        copies = list(REPO.glob("**/check-complete.sh")) + list(
-            REPO.glob("**/check-complete.ps1")
-        )
+        copies = shipped_check_complete_copies()
         self.assertGreater(len(copies), 10)
         for copy in copies:
-            if "node_modules" in copy.parts:
-                continue
             text = copy.read_text(encoding="utf-8", errors="replace")
             self.assertIn(
                 "PLANNING_DISABLED",
                 text,
                 f"missing opt-out guard: {copy.relative_to(REPO)}",
             )
+
+    def test_ignored_scratch_check_complete_does_not_join_shipped_inventory(self) -> None:
+        scratch = REPO / ".planning" / "_pwf352_scratch"
+        scratch.mkdir(parents=True, exist_ok=True)
+        bad = scratch / "check-complete.sh"
+        bad.write_text("#!/bin/sh\necho no guard\n", encoding="utf-8")
+        try:
+            copies = shipped_check_complete_copies()
+            self.assertNotIn(bad.resolve(), {c.resolve() for c in copies})
+            for copy in copies:
+                text = copy.read_text(encoding="utf-8", errors="replace")
+                self.assertIn("PLANNING_DISABLED", text)
+        finally:
+            bad.unlink(missing_ok=True)
+            try:
+                scratch.rmdir()
+            except OSError:
+                pass
 
 
 @unittest.skipUnless(POWERSHELL, "PowerShell is not available")

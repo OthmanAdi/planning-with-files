@@ -18,15 +18,47 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+_EXCLUDED_PARTS = {".git", "node_modules", "__pycache__", ".planning", "clawhub-upload"}
+
+
 def _skill_md_files(root=None):
+    """Discover SKILL.md files for validation.
+
+    Prefer the tracked inventory when ``root`` is the repository (so an ignored
+    scratch tree under ``.planning/`` cannot fail shipped validation, #352).
+    Fall back to a filtered walk for source archives without Git metadata, and
+    always walk when ``root`` is a fixture tree (hidden-adapter discovery).
+    """
     if root is None:
         root = REPO_ROOT
     else:
         root = Path(root).resolve()
     out = []
+    if root.resolve() == REPO_ROOT.resolve():
+        try:
+            proc = subprocess.run(
+                ["git", "-c", "core.quotepath=off", "ls-files", "-z", "--", "*SKILL.md"],
+                cwd=str(REPO_ROOT),
+                capture_output=True,
+                check=False,
+            )
+        except OSError:
+            proc = None
+        if proc is not None and proc.returncode == 0 and proc.stdout:
+            for rel in proc.stdout.decode("utf-8").split(chr(0)):
+                if not rel:
+                    continue
+                path = REPO_ROOT / rel
+                if path.is_file() and path.name == "SKILL.md":
+                    out.append(path)
+            if out:
+                return sorted(out)
     for p in root.rglob("SKILL.md"):
-        parts = p.parts
-        if ".git" in parts or "node_modules" in parts:
+        try:
+            relative_parts = p.relative_to(root).parts
+        except ValueError:
+            relative_parts = p.parts
+        if _EXCLUDED_PARTS.intersection(relative_parts):
             continue
         out.append(p)
     return sorted(out)
@@ -96,6 +128,25 @@ class SkillFrontmatterTests(unittest.TestCase):
             self.assertIsNotNone(
                 _description_line(fm), f"{f} frontmatter has no description:"
             )
+
+    def test_ignored_scratch_skill_does_not_join_shipped_inventory(self):
+        scratch = REPO_ROOT / ".planning" / "_pwf352_scratch"
+        scratch.mkdir(parents=True, exist_ok=True)
+        bad = scratch / "SKILL.md"
+        bad.write_text("name: scratch\n", encoding="utf-8")
+        try:
+            discovered = {p.resolve() for p in _skill_md_files()}
+            self.assertNotIn(bad.resolve(), discovered)
+            for f in discovered:
+                fm = _frontmatter(f.read_text(encoding="utf-8"))
+                self.assertIsNotNone(fm, f"{f} has no '---' frontmatter block")
+        finally:
+            bad.unlink(missing_ok=True)
+            try:
+                scratch.rmdir()
+            except OSError:
+                pass
+
 
     def test_unquoted_description_has_no_colon_space(self):
         # Dependency-free guard for the exact v3.1.2 break.
