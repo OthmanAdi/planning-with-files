@@ -2,7 +2,17 @@
 description: "Show current planning status at a glance - phases, progress, and any logged errors."
 ---
 
-Read task_plan.md from the current project directory and display a compact status summary.
+Resolve the selected task, then read `task_plan.md` from that one directory and display a compact status summary.
+
+## Resolve the Selected Task
+
+Run `sh ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plan-dir.sh` (PowerShell: `& "$env:CLAUDE_PLUGIN_ROOT\scripts\resolve-plan-dir.ps1"`):
+- A printed directory is the selected task. Read its `task_plan.md`, `findings.md`, and `progress.md`. A root `task_plan.md` must not override it.
+- Empty output with `PLAN_ID` or `PWF_PLAN_ROOT` set means the selector was rejected. Report that the pin did not resolve and read nothing else.
+- Empty output where `resolve-plan-dir.sh --check-ambiguity` (PowerShell: `-CheckAmbiguity`) prints `PWF_PLAN_AMBIGUOUS_V1` means multiple plans exist without a selector. Report that and ask the user to set `PLAN_ID=<slug>`; do not pick one.
+- Otherwise empty output is the legacy project-root convention: use the root planning files.
+
+`.planning/.active_plan` is a shared default; it does not bind a parallel session.
 
 ## What to Show
 
