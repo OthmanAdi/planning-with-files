@@ -7,7 +7,7 @@ allowed-tools: "Bash"
 Run the plan attestation helper for the active plan.
 
 Steps:
-1. Resolve the active plan: prefer `${PLAN_ID}` env var, then `.planning/.active_plan`, then newest `.planning/<dir>/`. If the current directory is itself a valid `.planning/<slug>/` directory, use its `task_plan.md`. Otherwise use legacy `./task_plan.md`.
+1. Resolve the selected plan with the installed resolver (`resolve-plan-dir.sh`, or `resolve-plan-dir.ps1`); the helper below applies the same rules. A set `${PLAN_ID}` binds that plan. Without it, multiple plans refuse selection: the helper exits with `Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.` A single plan may use `.planning/.active_plan` or the newest `.planning/<dir>/`; the shared pointer does not bind a parallel session. If the current directory is itself a valid `.planning/<slug>/` directory, use its `task_plan.md`. With no selector and no named plan, use legacy `./task_plan.md`.
 2. Compute the SHA-256 of the resolved `task_plan.md`.
 3. Write the hex digest to `.planning/<active-plan>/.attestation` (parallel-plan mode) or `./.plan-attestation` (legacy mode).
 4. Confirm to the user with the short hash (first 12 hex chars) and the storage path.

@@ -8,8 +8,12 @@ Bridge the active plan to Claude Code's `/goal` primitive.
 
 Steps:
 
-1. Resolve the active plan: prefer `${PLAN_ID}` env var, then `.planning/.active_plan`, then newest `.planning/<dir>/`, then legacy `./task_plan.md`.
-2. Read the resolved `task_plan.md`.
+1. Resolve the selected plan with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plan-dir.sh` (PowerShell: `& "$env:CLAUDE_PLUGIN_ROOT\scripts\resolve-plan-dir.ps1"`). A printed directory is the selected plan. On empty output:
+   - With `${PLAN_ID}` or `${PWF_PLAN_ROOT}` set, the selector was rejected. Refuse and ask the user to correct the pin; never fall back to another plan.
+   - If `resolve-plan-dir.sh --check-ambiguity` (PowerShell: `-CheckAmbiguity`) prints `PWF_PLAN_AMBIGUOUS_V1`, multiple plans exist without a selector. Refuse and ask the user to set `PLAN_ID=<slug>`.
+   - Otherwise use the legacy `./task_plan.md`.
+   The shared `.planning/.active_plan` pointer does not bind a parallel session.
+2. Read the selected `task_plan.md`.
 3. Derive a goal condition from the plan content:
    - Default: "all phases in task_plan.md report Status: complete and check-complete.sh reports ALL PHASES COMPLETE"
    - If user passed an argument: use that as an additional clause (e.g., `/plan-goal until all tests pass`)
