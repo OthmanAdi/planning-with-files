@@ -62,6 +62,34 @@ class CommandPlanSelectionTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertIn("does not bind a parallel session", _read(name))
 
+    def test_valid_project_pin_is_not_itself_a_rejected_plan_selector(self) -> None:
+        for name in SELECTION_COMMANDS:
+            with self.subTest(command=name):
+                body = _read(name)
+                self.assertNotIn("Empty output with `PLAN_ID` or `PWF_PLAN_ROOT` set means", body)
+                self.assertNotIn("With `${PLAN_ID}` or `${PWF_PLAN_ROOT}` set, the selector was rejected", body)
+                self.assertIn("absolute existing project root", body)
+                self.assertIn("valid root pin alone does not reject", body)
+
+    def test_creation_uses_the_validated_root(self) -> None:
+        for name in CREATION_COMMANDS:
+            with self.subTest(command=name):
+                body = _read(name)
+                initialization = next(line for line in body.splitlines() if line.startswith("Only for a new task"))
+                self.assertIn("validated project root", initialization)
+                self.assertIn("PWF_PLAN_ROOT", initialization)
+
+    def test_status_does_not_load_companion_file_bodies(self) -> None:
+        body = _read("status.md")
+        self.assertIn("Read only its `task_plan.md`", body)
+        self.assertIn("exist without loading their contents", body)
+
+    def test_attestation_forwards_target_to_helper(self) -> None:
+        body = _read("plan-attest.md")
+        self.assertIn("--target root", body)
+        self.assertIn("forward it when requested", body)
+        self.assertNotIn("Compute the SHA-256 of the resolved", body)
+
 
 if __name__ == "__main__":
     unittest.main()

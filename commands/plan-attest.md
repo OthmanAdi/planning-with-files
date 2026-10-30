@@ -7,10 +7,10 @@ allowed-tools: "Bash"
 Run the plan attestation helper for the active plan.
 
 Steps:
-1. Resolve the selected plan with the installed resolver (`resolve-plan-dir.sh`, or `resolve-plan-dir.ps1`); the helper below applies the same rules. A set `${PLAN_ID}` binds that plan. Without it, multiple plans refuse selection: the helper exits with `Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.` A single plan may use `.planning/.active_plan` or the newest `.planning/<dir>/`; the shared pointer does not bind a parallel session. If the current directory is itself a valid `.planning/<slug>/` directory, use its `task_plan.md`. With no selector and no named plan, use legacy `./task_plan.md`.
-2. Compute the SHA-256 of the resolved `task_plan.md`.
-3. Write the hex digest to `.planning/<active-plan>/.attestation` (parallel-plan mode) or `./.plan-attestation` (legacy mode).
-4. Confirm to the user with the short hash (first 12 hex chars) and the storage path.
+1. Forward the requested operation to the installed helper: `--show` or `--clear` for `attest-plan.sh`, `-Show` or `-Clear` for `attest-plan.ps1`, or no flag to attest.
+2. Let that helper resolve the selected plan and storage path. Do not reproduce its selection logic or write an attestation manually.
+3. If it reports an invalid explicit selector or multiple named plans, stop and ask for the exact `PLAN_ID`; do not substitute another task.
+4. Report the helper's result and storage path to the user, including `Multiple plans are available` when it refuses ambiguity. The shared pointer does not bind a parallel session.
 
 An explicit `${PLAN_ID}` or `${PWF_PLAN_ROOT}` that does not resolve exits with an error. It never falls back to another plan.
 
@@ -22,5 +22,6 @@ Implementation:
 Flags:
 - `--show` — print the currently stored hash and where it lives.
 - `--clear` — remove the attestation (re-open the plan to free editing).
+- Shell `--target root` or `--target <plan-id>` selects an explicit attestation target for this call; forward it when requested. PowerShell has `-Show` and `-Clear`, but no `-Target` parameter.
 
-After running this command, every UserPromptSubmit and PreToolUse hook fire compares `task_plan.md` against the stored hash. If they diverge, the hook emits `[PLAN TAMPERED — injection blocked]` instead of feeding plan content into the model. Re-run `/plan-attest` whenever you intentionally edit and re-approve the plan.
+After running an attestation, every UserPromptSubmit and PreToolUse hook fire compares `task_plan.md` against the stored hash. If they diverge, the hook emits `[PLAN TAMPERED — injection blocked]` instead of feeding plan content into the model. Re-run `/plan-attest` whenever you intentionally edit and re-approve the plan.

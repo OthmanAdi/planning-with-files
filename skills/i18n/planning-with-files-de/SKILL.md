@@ -244,6 +244,9 @@ Automatisierungshilfsskripte:
 
 ### Gespeicherte Pläne auflisten
 
+
+Für Agenten: Ergänze beim Auflisten `--json` (PowerShell: `-Json`), um Dateipfade, Phasenstatus und Auswahlgrenzen strukturiert zu erhalten. Das Schema und eine kurze Übergabe an weitere Agenten stehen in [plan-inventory.md](plan-inventory.md). Diese optionale Abfrage läuft beim normalen Aktivieren des Skills nicht.
+
 Um eine Aufgabe vor dem Fortsetzen zu finden, führe `sh "<skill-dir>/scripts/set-active-plan.sh" --list` aus, unter Windows PowerShell `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Ersetze `<skill-dir>` durch das Installationsverzeichnis dieses Skills und bleibe im Projektstamm als aktuellem Arbeitsverzeichnis.
 
 Der Befehl liest nur und zeigt benannte Pläne samt Phasenfortschritt unter `.planning/` im aktuellen Arbeitsverzeichnis. `[active]` kennzeichnet den gemeinsamen Standardzeiger; er bindet keine Sitzung an einen Plan. Parallele Aufgaben benötigen weiterhin eine eigene `PLAN_ID` pro Host oder getrennte Worktrees.

@@ -247,6 +247,9 @@ if 操作失敗:
 
 ### 列出已儲存的計畫
 
+
+為代理提供結構化路徑和狀態時，在清單命令後加入 `--json`（PowerShell：`-Json`）。欄位說明與代理任務交接範例見 [plan-inventory.md](plan-inventory.md)。此查詢是可選操作，正常啟用技能時不會自動執行。
+
 恢復任務前，可執行 `sh "<skill-dir>/scripts/set-active-plan.sh" --list` 尋找計畫；在 Windows PowerShell 中執行 `& "<skill-dir>/scripts/set-active-plan.ps1" -List`。將 `<skill-dir>` 替換為此技能的安裝目錄，並將目前工作目錄保持在專案根目錄。
 
 此命令僅執行讀取，列出目前目錄下 `.planning/` 中的具名計畫及階段進度。`[active]` 表示共用的預設指標，不會將工作階段綁定至計畫。平行任務仍需為每個宿主設定 `PLAN_ID`，或使用獨立的工作樹。

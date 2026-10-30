@@ -251,6 +251,9 @@ Scripts auxiliares de automatización:
 
 ### Listar planes guardados
 
+
+Para agentes, añade `--json` (PowerShell: `-Json`) al comando de listado para obtener rutas, estado y límites de selección. Consulta el esquema y la asignación a otro agente en [plan-inventory.md](plan-inventory.md). Esta consulta opcional no se ejecuta al activar el skill normalmente.
+
 Para encontrar una tarea antes de retomarla, ejecuta `sh "<skill-dir>/scripts/set-active-plan.sh" --list` o, en Windows PowerShell, `& "<skill-dir>/scripts/set-active-plan.ps1" -List`. Sustituye `<skill-dir>` por el directorio de instalación de este skill y mantén la raíz del proyecto como directorio de trabajo actual.
 
 Este comando de solo lectura muestra los planes con nombre y el progreso de sus fases en `.planning/` del directorio actual. `[active]` marca el puntero predeterminado compartido; no vincula una sesión a un plan. Las tareas simultáneas siguen necesitando una `PLAN_ID` por host o árboles de trabajo separados.

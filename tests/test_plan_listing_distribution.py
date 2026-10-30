@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import json
 import runpy
 import shutil
 import subprocess
@@ -45,9 +46,27 @@ def test_listing_helpers_are_shipped_and_synced(manifest_key, relative_scripts):
             assert ROOT / target == shipped
 
 
+@pytest.mark.parametrize("manifest_key,relative_scripts", SURFACES)
+def test_json_listing_reference_is_installed_and_discoverable(manifest_key, relative_scripts):
+    if manifest_key == ".":
+        return  # root scripts are dev/plugin entry points, not an installed skill
+    skill_root = (ROOT / relative_scripts).parent
+    if manifest_key == "canonical":
+        reference = ROOT / "skills/planning-with-files/plan-inventory.md"
+    else:
+        reference = ROOT / MANIFESTS[manifest_key]["plan-inventory.md"]
+    assert reference.read_bytes() == (ROOT / "skills/planning-with-files/plan-inventory.md").read_bytes()
+    skill = skill_root / "SKILL.md"
+    text = skill.read_text(encoding="utf-8")
+    assert "--json" in text and "plan-inventory.md" in text
+    relative_reference = reference.relative_to(skill_root).as_posix()
+    assert f"]({relative_reference})" in text
+
+
 @pytest.mark.parametrize("ide", (".hermes", ".mastracode", ".opencode"))
 @pytest.mark.parametrize("runtime", RUNTIMES, ids=lambda runtime: runtime[0])
-def test_listing_runs_without_sibling_scripts(ide, runtime, tmp_path):
+@pytest.mark.parametrize("structured", [False, True], ids=["text", "json"])
+def test_listing_runs_without_sibling_scripts(ide, runtime, tmp_path, structured):
     """Partial script bundles must remain usable from the project directory."""
     name, executable = runtime
     if executable is None:
@@ -75,12 +94,21 @@ def test_listing_runs_without_sibling_scripts(ide, runtime, tmp_path):
     env = os.environ.copy()
     for key in ("PLAN_ID", "PWF_PLAN_ROOT", "PLANNING_DISABLED"):
         env.pop(key, None)
+    if structured:
+        command.append("--json" if name == "sh" else "-Json")
     result = subprocess.run(
         command, cwd=project, env=env, text=True, encoding="utf-8",
         errors="replace", capture_output=True, check=False, timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert not result.stderr.strip(), result.stderr
+    if structured:
+        report = json.loads(result.stdout)
+        assert report["selection"]["status"] == "unknown"
+        assert report["host_session"] is None
+        assert report["candidates"][0]["plan_id"] == "alpha"
+        assert report["candidates"][0]["phases"]["complete"] == 1
+        return
     assert "alpha" in result.stdout
     assert "[active]" in result.stdout
     assert "1/2 complete, 0 in_progress, 1 pending" in result.stdout

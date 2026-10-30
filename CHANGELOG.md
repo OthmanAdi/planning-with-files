@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Agent-readable inventory through `set-active-plan.sh --list --json` and PowerShell `-List -Json`, with root and named plan paths, phase metadata, explicit selection uncertainty and bounded paging. Existing text listing and activation behavior remain unchanged (#349).
+
+### Fixed
+- Claude plugin commands restore the selected task, preserve existing files, use the bundled initializer and validate explicit plan paths. Ambiguous or rejected selectors cannot silently select another task; valid pinned legacy roots remain usable (PR #351, #350).
+
+### Thanks
+- Dylan Duan (@Kiddo4993), for aligning plugin command prompts with plan selection and adding command-contract checks (PR #351).
+
 ## [3.26.0] - 2026-10-28
 
 ### Added

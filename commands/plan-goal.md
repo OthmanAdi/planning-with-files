@@ -8,14 +8,14 @@ Bridge the active plan to Claude Code's `/goal` primitive.
 
 Steps:
 
-1. Resolve the selected plan with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plan-dir.sh` (PowerShell: `& "$env:CLAUDE_PLUGIN_ROOT\scripts\resolve-plan-dir.ps1"`). A printed directory is the selected plan. On empty output:
-   - With `${PLAN_ID}` or `${PWF_PLAN_ROOT}` set, the selector was rejected. Refuse and ask the user to correct the pin; never fall back to another plan.
+1. Validate `${PWF_PLAN_ROOT}` as an absolute existing project root when set; refuse an invalid root pin. Otherwise use cwd as the project root. Resolve the selected plan with `sh ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plan-dir.sh` (PowerShell: `& "$env:CLAUDE_PLUGIN_ROOT\scripts\resolve-plan-dir.ps1"`). A printed directory is the selected plan. On empty output:
+   - With non-empty `${PLAN_ID}`, the plan selector was rejected. Refuse and ask the user to correct the pin; never fall back to another plan.
    - If `resolve-plan-dir.sh --check-ambiguity` (PowerShell: `-CheckAmbiguity`) prints `PWF_PLAN_AMBIGUOUS_V1`, multiple plans exist without a selector. Refuse and ask the user to set `PLAN_ID=<slug>`.
-   - Otherwise use the legacy `./task_plan.md`.
+   - Otherwise use legacy `task_plan.md` from the validated project root (`PWF_PLAN_ROOT` when set), if it exists. A valid root pin alone does not reject a legacy root plan.
    The shared `.planning/.active_plan` pointer does not bind a parallel session.
-2. Read the selected `task_plan.md`.
+2. Read the selected `task_plan.md` and retain its absolute path for the goal condition and completion check.
 3. Derive a goal condition from the plan content:
-   - Default: "all phases in task_plan.md report Status: complete and check-complete.sh reports ALL PHASES COMPLETE"
+   - Default: "all phases in the selected task_plan.md report Status: complete and check-complete.sh with that explicit plan path reports ALL PHASES COMPLETE"
    - If user passed an argument: use that as an additional clause (e.g., `/plan-goal until all tests pass`)
 4. Issue Claude Code's `/goal <condition>` with the derived text.
 5. Confirm to the user: print the goal condition + the active plan ID + remind that `/goal clear` cancels.

@@ -41,6 +41,7 @@ TEMPLATES = [
 REFERENCES = [
     "examples.md",
     "reference.md",
+    "plan-inventory.md",
 ]
 
 SCRIPTS = [
@@ -226,7 +227,7 @@ IDE_MANIFESTS = {
         ".factory/skills/planning-with-files",
         ref_style="skip",  # Uses combined references.md, not synced
         include_scripts=True,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS,
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + ["plan-inventory.md"],
     ),
 
     ".opencode": _build_manifest(
@@ -243,7 +244,7 @@ IDE_MANIFESTS = {
         ref_style="skip",
         template_dirs=[],
         include_scripts=False,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS,
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS + ["plan-inventory.md"],
     ),
 
     # Hermes owns its Python lifecycle adapter and its skill bundle. Only
@@ -253,7 +254,7 @@ IDE_MANIFESTS = {
         ref_style="skip",
         template_dirs=[],
         include_scripts=False,
-        extra_scripts=LISTING_SCRIPTS,
+        extra_scripts=LISTING_SCRIPTS + ["plan-inventory.md"],
     ),
 
     # Kiro: maintained under .kiro/ (skill + wrappers); not synced from canonical scripts/.
@@ -307,7 +308,7 @@ for _lang in ("ar", "de", "es", "zh", "zht"):
         ref_style="skip",
         template_dirs=[],
         include_scripts=False,
-        extra_scripts=LANG_EXTRA_SCRIPTS,
+        extra_scripts=LANG_EXTRA_SCRIPTS + ["plan-inventory.md"],
     )
 
 

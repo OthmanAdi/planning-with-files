@@ -107,6 +107,9 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[Dylan Duan](https://github.com/Kiddo4993)** — [PR #351](https://github.com/OthmanAdi/planning-with-files/pull/351)
+  - Aligned Claude plugin commands with selected-plan, initialization and validation contracts, with focused command checks.
+
 - **[Thanut Jongteerathanachote](https://github.com/winxtxrgit)**, [PR #340](https://github.com/OthmanAdi/planning-with-files/pull/340)
   - Corrected startup and post-tool context output for the current Copilot harness, with schema, Unicode and disabled-hook regression coverage.
 
@@ -510,6 +513,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 110 (109 community contributors plus the maintainer)
+**Total Contributors:** 111 (110 community contributors plus the maintainer)
 
-*Last updated: 2026-10-28*
+*Last updated: 2026-10-30*

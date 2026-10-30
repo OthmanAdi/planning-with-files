@@ -177,18 +177,20 @@ is_within_root() {
 # over an inline heading marker. Fenced examples and unrelated sections are
 # not phases. Keep this parser aligned with the PowerShell helper.
 phase_status() {
-    awk '
+    awk -v output="${2:-text}" '
         function finish() {
             if (phase) {
                 status = primary != "" ? primary : inline_status
+                if (primary_count > 1) malformed = 1
                 if (status == "complete") complete++
                 else if (status == "in_progress") in_progress++
                 else if (status == "pending") pending++
             }
-            phase = 0; primary = ""; inline_status = ""
+            phase = 0; primary = ""; inline_status = ""; primary_count = 0
         }
         {
             line = $0
+            if (NR == 1 && output == "json") sub(/^\357\273\277/, "", line)
             sub(/\r$/, "", line)
             trimmed = line
             sub(/^ */, "", trimmed)
@@ -207,15 +209,21 @@ phase_status() {
                     inline_status = substr(line, RSTART + 1, RLENGTH - 2)
             } else if (line ~ /^ ? ? ?(###|##|#)([ \t]|$)/) {
                 finish()
-            } else if (phase && primary == "" && line ~ /^ ? ? ?(-[ \t]+)?\*\*(Status:|Estado:|الحالة:|状态：|狀態：)\*\*[ \t]+(complete|in_progress|pending)([ \t]|$)/) {
+            } else if (phase && line ~ /^ ? ? ?(-[ \t]+)?\*\*(Status:|Estado:|الحالة:|状态：|狀態：)\*\*[ \t]+(complete|in_progress|pending)([ \t]|$)/) {
+                primary_count++
                 sub(/^ ? ? ?(-[ \t]+)?\*\*(Status:|Estado:|الحالة:|状态：|狀態：)\*\*[ \t]+/, "", line)
                 sub(/[ \t].*$/, "", line)
-                primary = line
+                if (primary == "") primary = line
+            } else if (phase && line ~ /^ ? ? ?(-[ \t]+)?\*\*(Status:|Estado:|الحالة:|状态：|狀態：)\*\*/) {
+                malformed = 1
             }
         }
         END {
             finish()
-            printf "%d/%d complete, %d in_progress, %d pending", complete, total, in_progress, pending
+            if (output == "json") {
+                state = total == 0 ? "empty" : ((malformed || total != complete + in_progress + pending) ? "malformed" : "parsed")
+                printf "{\"status\":\"%s\",\"total\":%d,\"complete\":%d,\"in_progress\":%d,\"pending\":%d}", state, total, complete, in_progress, pending
+            } else printf "%d/%d complete, %d in_progress, %d pending", complete, total, in_progress, pending
         }
     ' < "$1"
 }
@@ -294,6 +302,178 @@ list_plans() {
     fi
 }
 
+# JSON is an explicit read-only listing mode. Keep all of its work outside the
+# existing text/selection paths, including interpreter and resolver discovery.
+json_string() {
+    printf '%s' "$1" | LC_ALL=C awk '
+        BEGIN { printf "\""; for (i=1; i<32; i++) escape[sprintf("%c",i)] = sprintf("\\u%04x",i) }
+        { if (NR>1) printf "\\n"; for (i=1; i<=length($0); i++) {
+            c=substr($0,i,1)
+            if (c=="\\") printf "\\\\"
+            else if (c=="\"") printf "\\\""
+            else if (c in escape) printf "%s",escape[c]
+            else printf "%s",c
+        }} END { printf "\"" }
+    '
+}
+
+file_metadata() {
+    _jf_path="$1"; _jf_display="$2"; _jf_state=missing; _jf_mtime=null
+    if [ -L "$_jf_path" ]; then _jf_state=excluded
+    elif [ -e "$_jf_path" ]; then
+        if [ ! -f "$_jf_path" ] || ! is_within_root "$_jf_path"; then _jf_state=excluded
+        elif [ ! -r "$_jf_path" ]; then _jf_state=unreadable
+        else
+            _jf_state=readable
+            _jf_mtime=$(stat -c %Y "$_jf_path" 2>/dev/null || stat -f %m "$_jf_path" 2>/dev/null) || _jf_mtime=null
+            case "$_jf_mtime" in ''|*[!0-9]*) _jf_mtime=null ;; esac
+        fi
+    fi
+    printf '{"path":%s,"status":"%s","modified_at":%s}' "$(json_string "$_jf_display")" "$_jf_state" "$_jf_mtime"
+}
+
+json_phases() {
+    _jp_file="$1"
+    if [ -L "$_jp_file" ] || [ ! -f "$_jp_file" ] || [ ! -r "$_jp_file" ] || ! is_within_root "$_jp_file"; then
+        printf '{"status":"unavailable","total":0,"complete":0,"in_progress":0,"pending":0}'; return
+    fi
+    _jp_bytes=$(stat -c %s "$_jp_file" 2>/dev/null || stat -f %z "$_jp_file" 2>/dev/null) || _jp_bytes=''
+    case "$_jp_bytes" in ''|*[!0-9]*) _jp_bytes=262145 ;; esac
+    if [ "$_jp_bytes" -gt 262144 ]; then
+        printf '{"status":"too_large","total":0,"complete":0,"in_progress":0,"pending":0}'; return
+    fi
+    phase_status "$_jp_file" json
+}
+
+json_candidate() {
+    _jc_dir="$1"; _jc_display="$2"; _jc_id="$3"; _jc_kind="$4"
+    if [ "$_jc_kind" = root ]; then _jc_id_json=null; else _jc_id_json=$(json_string "$_jc_id"); fi
+    printf '{"kind":"%s","plan_id":%s,"ownership":"unknown","files":{' "$_jc_kind" "$_jc_id_json"
+    _jc_comma=''
+    for _jc_pair in task_plan:task_plan.md findings:findings.md progress:progress.md; do
+        _jc_key=${_jc_pair%%:*}; _jc_name=${_jc_pair#*:}
+        printf '%s"%s":%s' "$_jc_comma" "$_jc_key" "$(file_metadata "$_jc_dir/$_jc_name" "$_jc_display/$_jc_name")"
+        _jc_comma=,
+    done
+    printf '},"phases":%s}' "$(json_phases "$_jc_dir/task_plan.md")"
+}
+
+json_selection() {
+    _js_status=unknown; _js_id=null
+    # Listing scope stays cwd. Do not inspect another pinned project's plans.
+    if [ -n "${PWF_PLAN_ROOT:-}" ]; then
+        case "$PWF_PLAN_ROOT" in
+            \\\\*|//*|[A-Za-z]:[!\\/]*|[!/]*)
+                case "$PWF_PLAN_ROOT" in [A-Za-z]:[\\/]*) : ;; *) printf '{"status":"rejected","plan_id":null}'; return ;; esac ;;
+        esac
+        if [ ! -d "$PWF_PLAN_ROOT" ]; then printf '{"status":"rejected","plan_id":null}'; return; fi
+        _js_pin=$(canonicalize "$PWF_PLAN_ROOT") || _js_pin=''
+        norm_slashes "$_js_pin"; _js_pin="$NORM_OUT"
+        if [ "$_js_pin" != "$JSON_PHYSICAL_ROOT" ] && ! [ "$PWF_PLAN_ROOT" -ef . ] 2>/dev/null; then printf '{"status":"outside_scope","plan_id":null}'; return; fi
+    fi
+    if [ -L "$PLAN_ROOT" ] || { [ -d "$PLAN_ROOT" ] && ! is_within_root "$PLAN_ROOT"; }; then
+        _js_status=unknown
+        [ -z "${PLAN_ID:-}" ] || _js_status=rejected
+        printf '{"status":"%s","plan_id":null}' "$_js_status"; return
+    fi
+    _js_resolver="$(dirname "$0")/resolve-plan-dir.sh"
+    if [ -z "${PLAN_ID:-}" ] && [ -f "$ACTIVE_FILE" ]; then
+        _js_pointer_bytes=$(stat -c %s "$ACTIVE_FILE" 2>/dev/null || stat -f %z "$ACTIVE_FILE" 2>/dev/null) || _js_pointer_bytes=9999
+        if [ "$_js_pointer_bytes" -gt 256 ]; then printf '{"status":"unknown","plan_id":null}'; return; fi
+    fi
+    if [ -f "$_js_resolver" ]; then
+        _js_dir=$(sh "$_js_resolver" 2>/dev/null) || _js_dir=''
+        if [ -n "$_js_dir" ]; then
+            norm_slashes "$_js_dir"; _js_dir="$NORM_OUT"
+            _js_status=selected; _js_id=$(json_string "${_js_dir##*/}")
+        elif [ "$(sh "$_js_resolver" --check-ambiguity 2>/dev/null)" = PWF_PLAN_AMBIGUOUS_V1 ]; then _js_status=ambiguous
+        elif [ -n "${PLAN_ID:-}" ]; then _js_status=rejected
+        elif [ -f task_plan.md ] && [ ! -L task_plan.md ] && is_within_root task_plan.md; then _js_status=legacy_root
+        elif [ -n "${PWF_PLAN_ROOT:-}" ]; then _js_status=rejected
+        else _js_status=none
+        fi
+    fi
+    printf '{"status":"%s","plan_id":%s}' "$_js_status" "$_js_id"
+}
+
+json_add_candidate() {
+    if [ "$JSON_INDEX" -lt "$JSON_OFFSET" ]; then JSON_INDEX=$((JSON_INDEX + 1)); return 0; fi
+    if [ "$JSON_RETURNED" -ge "$JSON_LIMIT" ]; then JSON_TRUNCATED=true; JSON_NEXT=$JSON_INDEX; return 1; fi
+    _ja_row=$(json_candidate "$1" "$2" "$3" "$4")
+    _ja_size=$(printf '%s' "$_ja_row" | LC_ALL=C wc -c)
+    if [ $((JSON_USED + _ja_size + 1)) -gt "$JSON_BUDGET" ]; then
+        JSON_TRUNCATED=true; JSON_NEXT=$JSON_INDEX
+        if [ "$JSON_RETURNED" -eq 0 ]; then
+            JSON_SKIPPED=$((JSON_SKIPPED + 1)); JSON_NEXT=$((JSON_INDEX + 1))
+        fi
+        return 1
+    fi
+    JSON_ROWS="${JSON_ROWS}${JSON_COMMA}${_ja_row}"; JSON_COMMA=,
+    JSON_USED=$((JSON_USED + _ja_size + 1)); JSON_RETURNED=$((JSON_RETURNED + 1)); JSON_INDEX=$((JSON_INDEX + 1))
+}
+
+list_plans_json() {
+    JSON_PHYSICAL_ROOT=$(canonicalize .) || { printf '{"schema_version":1,"error":"unresolved_project_root"}\n'; return 1; }
+    norm_slashes "$JSON_PHYSICAL_ROOT"; JSON_PHYSICAL_ROOT=$NORM_OUT
+    JSON_PROJECT=$JSON_PHYSICAL_ROOT
+    if [ -x /usr/bin/cygpath.exe ]; then JSON_PROJECT=$(/usr/bin/cygpath.exe -am "$JSON_PROJECT"); fi
+    _jl_pointer=null; _jl_pointer_state=missing
+    if [ -L "$ACTIVE_FILE" ]; then _jl_pointer_state=excluded
+    elif [ -e "$ACTIVE_FILE" ]; then
+        _jl_pointer_state=invalid
+        if [ -f "$ACTIVE_FILE" ] && [ -r "$ACTIVE_FILE" ] && is_within_root "$ACTIVE_FILE"; then
+            _jl_bytes=$(stat -c %s "$ACTIVE_FILE" 2>/dev/null || stat -f %z "$ACTIVE_FILE" 2>/dev/null) || _jl_bytes=9999
+            if [ "$_jl_bytes" -le 256 ]; then
+                _jl_active=$(current_active)
+                if [ -n "$_jl_active" ]; then
+                    _jl_pointer=$(json_string "$_jl_active"); _jl_pointer_state=dangling
+                    if [ ! -L "$PLAN_ROOT/$_jl_active" ] && [ ! -L "$PLAN_ROOT/$_jl_active/task_plan.md" ] && [ -f "$PLAN_ROOT/$_jl_active/task_plan.md" ] && is_within_root "$PLAN_ROOT/$_jl_active/task_plan.md"; then _jl_pointer_state=present; fi
+                fi
+            fi
+        fi
+    fi
+    _jl_header="{\"schema_version\":1,\"scope\":{\"project_root\":$(json_string "$JSON_PROJECT"),\"source\":\"cwd\"},\"shared_default\":{\"plan_id\":${_jl_pointer},\"status\":\"${_jl_pointer_state}\"},\"selection\":$(json_selection),\"host_session\":null,\"candidates\":["
+    _jl_header_size=$(printf '%s' "$_jl_header" | LC_ALL=C wc -c)
+    JSON_BUDGET=$((16383 - _jl_header_size - 512))
+    JSON_ROWS=''; JSON_COMMA=''; JSON_INDEX=0; JSON_RETURNED=0; JSON_USED=0; JSON_SKIPPED=0; JSON_NEXT=null; JSON_TRUNCATED=false
+    if [ "$JSON_BUDGET" -lt 0 ]; then printf '{"schema_version":1,"error":"project_path_exceeds_output_limit"}\n'; return 1; fi
+    _jl_continue=1
+    if [ -e task_plan.md ] || [ -L task_plan.md ] || [ -e findings.md ] || [ -e progress.md ]; then
+        json_add_candidate . "$JSON_PROJECT" '' root || _jl_continue=0
+    fi
+    if [ "$_jl_continue" = 1 ] && [ -d "$PLAN_ROOT" ]; then
+        if [ -L "$PLAN_ROOT" ] || ! is_within_root "$PLAN_ROOT"; then JSON_SKIPPED=$((JSON_SKIPPED + 1))
+        else
+            # Slugs are ASCII. C locale gives the same ordering as PS ordinal.
+            LC_ALL=C; export LC_ALL
+            for _jl_dir in "$PLAN_ROOT"/*; do
+                [ -d "$_jl_dir" ] || [ -L "$_jl_dir" ] || continue
+                _jl_id=${_jl_dir##*/}; slug_is_valid "$_jl_id" || continue
+                if [ -L "$_jl_dir" ] || [ -L "$_jl_dir/task_plan.md" ] || ! is_within_root "$_jl_dir"; then JSON_SKIPPED=$((JSON_SKIPPED + 1)); continue; fi
+                [ -f "$_jl_dir/task_plan.md" ] || continue
+                json_add_candidate "$_jl_dir" "$JSON_PROJECT/.planning/$_jl_id" "$_jl_id" named || break
+            done
+        fi
+    fi
+    printf '%s%s],"limits":{"limit":%s,"offset":%s,"returned":%s,"truncated":%s,"next_offset":%s,"skipped":%s},"warnings":[' "$_jl_header" "$JSON_ROWS" "$JSON_LIMIT" "$JSON_OFFSET" "$JSON_RETURNED" "$JSON_TRUNCATED" "$JSON_NEXT" "$JSON_SKIPPED"
+    [ "$JSON_SKIPPED" -eq 0 ] || printf '"linked_unsafe_or_oversized_entries_skipped"'
+    printf ']}\n'
+}
+
+case "${1:-}:${2:-}" in
+    --list:--json|-l:--json)
+        shift 2; JSON_LIMIT=20; JSON_OFFSET=0
+        while [ "$#" -gt 0 ]; do
+            [ "$#" -ge 2 ] || { printf '%s\n' 'Error: a listing option needs an integer value.' >&2; exit 1; }
+            case "$2" in ''|*[!0-9]*|0[0-9]*) printf '%s\n' 'Error: listing bounds must be decimal integers.' >&2; exit 1 ;; esac
+            [ "${#2}" -le 6 ] || { printf '%s\n' 'Error: listing bound is too large.' >&2; exit 1; }
+            case "$1" in --limit) JSON_LIMIT=$2 ;; --offset) JSON_OFFSET=$2 ;; *) printf '%s\n' 'Error: unknown JSON listing option.' >&2; exit 1 ;; esac
+            shift 2
+        done
+        [ "$JSON_LIMIT" -ge 1 ] && [ "$JSON_LIMIT" -le 100 ] || { printf '%s\n' 'Error: limit must be between 1 and 100.' >&2; exit 1; }
+        list_plans_json; exit $? ;;
+esac
+
 if [ "$#" -gt 1 ]; then
     printf '%s\n' 'Error: list plans, verify the root, or set PLAN_ID in separate calls.' >&2
     exit 1
@@ -305,6 +485,7 @@ case "${1:-}" in
     --help|-h)
         printf '%s\n' 'Usage: set-active-plan.sh [--list|--verify-root|PLAN_ID]' \
             'Lists saved named plans in the current project without selecting a plan.' \
+            '--list --json [--limit 1..100] [--offset N] emits bounded metadata, including root files.' \
             '--verify-root checks the planning root and pointer without listing or selecting.'
         exit 0 ;;
 esac
