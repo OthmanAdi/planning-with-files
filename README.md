@@ -245,6 +245,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.27.0** | Adds optional agent-readable plan inventory (`--list --json` / `-List -Json`) with paths, phase metadata, selection uncertainty and bounded paging; aligns Claude plugin commands with selected-plan and initializer contracts (#349, #350, PR #351). |
 | **v3.26.0** | Adds opt-in Claude Code subagent tool-hook isolation (`PWF_SKIP_SUBAGENTS=1`); fixes Codex setup, Copilot PreToolUse output and Gemini lifecycle opt-out (PRs #345, #346, #347; #348). |
 | **v3.25.2** | Plan creation through the initializer and explicit format validation; Copilot context schema and Cursor selection/install fixes; optional skill-lens resume evaluation (PRs #338, #340, #341, #342). |
 | **v3.25.1** | OpenCode reports current attestation validity; DSH preserves the `PLAN_ID` selection notice. Adds an optional skill-lens evaluation with documented limits and contributor-reported measurements (PRs #331, #333, #334). |
@@ -517,6 +518,8 @@ Per-platform setup guides, discovery paths and sandbox runtimes are in the colla
 The contract and the `.mode` tokens are specified in the skill itself ([SKILL.md, Autonomous and Gated Modes](skills/planning-with-files/SKILL.md#autonomous-and-gated-modes-v3)) and in [docs/long-running-agent-tasks.md](docs/long-running-agent-tasks.md).
 
 To find a saved plan, run the installed `scripts/set-active-plan.sh --list` helper from your project directory, or `scripts/set-active-plan.ps1 -List` in PowerShell. It lists named plans under that project's `.planning/` directory, with phase counts for the shipped English and translated templates. `[active]` marks the shared default pointer. Listing does not select a plan or attach a session; use the displayed ID as `PLAN_ID` before starting a concurrent task. Kiro's separate `.kiro/plan` layout is not part of this inventory.
+
+For agent-readable paths and state, add `--json` (PowerShell: `-Json`). The read-only response includes root and named triplets, missing/unreadable files, phase parse status, and the shared default separately from process-visible selection. Results are paged and capped at 16 KiB; this query does not run during ordinary activation. See the [inventory schema and worker handoff](skills/planning-with-files/plan-inventory.md).
 
 ## How It Works
 

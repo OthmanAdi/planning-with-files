@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.27.0] - 2026-10-30
+
 ### Added
 - Agent-readable inventory through `set-active-plan.sh --list --json` and PowerShell `-List -Json`, with root and named plan paths, phase metadata, explicit selection uncertainty and bounded paging. Existing text listing and activation behavior remain unchanged (#349).
 
