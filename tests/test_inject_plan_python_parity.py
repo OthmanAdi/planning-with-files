@@ -352,6 +352,21 @@ class InjectorParityTests(ParityCase):
         self.assert_parity(extra={"PWF_SESSION_ID": "legacy-session", "PLAN_ID": "plan-b"},
                            expect={"userprompt": "Task Plan: plan-b"})
 
+    def test_ambiguity_notices_point_at_plan_archiving(self):
+        # #355: an agent cannot set PLAN_ID for the hook process, but it can
+        # archive finished plans until one remains, so both notices name that.
+        hint = b"nothing injected. Finished plans can be archived with set-active-plan --archive <slug>.\n"
+        self.slug("plan-a")
+        self.slug("plan-b")
+        unarmed = self.assert_parity(contexts=("userprompt",))["userprompt"]
+        self.assertTrue(unarmed.endswith(hint), unarmed)
+        sessions = self.project / ".planning" / "sessions"
+        sessions.mkdir()
+        write(sessions / "legacy-session.attached", "")
+        armed = self.assert_parity(contexts=("userprompt",), extra={"PWF_SESSION_ID": "legacy-session"},
+                                   expect={"userprompt": "while session isolation is armed"})["userprompt"]
+        self.assertTrue(armed.endswith(hint), armed)
+
     def test_linked_plan_directory_never_counts_as_a_second_plan(self):
         # #270: a symlinked or junctioned plan directory is not selectable, so
         # the several-plans counter skips it on both implementations.

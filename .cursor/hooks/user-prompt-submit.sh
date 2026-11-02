@@ -14,7 +14,7 @@ cursor_resolve_plan_context "${HOOK_DIR}"
 if [ -z "${CURSOR_PLAN_DIR}" ]; then
     case "${CURSOR_PLAN_STATUS}" in
         ambiguous)
-            echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected." ;;
+            echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>." ;;
         invalid-pin)
             echo "[planning-with-files] PWF_PLAN_ROOT is not a supported absolute local directory: ${CURSOR_PLAN_DETAIL} — nothing injected." ;;
         invalid-plan-id)

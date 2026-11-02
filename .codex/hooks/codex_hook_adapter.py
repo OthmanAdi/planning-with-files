@@ -18,7 +18,8 @@ _SAFE_LEGACY_SESSION_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _PLAN_SLUG = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]*\Z")
 SESSION_PLAN_BINDING_NOTICE = (
     "[planning-with-files] Multiple plans are available. "
-    "Set PLAN_ID=<slug> for this session; nothing injected."
+    "Set PLAN_ID=<slug> for this session; nothing injected. "
+    "Finished plans can be archived with set-active-plan --archive <slug>."
 )
 _DARWIN_SYSTEM_ALIASES = {
     Path("/var"): Path("/private/var"),

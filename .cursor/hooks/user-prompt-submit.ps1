@@ -18,7 +18,7 @@ if (-not $PlanContext.Directory) {
     # One notice per failure, worded like inject-plan.sh, which owns the rule.
     switch ($PlanContext.Status) {
         'ambiguous' {
-            Write-Output "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
+            Write-Output "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>."
         }
         'invalid-pin' {
             Write-Output "[planning-with-files] PWF_PLAN_ROOT is not a supported absolute local directory: $($PlanContext.Detail) — nothing injected."

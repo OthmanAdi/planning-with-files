@@ -165,7 +165,7 @@ case "$PWF_SESSION_ADMISSION" in
 esac
 
 if [ "$PLAN_AMBIGUOUS" = "1" ]; then
-    echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
+    echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>."
     exit 0
 fi
 
@@ -196,7 +196,7 @@ if [ "$SESSION_ATTACHED" = "1" ] && [ -z "${PLAN_ID:-}" ]; then
         [ "$SESSION_PLAN_N" -gt 1 ] && break
     done
     if [ "$SESSION_PLAN_N" -gt 1 ]; then
-        echo "[planning-with-files] Multiple plans are available while session isolation is armed. Set PLAN_ID=<slug> for this session; nothing injected."
+        echo "[planning-with-files] Multiple plans are available while session isolation is armed. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>."
         exit 0
     fi
 fi

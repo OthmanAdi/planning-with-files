@@ -273,7 +273,7 @@ if [ -z "${PLAN_ID:-}" ]; then
 fi
 if [ "$PLAN_AMBIGUOUS" = "1" ] && { [ "$CONTEXT" = "preflight" ] || [ ! -d "${PLAN_PREFIX}.planning/sessions" ]; }; then
     if [ "$CONTEXT" = "userprompt" ]; then
-        echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected."
+        echo "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>."
     fi
     exit 0
 fi
@@ -484,7 +484,7 @@ PY
     # attachment-first notice above for sessions that never opted in.
     if [ "$PLAN_AMBIGUOUS" = "1" ]; then
         if [ "$CONTEXT" = "userprompt" ]; then
-            echo "[planning-with-files] Multiple plans are available while session isolation is armed. Set PLAN_ID=<slug> for this session; nothing injected."
+            echo "[planning-with-files] Multiple plans are available while session isolation is armed. Set PLAN_ID=<slug> for this session; nothing injected. Finished plans can be archived with set-active-plan --archive <slug>."
         fi
         exit 0
     fi

@@ -978,7 +978,8 @@ class Injector(object):
             if context == "userprompt":
                 self.echo(
                     "[planning-with-files] Multiple plans are available. Set PLAN_ID=<slug> "
-                    "for this session; nothing injected."
+                    "for this session; nothing injected. Finished plans can be archived "
+                    "with set-active-plan --archive <slug>."
                 )
             raise Bail()
         if plan_id:
@@ -1077,7 +1078,8 @@ class Injector(object):
                     self.echo(
                         "[planning-with-files] Multiple plans are available while session "
                         "isolation is armed. Set PLAN_ID=<slug> for this session; nothing "
-                        "injected."
+                        "injected. Finished plans can be archived with set-active-plan "
+                        "--archive <slug>."
                     )
                 raise Bail()
 
