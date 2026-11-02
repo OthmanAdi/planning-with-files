@@ -28,6 +28,7 @@ if ($script:IsWindowsHost -and -not ("PwfResolverNative" -as [type])) {
     Add-Type -TypeDefinition @'
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -49,8 +50,17 @@ public static class PwfResolverNative {
         SafeFileHandle handle, StringBuilder path, uint length, uint flags);
 
     public static string FinalDirectoryPath(string path) {
+        // Win32 applies MAX_PATH to unprefixed names in a process that is not
+        // long-path aware (pwsh 7): a plan deeper than 260 characters resolved
+        // on Windows PowerShell 5.1 and sh but failed here. The extended
+        // prefix lifts the limit and needs the normalized form GetFullPath
+        // returns; the stripping below undoes the prefix again.
+        string full = Path.GetFullPath(path);
+        if (!full.StartsWith(@"\\?\", StringComparison.Ordinal))
+            full = full.StartsWith(@"\\", StringComparison.Ordinal)
+                ? @"\\?\UNC\" + full.Substring(2) : @"\\?\" + full;
         using (SafeFileHandle handle = CreateFileW(
-            path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            full, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             IntPtr.Zero, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero)) {
             if (handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
             StringBuilder buffer = new StringBuilder(32768);
@@ -175,7 +185,8 @@ if (-not $env:PLAN_ID) {
         $planCount = 1
     }
     if (Test-Path -LiteralPath $PlanRoot -PathType Container) {
-        foreach ($entry in (Get-ChildItem -LiteralPath $PlanRoot -Directory -ErrorAction SilentlyContinue)) {
+        # -Force: a Hidden plan directory counts on every other route.
+        foreach ($entry in (Get-ChildItem -LiteralPath $PlanRoot -Directory -Force -ErrorAction SilentlyContinue)) {
             # A linked plan directory (symlink, junction) is not selectable and
             # never counts, matching `[ -L ]` in resolve-plan-dir.sh (#270).
             if (Test-LinkedDirectory $entry) { continue }
@@ -232,7 +243,7 @@ if ($activeItem) {
 # Test-Path and Get-ChildItem -Path, and a pattern that matches nothing turned a
 # valid selection into an empty result.
 if (Test-Path -LiteralPath $PlanRoot -PathType Container) {
-    $latest = Get-ChildItem -LiteralPath $PlanRoot -Directory |
+    $latest = Get-ChildItem -LiteralPath $PlanRoot -Directory -Force |
         Where-Object { -not $_.Name.StartsWith('.') } |
         Where-Object { -not (Test-LinkedDirectory $_) } |
         Where-Object { Test-ValidSlug $_.Name } |

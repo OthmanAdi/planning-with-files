@@ -9,8 +9,22 @@ from pathlib import Path
 
 import pytest
 
-from test_plan_listing import runtime, run_selector, plan, make_symlink, SCRIPTS
+from test_plan_listing import runtime, run_selector, plan, make_symlink, listed, SCRIPTS
 from test_plan_listing import make_junction
+
+
+def clean_env(extra=None):
+    env = {k: v for k, v in os.environ.items() if k not in ("PLAN_ID", "PWF_PLAN_ROOT", "PLANNING_DISABLED")}
+    env.update(extra or {})
+    return env
+
+
+def wire_command(runtime, *args):
+    name, executable = runtime
+    if name == "sh":
+        return [executable, str(SCRIPTS / "set-active-plan.sh"), *args]
+    return [executable, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", str(SCRIPTS / "set-active-plan.ps1"), *args]
 
 
 def inventory(runtime, root, *args, env_extra=None):
@@ -226,16 +240,116 @@ def test_json_invalid_invocations_never_write_pointer(runtime, tmp_path, args):
 
 
 def test_json_wire_output_is_one_utf8_line_with_lf(runtime, tmp_path):
-    name, executable = runtime
-    if name == 'sh':
-        args = [executable, str(SCRIPTS/'set-active-plan.sh'), '--list', '--json']
-    else:
-        args = [executable, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-                '-File', str(SCRIPTS/'set-active-plan.ps1'), '-List', '-Json']
-    env = {k:v for k,v in os.environ.items() if k not in ('PLAN_ID','PWF_PLAN_ROOT')}
-    result = subprocess.run(args, cwd=tmp_path, env=env, capture_output=True, timeout=30)
+    name = runtime[0]
+    args = wire_command(runtime, '--list', '--json') if name == 'sh' else wire_command(runtime, '-List', '-Json')
+    result = subprocess.run(args, cwd=tmp_path, env=clean_env(), capture_output=True, timeout=30)
     assert result.returncode == 0, result.stderr
     assert len(result.stdout) <= 16384
     assert result.stdout.endswith(b'\n') and result.stdout.count(b'\n') == 1
     assert b'\r' not in result.stdout
     assert json.loads(result.stdout.decode('utf-8'))['schema_version'] == 1
+
+
+@pytest.mark.parametrize("env_extra", [{}, {"LC_ALL": "C"}], ids=["inherited-locale", "C-locale"])
+def test_json_wire_bytes_are_utf8_for_a_non_ascii_project(runtime, tmp_path, env_extra):
+    # cygpath converted through the ANSI code page under LC_ALL=C, so the sh
+    # route emitted non-UTF-8 bytes for this project name; PowerShell must
+    # emit UTF-8 whatever the console code page.
+    root = tmp_path / "Übung 计划"
+    path = plan(root, "alpha")
+    args = wire_command(runtime, '--list', '--json') if runtime[0] == 'sh' else wire_command(runtime, '-List', '-Json')
+    result = subprocess.run(args, cwd=root, env=clean_env(env_extra), capture_output=True, timeout=60)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.endswith(b"\n") and result.stdout.count(b"\n") == 1 and b"\r" not in result.stdout
+    value = json.loads(result.stdout.decode("utf-8"))
+    assert "Übung 计划" in value["scope"]["project_root"]
+    assert Path(value["candidates"][0]["files"]["task_plan"]["path"]).samefile(path)
+
+
+def test_json_in_session_call_feeds_the_pipeline_and_restores_the_console(runtime, tmp_path):
+    name, executable = runtime
+    if name == "sh":
+        pytest.skip("PowerShell session semantics")
+    plan(tmp_path, "alpha")
+    script = str(SCRIPTS / "set-active-plan.ps1").replace("'", "''")
+    command = ("$before = [Console]::OutputEncoding.CodePage; "
+               f"$report = & '{script}' -List -Json; "
+               "Write-Output (($report | ConvertFrom-Json).candidates[0].plan_id); "
+               "Write-Output ([Console]::OutputEncoding.CodePage -eq $before)")
+    result = subprocess.run(
+        [executable, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", command],
+        cwd=tmp_path, env=clean_env(), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.split() == ["alpha", "True"], result.stdout + result.stderr
+
+
+def test_json_modified_at_is_the_unix_epoch_second(runtime, tmp_path):
+    path = plan(tmp_path, "alpha")
+    # A fixed instant far from now: a local-time epoch would show as the UTC offset.
+    os.utime(path, (1700000000, 1700000000))
+    value = inventory(runtime, tmp_path)
+    assert value["candidates"][0]["files"]["task_plan"]["modified_at"] == int(os.stat(path).st_mtime) == 1700000000
+
+
+def test_json_root_and_named_candidates_parse_under_one_locale(runtime, tmp_path):
+    body = "### Phase 1: Übung [complete]\n**Status:** complete\n".encode("cp1252")
+    (tmp_path / "task_plan.md").write_bytes(body)
+    plan(tmp_path, "alpha").write_bytes(body)
+    value = inventory(runtime, tmp_path)
+    expected = {"status": "parsed", "total": 1, "complete": 1, "in_progress": 0, "pending": 0}
+    assert [c["phases"] for c in value["candidates"]] == [expected, expected]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows share-mode locking")
+def test_json_exclusively_locked_plan_file_keeps_the_document_valid(runtime, tmp_path):
+    import ctypes
+    named = plan(tmp_path, "alpha", "### Phase 1: Work [pending]\n")
+    plan(tmp_path, "beta", "### Phase 1: Work [pending]\n")
+    root_file = tmp_path / "task_plan.md"
+    root_file.write_text("### Phase 1: Root [complete]\n", encoding="utf-8")
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateFileW.restype = ctypes.c_void_p
+    kernel32.CreateFileW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p,
+                                     ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
+    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+    # GENERIC_READ, no sharing, OPEN_EXISTING: [ -r ] passes, every open fails.
+    handles = [kernel32.CreateFileW(str(p), 0x80000000, 0, None, 3, 0x80, None) for p in (named, root_file)]
+    assert all(h not in (None, ctypes.c_void_p(-1).value) for h in handles)
+    try:
+        value = inventory(runtime, tmp_path)
+        states = [(c["kind"], c["files"]["task_plan"]["status"], c["phases"]["status"]) for c in value["candidates"]]
+        assert states == [("root", "unreadable", "unavailable"), ("named", "unreadable", "unavailable"),
+                          ("named", "readable", "parsed")]
+        text = listed(runtime, tmp_path)
+        assert "- beta" in text and "- alpha" not in text
+    finally:
+        for handle in handles:
+            kernel32.CloseHandle(handle)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows MAX_PATH regression")
+def test_json_plan_beyond_max_path_is_listed_and_selected(runtime, tmp_path):
+    overhead = len(str(tmp_path / ".planning")) + len("/x/task_plan.md")
+    slug = "p-" + "x" * max(20, 270 - overhead)
+    try:
+        path = plan(tmp_path, slug)
+    except OSError as error:
+        pytest.skip(f"long paths are disabled on this host: {error}")
+    assert len(str(path)) > 260
+    value = inventory(runtime, tmp_path)
+    assert [c["plan_id"] for c in value["candidates"]] == [slug]
+    assert value["limits"]["skipped"] == 0 and value["warnings"] == []
+    assert value["selection"] == {"status": "selected", "plan_id": slug}
+    assert f"- {slug}" in listed(runtime, tmp_path)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Hidden attribute")
+def test_json_hidden_plan_directory_is_a_plan_on_every_route(runtime, tmp_path):
+    plan(tmp_path, "alpha")
+    hidden = plan(tmp_path, "hidden").parent
+    subprocess.run(["attrib", "+H", str(hidden)], check=True, capture_output=True)
+    value = inventory(runtime, tmp_path)
+    assert [c["plan_id"] for c in value["candidates"]] == ["alpha", "hidden"]
+    # The resolver probe behind this status enumerates the same directories.
+    assert value["selection"]["status"] == "ambiguous"
+    assert "- hidden" in listed(runtime, tmp_path)

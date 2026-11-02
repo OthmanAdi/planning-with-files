@@ -25,12 +25,10 @@ param(
     [switch]$Help
 )
 
-$ProjectRoot = (Get-Location).Path
-# Windows PowerShell 5.1 can silently change directories when -File inherits
-# a cwd containing wildcard characters. Recover that physical cwd only for a
-# direct invocation of this script; interactive Set-Location remains primary.
-if ($PSVersionTable.PSVersion.Major -eq 5 -and
-    [System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters([Environment]::CurrentDirectory)) {
+# True only when PowerShell started this script itself through -File, the
+# documented command-line entry. Called from a session (& or dot-sourced) the
+# script is part of that session and must leave its console and pipeline alone.
+function Test-DirectFileInvocation {
     $processArgs = [Environment]::GetCommandLineArgs()
     for ($index = 0; $index -lt ($processArgs.Length - 1); $index++) {
         if ($processArgs[$index] -ieq '-File') {
@@ -38,12 +36,20 @@ if ($PSVersionTable.PSVersion.Major -eq 5 -and
             if (-not [IO.Path]::IsPathRooted($entryScript)) {
                 $entryScript = Join-Path ([Environment]::CurrentDirectory) $entryScript
             }
-            if ([IO.Path]::GetFullPath($entryScript) -eq [IO.Path]::GetFullPath($PSCommandPath)) {
-                $ProjectRoot = [Environment]::CurrentDirectory
-            }
-            break
+            return [IO.Path]::GetFullPath($entryScript) -eq [IO.Path]::GetFullPath($PSCommandPath)
         }
     }
+    return $false
+}
+
+$ProjectRoot = (Get-Location).Path
+# Windows PowerShell 5.1 can silently change directories when -File inherits
+# a cwd containing wildcard characters. Recover that physical cwd only for a
+# direct invocation of this script; interactive Set-Location remains primary.
+if ($PSVersionTable.PSVersion.Major -eq 5 -and
+    [System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters([Environment]::CurrentDirectory) -and
+    (Test-DirectFileInvocation)) {
+    $ProjectRoot = [Environment]::CurrentDirectory
 }
 $PlanRoot = Join-Path $ProjectRoot ".planning"
 $ActiveFile = Join-Path $PlanRoot ".active_plan"
@@ -58,6 +64,7 @@ function Get-FinalPath {
         Add-Type -ErrorAction Stop -TypeDefinition @'
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -82,9 +89,18 @@ public static class PwfPlanListingNative {
             try { return Marshal.PtrToStringAnsi(resolved); }
             finally { free(resolved); }
         }
+        // Win32 applies MAX_PATH to unprefixed names in a process that is not
+        // long-path aware (pwsh 7): a plan deeper than 260 characters opened
+        // on Windows PowerShell 5.1 and sh but failed here. The extended
+        // prefix lifts the limit and needs the normalized form GetFullPath
+        // returns; the stripping below undoes the prefix again.
+        string full = Path.GetFullPath(path);
+        if (!full.StartsWith(@"\\?\", StringComparison.Ordinal))
+            full = full.StartsWith(@"\\", StringComparison.Ordinal)
+                ? @"\\?\UNC\" + full.Substring(2) : @"\\?\" + full;
         // OPEN_EXISTING, FILE_SHARE_READ | WRITE | DELETE, BACKUP_SEMANTICS.
         using (SafeFileHandle handle = CreateFileW(
-            path, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero)) {
+            full, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero)) {
             if (handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
             StringBuilder buffer = new StringBuilder(32768);
             uint length = GetFinalPathNameByHandleW(handle, buffer, (uint)buffer.Capacity, 0);
@@ -272,7 +288,9 @@ function Get-ListingFileMetadata {
         $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
         $stream.Dispose()
         $result.status = "readable"
-        $result.modified_at = [long][Math]::Floor(($item.LastWriteTimeUtc - [datetime]'1970-01-01T00:00:00Z').TotalSeconds)
+        # A [datetime] literal parses as local time even with a Z suffix, which
+        # shifted the epoch by the local UTC offset; DateTimeOffset is exact.
+        $result.modified_at = ([DateTimeOffset]$item.LastWriteTimeUtc).ToUnixTimeSeconds()
     } catch { $result.status = "unreadable" }
     return $result
 }
@@ -361,7 +379,9 @@ function Show-PlanListJson {
         $planningItem = Get-Item -LiteralPath $PlanRoot -Force -ErrorAction SilentlyContinue
         if (([string]$planningItem.LinkType) -in @('SymbolicLink', 'Junction') -or -not (Test-WithinRoot $PlanRoot)) { $report.limits.skipped++ }
         else {
-            $names = [string[]]@(Get-ChildItem -LiteralPath $PlanRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+            # -Force: a plan directory carrying the Hidden attribute is a plan to
+            # every other route; slug validation still drops dot-prefixed names.
+            $names = [string[]]@(Get-ChildItem -LiteralPath $PlanRoot -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
             [Array]::Sort($names, [StringComparer]::Ordinal)
             foreach ($name in $names) {
                 if (-not (Test-ValidSlug $name)) { continue }
@@ -391,8 +411,18 @@ function Show-PlanListJson {
     if ($report.limits.skipped) { $report.warnings = @('linked_unsafe_or_oversized_entries_skipped') }
     $serialized = $report | ConvertTo-Json -Depth 10 -Compress
     if ($encoding.GetByteCount($serialized) -gt 16383) { $serialized = '{"schema_version":1,"error":"project_path_exceeds_output_limit"}' }
-    [Console]::OutputEncoding = $encoding
-    [Console]::Write($serialized + [char]10)
+    if (Test-DirectFileInvocation) {
+        # The command-line entry writes one UTF-8 line ending in LF, whatever
+        # the console code page; the console setting is restored afterwards.
+        $previousEncoding = [Console]::OutputEncoding
+        try {
+            [Console]::OutputEncoding = $encoding
+            [Console]::Write($serialized + [char]10)
+        } finally { [Console]::OutputEncoding = $previousEncoding }
+    } else {
+        # Inside a session the document belongs to the caller's pipeline.
+        Write-Output $serialized
+    }
 }
 
 function Show-PlanList {
@@ -408,7 +438,7 @@ function Show-PlanList {
     Write-Output "Available plans:"
     Write-Output "[active] marks the shared .active_plan pointer; listing does not bind this session."
     $found = $false
-    foreach ($plan in (Get-ChildItem -LiteralPath $PlanRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name)) {
+    foreach ($plan in (Get-ChildItem -LiteralPath $PlanRoot -Directory -Force -ErrorAction SilentlyContinue | Sort-Object Name)) {
         # A linked plan directory is never a plan (#270): no resolver selects it.
         if (([string]$plan.LinkType) -in @('SymbolicLink', 'Junction')) { continue }
         if (-not (Test-ValidSlug $plan.Name) -or -not (Test-WithinRoot $plan.FullName)) { continue }

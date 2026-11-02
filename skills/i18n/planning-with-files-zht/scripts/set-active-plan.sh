@@ -287,7 +287,7 @@ list_plans() {
         slug_is_valid "${_id}" || continue
         is_within_root "${_dir}" || continue
         _plan_file="${_dir}/task_plan.md"
-        [ -f "${_plan_file}" ] && [ -r "${_plan_file}" ] || continue
+        [ -f "${_plan_file}" ] && can_open "${_plan_file}" || continue
         is_within_root "${_plan_file}" || continue
         _status="$(phase_status "${_plan_file}")" || continue
         _marker=''
@@ -301,6 +301,13 @@ list_plans() {
         printf '%s\n' '[active] marks the shared default pointer. Set PLAN_ID to pin a session.'
     fi
 }
+
+# [ -r ] consults permission bits only. On Windows a file that another
+# process holds open without sharing passes that test and still fails to
+# open, which left awk's error where JSON belonged. A real open decides.
+# `true`, not `:`: a redirection error on a special builtin exits a POSIX
+# shell (sh, dash) under set -e instead of returning.
+can_open() { { true < "$1"; } 2>/dev/null; }
 
 # JSON is an explicit read-only listing mode. Keep all of its work outside the
 # existing text/selection paths, including interpreter and resolver discovery.
@@ -322,7 +329,7 @@ file_metadata() {
     if [ -L "$_jf_path" ]; then _jf_state=excluded
     elif [ -e "$_jf_path" ]; then
         if [ ! -f "$_jf_path" ] || ! is_within_root "$_jf_path"; then _jf_state=excluded
-        elif [ ! -r "$_jf_path" ]; then _jf_state=unreadable
+        elif ! can_open "$_jf_path"; then _jf_state=unreadable
         else
             _jf_state=readable
             _jf_mtime=$(stat -c %Y "$_jf_path" 2>/dev/null || stat -f %m "$_jf_path" 2>/dev/null) || _jf_mtime=null
@@ -332,17 +339,21 @@ file_metadata() {
     printf '{"path":%s,"status":"%s","modified_at":%s}' "$(json_string "$_jf_display")" "$_jf_state" "$_jf_mtime"
 }
 
+JSON_PHASES_UNAVAILABLE='{"status":"unavailable","total":0,"complete":0,"in_progress":0,"pending":0}'
 json_phases() {
     _jp_file="$1"
-    if [ -L "$_jp_file" ] || [ ! -f "$_jp_file" ] || [ ! -r "$_jp_file" ] || ! is_within_root "$_jp_file"; then
-        printf '{"status":"unavailable","total":0,"complete":0,"in_progress":0,"pending":0}'; return
+    if [ -L "$_jp_file" ] || [ ! -f "$_jp_file" ] || ! can_open "$_jp_file" || ! is_within_root "$_jp_file"; then
+        printf '%s' "$JSON_PHASES_UNAVAILABLE"; return
     fi
     _jp_bytes=$(stat -c %s "$_jp_file" 2>/dev/null || stat -f %z "$_jp_file" 2>/dev/null) || _jp_bytes=''
     case "$_jp_bytes" in ''|*[!0-9]*) _jp_bytes=262145 ;; esac
     if [ "$_jp_bytes" -gt 262144 ]; then
         printf '{"status":"too_large","total":0,"complete":0,"in_progress":0,"pending":0}'; return
     fi
-    phase_status "$_jp_file" json
+    # The file can still lock or vanish between the open test and the parse;
+    # a failed or empty parse must not leave a hole in the document.
+    _jp_out=$(phase_status "$_jp_file" json 2>/dev/null) || _jp_out=''
+    case "$_jp_out" in '{"status":"'*'}') printf '%s' "$_jp_out" ;; *) printf '%s' "$JSON_PHASES_UNAVAILABLE" ;; esac
 }
 
 json_candidate() {
@@ -416,7 +427,12 @@ list_plans_json() {
     JSON_PHYSICAL_ROOT=$(canonicalize .) || { printf '{"schema_version":1,"error":"unresolved_project_root"}\n'; return 1; }
     norm_slashes "$JSON_PHYSICAL_ROOT"; JSON_PHYSICAL_ROOT=$NORM_OUT
     JSON_PROJECT=$JSON_PHYSICAL_ROOT
-    if [ -x /usr/bin/cygpath.exe ]; then JSON_PROJECT=$(/usr/bin/cygpath.exe -am "$JSON_PROJECT"); fi
+    # cygpath converts through the ANSI code page under LC_ALL=C or LANG=C,
+    # mangling every non-ASCII path; pin a UTF-8 locale for that one call.
+    if [ -x /usr/bin/cygpath.exe ]; then JSON_PROJECT=$(LC_ALL=C.UTF-8 /usr/bin/cygpath.exe -am "$JSON_PROJECT"); fi
+    # Slugs are ASCII. C locale gives the same ordering as PS ordinal, and
+    # the root and named candidates must parse under the same locale.
+    LC_ALL=C; export LC_ALL
     _jl_pointer=null; _jl_pointer_state=missing
     if [ -L "$ACTIVE_FILE" ]; then _jl_pointer_state=excluded
     elif [ -e "$ACTIVE_FILE" ]; then
@@ -444,8 +460,6 @@ list_plans_json() {
     if [ "$_jl_continue" = 1 ] && [ -d "$PLAN_ROOT" ]; then
         if [ -L "$PLAN_ROOT" ] || ! is_within_root "$PLAN_ROOT"; then JSON_SKIPPED=$((JSON_SKIPPED + 1))
         else
-            # Slugs are ASCII. C locale gives the same ordering as PS ordinal.
-            LC_ALL=C; export LC_ALL
             for _jl_dir in "$PLAN_ROOT"/*; do
                 [ -d "$_jl_dir" ] || [ -L "$_jl_dir" ] || continue
                 _jl_id=${_jl_dir##*/}; slug_is_valid "$_jl_id" || continue
