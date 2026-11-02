@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Opt-in archive and restore for named plans: `set-active-plan.sh --archive <id>` and `--restore <id>`, PowerShell `-Archive` and `-Restore`. The command previews by default and applies with `--yes` (`-Yes`). The plan directory moves with its sidecars to `.planning/.archive/<id>/`, nothing is deleted, and the shared `.active_plan` pointer is cleared only when it names the archived plan. `--list --archived` lists archived plans, and the JSON inventory reports `archived_count` (#355).
+- The multiple-plans hook notice names the archive command. Once one named plan remains, hooks select it again without `PLAN_ID` (#355).
+
+### Fixed
+- PowerShell inventory `modified_at` values no longer shift by the local UTC offset.
+- The shell inventory reports a plan file held open by another process as unreadable instead of emitting invalid JSON.
+- PowerShell 7 lists and resolves plans whose paths reach 260 characters.
+- `set-active-plan.ps1 -List -Json` returns its JSON to the calling PowerShell session and restores the console encoding. Direct `-File` runs still write one UTF-8 line.
+- The shell inventory converts the project path with a UTF-8 locale, so non-ASCII paths stay correct under `LC_ALL=C`.
+- PowerShell listing and plan resolution include directories with the Windows Hidden attribute, matching the shell route.
+
 ## [3.27.0] - 2026-10-30
 
 ### Added

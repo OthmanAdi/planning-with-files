@@ -114,7 +114,7 @@ This diagram shows how the three files work together and how hooks interact with
 
 ## After Completion: What Happens to the Plan Files
 
-The planning files are working memory for one task, not a deliverable. `task_plan.md`, `findings.md`, `progress.md`, and any `.planning/<slug>/` directory are gitignored by default, and nothing archives them when a task finishes. In root mode the next task overwrites `task_plan.md`; in slug mode the old directory just stops being the active plan. There is no automatic "completed" or "archived" state, and `check-complete` reports completion without moving or extracting anything.
+The planning files are working memory for one task, not a deliverable. `task_plan.md`, `findings.md`, `progress.md`, and any `.planning/<slug>/` directory are gitignored by default, and nothing archives them when a task finishes. In root mode the next task overwrites `task_plan.md`; in slug mode the old directory stays in `.planning/`, and once a second named plan exists, hooks inject nothing until a session sets `PLAN_ID`. There is no automatic "completed" or "archived" state, and `check-complete` reports completion without moving or extracting anything.
 
 The behavior is consistent and intentional, though it was never stated as a rule until now (see [#14](https://github.com/OthmanAdi/planning-with-files/issues/14) and [#202](https://github.com/OthmanAdi/planning-with-files/issues/202)). The model is the Manus one the skill is built on: the context window is RAM and the filesystem is disk, so work survives `/clear` and a crash *during* a task. Anything meant to outlive the task belongs somewhere durable already, in code, in a commit, in a spec or doc, or in a `findings.md` you deliberately keep out of the gitignore.
 
@@ -124,7 +124,7 @@ If you want a completed plan to persist, keep it yourself:
 - Move the `.planning/<slug>/` directory outside the ignored path, or drop `.planning/` from `.gitignore` in a repo where you want plans tracked.
 - For personal reuse, keep the directory as a cache for a future related task and pin it with `PLAN_ID` or `.active_plan`.
 
-A completion-triggered archive step (move `.planning/<slug>/` into an archive directory and extract the decisions and errors tables into a git-tracked record) is a reasonable opt-in extension. It would sit on top of the three-file default the way attestation, gated mode, and topic handoffs already do, without changing the ephemeral default. It is not built in today. If you want it, a focused issue or PR is welcome.
+To set a finished named plan aside without deleting it, archive it. `set-active-plan.sh --archive <slug>` (PowerShell: `set-active-plan.ps1 -Archive <slug>`) previews the move, and adding `--yes` (`-Yes`) moves `.planning/<slug>/` to `.planning/.archive/<slug>/`. `--restore <slug>` moves it back, and `--list --archived` shows what is archived. If `.planning/.active_plan` names the archived plan, the pointer is cleared. Once one named plan remains, hooks select it automatically again. Archiving runs only on request: no hook, initializer or completion check calls it, and an agent archives only the plans the user approves. It does not extract decisions or errors into a tracked record, and the legacy root plan cannot be archived. See [Archive and restore](../skills/planning-with-files/plan-inventory.md#archive-and-restore) for the checks and limits.
 
 ---
 

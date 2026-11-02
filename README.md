@@ -396,7 +396,7 @@ They are complementary stages, not alternatives. Plan mode is where you design a
 
 ### What happens to the plan files after a task is complete?
 
-They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory just stops being active. Anything worth keeping should be promoted into code, a commit, or a doc. See [After Completion: What Happens to the Plan Files](docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan. This is a deliberate default, not a missing feature; a completion-triggered archive step is a welcome opt-in extension.
+They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory stays in `.planning/`. Anything worth keeping should be promoted into code, a commit, or a doc. To set a finished named plan aside, `set-active-plan.sh --archive <slug>` previews the move to `.planning/.archive/<slug>/` and `--yes` applies it; `--restore <slug>` moves it back. With one named plan left, hooks select it automatically again. See [After Completion: What Happens to the Plan Files](docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan.
 
 ### How fast are the hooks?
 
@@ -649,6 +649,8 @@ The contract and the `.mode` tokens are specified in the skill itself ([SKILL.md
 To find a saved plan, run the installed `scripts/set-active-plan.sh --list` helper from your project directory, or `scripts/set-active-plan.ps1 -List` in PowerShell. It lists named plans under that project's `.planning/` directory, with phase counts for the shipped English and translated templates. `[active]` marks the shared default pointer. Listing does not select a plan or attach a session; use the displayed ID as `PLAN_ID` before starting a concurrent task. Kiro's separate `.kiro/plan` layout is not part of this inventory.
 
 For agent-readable paths and state, add `--json` (PowerShell: `-Json`). The read-only response includes root and named triplets, missing/unreadable files, phase parse status, and the shared default separately from process-visible selection. Results are paged and capped at 16 KiB; this query does not run during ordinary activation. See the [inventory schema and worker handoff](skills/planning-with-files/plan-inventory.md).
+
+To set a finished named plan aside, run `set-active-plan.sh --archive <id>` (PowerShell: `-Archive <id>`). It previews the move to `.planning/.archive/<id>/`; `--yes` (`-Yes`) applies it, and `--restore <id>` moves it back. Nothing is deleted and nothing is archived automatically. Once one named plan remains, hooks select it again without `PLAN_ID`. `--list --archived` shows archived plans.
 
 ## How It Works
 

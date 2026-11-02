@@ -254,6 +254,8 @@ To find a task before resuming it, run `sh "<skill-dir>/scripts/set-active-plan.
 
 This read-only command lists named plans and phase progress under the current directory's `.planning/`. `[active]` marks the shared default pointer; it does not bind a session. Concurrent tasks still require each host's `PLAN_ID` or separate worktrees.
 
+When hooks report that multiple plans are available, or every phase of a named plan is complete, run the listing command and tell the user which plans look finished. Archive only the plans the user approves: `--archive <id>` (PowerShell: `-Archive <id>`) previews the move to `.planning/.archive/`, `--yes` (`-Yes`) applies it, and `--restore <id>` (`-Restore <id>`) moves it back. Never archive on age or completion alone.
+
 ### Parallel task workflow
 
 For independent tasks in the same repository, create a named plan for each and pin each agent host to its own plan:

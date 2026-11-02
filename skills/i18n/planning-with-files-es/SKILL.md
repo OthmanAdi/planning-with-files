@@ -258,6 +258,8 @@ Para encontrar una tarea antes de retomarla, ejecuta `sh "<skill-dir>/scripts/se
 
 Este comando de solo lectura muestra los planes con nombre y el progreso de sus fases en `.planning/` del directorio actual. `[active]` marca el puntero predeterminado compartido; no vincula una sesión a un plan. Las tareas simultáneas siguen necesitando una `PLAN_ID` por host o árboles de trabajo separados.
 
+Si los hooks indican que hay varios planes disponibles, o todas las fases de un plan con nombre están completas, ejecuta el comando de listado e indica al usuario qué planes parecen terminados. Archiva solo los planes que el usuario apruebe: `--archive <id>` (PowerShell: `-Archive <id>`) muestra una vista previa del traslado a `.planning/.archive/`, `--yes` (`-Yes`) lo aplica y `--restore <id>` (`-Restore <id>`) devuelve el plan. Nunca archives un plan solo por su antigüedad o porque esté completo.
+
 ## Límites de seguridad
 
 Este skill usa un hook PreToolUse para releer `task_plan.md` antes de cada llamada a herramienta. El contenido escrito en `task_plan.md` se inyecta repetidamente en el contexto, lo que lo convierte en un objetivo de alto valor para inyección indirecta de prompts.

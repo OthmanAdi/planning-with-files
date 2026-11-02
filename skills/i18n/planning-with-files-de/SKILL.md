@@ -251,6 +251,8 @@ Um eine Aufgabe vor dem Fortsetzen zu finden, führe `sh "<skill-dir>/scripts/se
 
 Der Befehl liest nur und zeigt benannte Pläne samt Phasenfortschritt unter `.planning/` im aktuellen Arbeitsverzeichnis. `[active]` kennzeichnet den gemeinsamen Standardzeiger; er bindet keine Sitzung an einen Plan. Parallele Aufgaben benötigen weiterhin eine eigene `PLAN_ID` pro Host oder getrennte Worktrees.
 
+Melden die Hooks, dass mehrere Pläne verfügbar sind, oder sind alle Phasen eines benannten Plans abgeschlossen, führe den Auflistungsbefehl aus und nenne dem Benutzer die Pläne, die fertig wirken. Archiviere nur Pläne, die der Benutzer freigibt: `--archive <id>` (PowerShell: `-Archive <id>`) zeigt die Verschiebung nach `.planning/.archive/` als Vorschau, `--yes` (`-Yes`) führt sie aus und `--restore <id>` (`-Restore <id>`) holt den Plan zurück. Archiviere nie allein wegen Alter oder Abschlussstatus.
+
 ## Sicherheitsgrenzen
 
 Dieser Skill verwendet einen PreToolUse-Hook, der `task_plan.md` vor jedem Tool-Aufruf neu einliest. In `task_plan.md` geschriebene Inhalte werden wiederholt in den Kontext eingespeist, was sie zu einem lohnenden Ziel für indirekte Prompt-Injektion macht.
