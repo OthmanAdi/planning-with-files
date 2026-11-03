@@ -1,10 +1,15 @@
 #!/bin/sh
-# List saved named plans, show the shared pointer, or change that pointer.
-# Usage: set-active-plan.sh [--list|-l|--verify-root|PLAN_ID]
+# List saved named plans, show the shared pointer, change that pointer, or
+# archive and restore named plans (a rename into .planning/.archive, #355).
+# Usage: set-active-plan.sh [--list [--archived]|-l|--verify-root|PLAN_ID]
+#        set-active-plan.sh --list --json [--archived] [--limit N] [--offset N]
+#        set-active-plan.sh --archive <id> [--yes] | --restore <id> [--yes]
 # Operates on the current project; listing never binds a host or injects data.
+# Archive and restore preview without --yes, never copy, and never delete.
 set -eu
 PLAN_ROOT="${PWD}/.planning"
 ACTIVE_FILE="${PLAN_ROOT}/.active_plan"
+ARCHIVE_ROOT="${PLAN_ROOT}/.archive"
 PWF_ROOT_PIN=""
 
 # Use the resolver canonicalization policy without running plan selection.
@@ -298,7 +303,141 @@ list_plans() {
     if [ "${_found}" -eq 0 ]; then
         printf '%s\n' 'No named plans found.'
     else
-        printf '%s\n' '[active] marks the shared default pointer. Set PLAN_ID to pin a session.'
+        printf '%s\n' '[active] marks the shared default pointer. Set PLAN_ID to pin a session.' \
+            'Archive a finished plan with --archive <id> (preview first; nothing is deleted).'
+    fi
+    _archived="$(archived_count)"
+    [ "${_archived}" -eq 0 ] || printf '%s\n' "${_archived} archived plan(s): --list --archived"
+}
+
+# Archive and restore (#355): a finished plan moves to .planning/.archive/<id>
+# with one rename and comes back the same way. Dot-prefixed names are never
+# plans on any route, so an archived plan is invisible to every resolver and
+# the remaining named plans select automatically again.
+fail() { printf '%s\n' "Error: $1" >&2; exit 1; }
+
+is_real_dir() { [ -d "$1" ] && [ ! -L "$1" ] && is_within_root "$1"; }
+
+# A plan that may move: a real contained directory with a regular task_plan.md.
+is_real_plan_dir() { is_real_dir "$1" && [ -f "$1/task_plan.md" ] && [ ! -L "$1/task_plan.md" ]; }
+
+device_of() { stat -c %d "$1" 2>/dev/null || stat -f %d "$1" 2>/dev/null; }
+
+# Archived plans with the listing filters, counted with builtins only.
+archived_count() {
+    _ac_n=0
+    if is_real_dir "${ARCHIVE_ROOT}"; then
+        for _ac_dir in "${ARCHIVE_ROOT}"/*; do
+            [ -d "${_ac_dir}" ] && [ ! -L "${_ac_dir}" ] || continue
+            slug_is_valid "${_ac_dir##*/}" || continue
+            [ -f "${_ac_dir}/task_plan.md" ] && [ ! -L "${_ac_dir}/task_plan.md" ] || continue
+            _ac_n=$((_ac_n + 1))
+        done
+    fi
+    printf '%s' "${_ac_n}"
+}
+
+list_archived() {
+    if [ ! -d "${PLAN_ROOT}" ]; then
+        printf '%s\n' 'No planning directory found.'
+        return 0
+    fi
+    if ! is_real_dir "${PLAN_ROOT}"; then
+        printf '%s\n' 'Error: planning directory is outside the project or cannot be verified.' >&2
+        return 1
+    fi
+    _found=0
+    if is_real_dir "${ARCHIVE_ROOT}"; then
+        for _dir in "${ARCHIVE_ROOT}"/*; do
+            _id="${_dir##*/}"
+            slug_is_valid "${_id}" && is_real_plan_dir "${_dir}" || continue
+            _status="$(phase_status "${_dir}/task_plan.md")" || continue
+            [ "${_found}" -eq 1 ] || printf '%s\n' 'Archived plans:'
+            printf '%s\n' "- ${_id} - ${_status}"
+            _found=1
+        done
+    fi
+    if [ "${_found}" -eq 0 ]; then
+        printf '%s\n' 'No archived plans found.'
+    else
+        printf '%s\n' 'Restore with --restore <id>.'
+    fi
+}
+
+# Every check runs before anything is touched; a failure changes nothing.
+# $1 archive|restore, $2 plan id, $3 1 to apply (otherwise preview).
+move_plan() {
+    _mp_op="$1"; _mp_id="$2"; _mp_apply="$3"
+    slug_is_valid "${_mp_id}" || fail 'invalid plan ID. Use a named directory under .planning.'
+    [ -d "${PLAN_ROOT}" ] || fail "planning directory not found: ${PLAN_ROOT}"
+    is_real_dir "${PLAN_ROOT}" || fail 'planning directory is outside the project, is a link, or cannot be verified.'
+    if [ "${_mp_op}" = archive ]; then
+        _mp_src="${PLAN_ROOT}/${_mp_id}"; _mp_parent="${ARCHIVE_ROOT}"
+        is_real_plan_dir "${_mp_src}" || fail "no plan to archive at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
+        [ "${PLAN_ID:-}" != "${_mp_id}" ] || fail 'PLAN_ID selects this plan in the current environment; unset it before archiving.'
+        if [ -e "${ARCHIVE_ROOT}" ] || [ -L "${ARCHIVE_ROOT}" ]; then
+            is_real_dir "${ARCHIVE_ROOT}" || fail "archive directory is not a real directory inside the project: ${ARCHIVE_ROOT}"
+        fi
+    else
+        _mp_src="${ARCHIVE_ROOT}/${_mp_id}"; _mp_parent="${PLAN_ROOT}"
+        is_real_dir "${ARCHIVE_ROOT}" || fail "no archive directory inside the project at ${ARCHIVE_ROOT}"
+        is_real_plan_dir "${_mp_src}" || fail "no archived plan at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
+    fi
+    _mp_dest="${_mp_parent}/${_mp_id}"
+    if [ -e "${_mp_dest}" ] || [ -L "${_mp_dest}" ]; then
+        fail "${_mp_dest} already exists; restore or rename it first."
+    fi
+    # One rename only: never a copy across filesystems, never a partial tree.
+    _mp_dev_parent="${_mp_parent}"; [ -d "${_mp_parent}" ] || _mp_dev_parent="${PLAN_ROOT}"
+    _mp_dev_src="$(device_of "${_mp_src}")" || _mp_dev_src=''
+    _mp_dev_dest="$(device_of "${_mp_dev_parent}")" || _mp_dev_dest=''
+    [ -n "${_mp_dev_src}" ] && [ "${_mp_dev_src}" = "${_mp_dev_dest}" ] ||
+        fail "${_mp_src} and ${_mp_dev_parent} are not on the same filesystem; a plan is only renamed, never copied."
+    _mp_names_pointer=0
+    if [ "${_mp_op}" = archive ] && ! pointer_is_unsafe && [ "$(current_active)" = "${_mp_id}" ]; then
+        _mp_names_pointer=1
+    fi
+    if [ "${_mp_apply}" != 1 ]; then
+        _mp_status="$(phase_status "${_mp_src}/task_plan.md")" || fail "cannot read ${_mp_src}/task_plan.md"
+        _mp_complete="${_mp_status%%/*}"; _mp_total="${_mp_status#*/}"; _mp_total="${_mp_total%% *}"
+        if [ "${_mp_op}" = archive ]; then
+            printf '%s\n' "Would archive plan: ${_mp_id} (${_mp_status})" "  from: ${_mp_src}" "  to:   ${_mp_dest}"
+            if [ "${_mp_total}" -eq 0 ] || [ "${_mp_complete}" -ne "${_mp_total}" ]; then
+                printf '%s\n' '  Note: not all phases are complete.'
+            fi
+            [ "${_mp_names_pointer}" -eq 0 ] || printf '%s\n' '  The shared default (.active_plan) names this plan and will be cleared.'
+            printf '%s\n' "Nothing is deleted. Restore with: set-active-plan.sh --restore ${_mp_id}"
+        else
+            printf '%s\n' "Would restore plan: ${_mp_id} (${_mp_status})" "  from: ${_mp_src}" "  to:   ${_mp_dest}" \
+                'Nothing is deleted.'
+        fi
+        printf '%s\n' 'Run again with --yes to apply.'
+        return 0
+    fi
+    if [ "${_mp_op}" = archive ] && [ ! -d "${ARCHIVE_ROOT}" ]; then
+        mkdir -- "${ARCHIVE_ROOT}" 2>/dev/null || fail "could not create ${ARCHIVE_ROOT}"
+        is_real_dir "${ARCHIVE_ROOT}" || fail "archive directory cannot be verified after creation: ${ARCHIVE_ROOT}"
+    fi
+    mv -- "${_mp_src}" "${_mp_dest}" || fail "could not move ${_mp_src} to ${_mp_dest}"
+    if [ -e "${_mp_src}" ] || [ ! -f "${_mp_dest}/task_plan.md" ]; then
+        # mv descends into a directory another process created meanwhile.
+        [ ! -f "${_mp_dest}/${_mp_id}/task_plan.md" ] ||
+            fail "${_mp_dest} appeared concurrently and the plan now sits at ${_mp_dest}/${_mp_id}; move it by hand."
+        fail "move did not complete as expected; inspect ${_mp_src} and ${_mp_dest}."
+    fi
+    if [ "${_mp_op}" = archive ]; then
+        printf '%s\n' "Archived plan: ${_mp_id}" "  to: ${_mp_dest}"
+        if [ "${_mp_names_pointer}" -eq 1 ]; then
+            if rm -f -- "${ACTIVE_FILE}"; then
+                printf '%s\n' '  Cleared the shared default (.active_plan), which named this plan.'
+            else
+                printf '%s\n' "Warning: could not remove ${ACTIVE_FILE}; it still names the archived plan." >&2
+            fi
+        fi
+        printf '%s\n' "Restore with: set-active-plan.sh --restore ${_mp_id}"
+    else
+        printf '%s\n' "Restored plan: ${_mp_id}" "  to: ${_mp_dest}" \
+            "To make it the default: set-active-plan.sh ${_mp_id}   To pin a session: PLAN_ID=${_mp_id}"
     fi
 }
 
@@ -448,24 +587,27 @@ list_plans_json() {
             fi
         fi
     fi
-    _jl_header="{\"schema_version\":1,\"scope\":{\"project_root\":$(json_string "$JSON_PROJECT"),\"source\":\"cwd\"},\"shared_default\":{\"plan_id\":${_jl_pointer},\"status\":\"${_jl_pointer_state}\"},\"selection\":$(json_selection),\"host_session\":null,\"candidates\":["
+    _jl_header="{\"schema_version\":1,\"scope\":{\"project_root\":$(json_string "$JSON_PROJECT"),\"source\":\"cwd\"},\"shared_default\":{\"plan_id\":${_jl_pointer},\"status\":\"${_jl_pointer_state}\"},\"selection\":$(json_selection),\"host_session\":null,\"archived_count\":$(archived_count),\"candidates\":["
     _jl_header_size=$(printf '%s' "$_jl_header" | LC_ALL=C wc -c)
     JSON_BUDGET=$((16383 - _jl_header_size - 512))
     JSON_ROWS=''; JSON_COMMA=''; JSON_INDEX=0; JSON_RETURNED=0; JSON_USED=0; JSON_SKIPPED=0; JSON_NEXT=null; JSON_TRUNCATED=false
     if [ "$JSON_BUDGET" -lt 0 ]; then printf '{"schema_version":1,"error":"project_path_exceeds_output_limit"}\n'; return 1; fi
+    # --archived lists .planning/.archive with the same filters and no root candidate.
+    _jl_scan="$PLAN_ROOT"; _jl_kind=named; _jl_rel=.planning
+    if [ "$JSON_ARCHIVED" = 1 ]; then _jl_scan="$ARCHIVE_ROOT"; _jl_kind=archived; _jl_rel=.planning/.archive; fi
     _jl_continue=1
-    if [ -e task_plan.md ] || [ -L task_plan.md ] || [ -e findings.md ] || [ -e progress.md ]; then
+    if [ "$JSON_ARCHIVED" != 1 ] && { [ -e task_plan.md ] || [ -L task_plan.md ] || [ -e findings.md ] || [ -e progress.md ]; }; then
         json_add_candidate . "$JSON_PROJECT" '' root || _jl_continue=0
     fi
-    if [ "$_jl_continue" = 1 ] && [ -d "$PLAN_ROOT" ]; then
-        if [ -L "$PLAN_ROOT" ] || ! is_within_root "$PLAN_ROOT"; then JSON_SKIPPED=$((JSON_SKIPPED + 1))
+    if [ "$_jl_continue" = 1 ] && [ -d "$_jl_scan" ]; then
+        if [ -L "$PLAN_ROOT" ] || [ -L "$_jl_scan" ] || ! is_within_root "$_jl_scan"; then JSON_SKIPPED=$((JSON_SKIPPED + 1))
         else
-            for _jl_dir in "$PLAN_ROOT"/*; do
+            for _jl_dir in "$_jl_scan"/*; do
                 [ -d "$_jl_dir" ] || [ -L "$_jl_dir" ] || continue
                 _jl_id=${_jl_dir##*/}; slug_is_valid "$_jl_id" || continue
                 if [ -L "$_jl_dir" ] || [ -L "$_jl_dir/task_plan.md" ] || ! is_within_root "$_jl_dir"; then JSON_SKIPPED=$((JSON_SKIPPED + 1)); continue; fi
                 [ -f "$_jl_dir/task_plan.md" ] || continue
-                json_add_candidate "$_jl_dir" "$JSON_PROJECT/.planning/$_jl_id" "$_jl_id" named || break
+                json_add_candidate "$_jl_dir" "$JSON_PROJECT/$_jl_rel/$_jl_id" "$_jl_id" "$_jl_kind" || break
             done
         fi
     fi
@@ -476,8 +618,9 @@ list_plans_json() {
 
 case "${1:-}:${2:-}" in
     --list:--json|-l:--json)
-        shift 2; JSON_LIMIT=20; JSON_OFFSET=0
+        shift 2; JSON_LIMIT=20; JSON_OFFSET=0; JSON_ARCHIVED=0
         while [ "$#" -gt 0 ]; do
+            if [ "$1" = --archived ]; then JSON_ARCHIVED=1; shift; continue; fi
             [ "$#" -ge 2 ] || { printf '%s\n' 'Error: a listing option needs an integer value.' >&2; exit 1; }
             case "$2" in ''|*[!0-9]*|0[0-9]*) printf '%s\n' 'Error: listing bounds must be decimal integers.' >&2; exit 1 ;; esac
             [ "${#2}" -le 6 ] || { printf '%s\n' 'Error: listing bound is too large.' >&2; exit 1; }
@@ -486,6 +629,16 @@ case "${1:-}:${2:-}" in
         done
         [ "$JSON_LIMIT" -ge 1 ] && [ "$JSON_LIMIT" -le 100 ] || { printf '%s\n' 'Error: limit must be between 1 and 100.' >&2; exit 1; }
         list_plans_json; exit $? ;;
+    --list:--archived|-l:--archived)
+        [ "$#" -eq 2 ] || { printf '%s\n' 'Error: --list --archived takes no other option; JSON is --list --json --archived.' >&2; exit 1; }
+        list_archived; exit $? ;;
+    --archive:*|--restore:*)
+        move_op="${1#--}"; move_apply=0
+        case "${2:-}" in ''|-*) printf '%s\n' "Error: --${move_op} needs a plan ID: --${move_op} <id> [--yes]" >&2; exit 1 ;; esac
+        if [ "$#" -eq 3 ] && [ "$3" = --yes ]; then move_apply=1
+        elif [ "$#" -ne 2 ]; then printf '%s\n' "Error: --${move_op} takes a plan ID and optionally --yes, nothing else." >&2; exit 1
+        fi
+        move_plan "${move_op}" "$2" "${move_apply}"; exit $? ;;
 esac
 
 if [ "$#" -gt 1 ]; then
@@ -496,11 +649,17 @@ fi
 case "${1:-}" in
     --list|-l) list_plans; exit $? ;;
     --verify-root) verify_root; exit $? ;;
+    --yes|--archived)
+        printf '%s\n' "Error: $1 is only valid with --archive, --restore, or --list." >&2
+        exit 1 ;;
     --help|-h)
-        printf '%s\n' 'Usage: set-active-plan.sh [--list|--verify-root|PLAN_ID]' \
+        printf '%s\n' 'Usage: set-active-plan.sh [--list [--archived]|--verify-root|PLAN_ID]' \
+            '       set-active-plan.sh --archive <id> [--yes] | --restore <id> [--yes]' \
             'Lists saved named plans in the current project without selecting a plan.' \
-            '--list --json [--limit 1..100] [--offset N] emits bounded metadata, including root files.' \
-            '--verify-root checks the planning root and pointer without listing or selecting.'
+            '--list --json [--archived] [--limit 1..100] [--offset N] emits bounded metadata, including root files.' \
+            '--verify-root checks the planning root and pointer without listing or selecting.' \
+            '--archive moves a named plan to .planning/.archive/<id>; --restore moves it back.' \
+            'Both preview until --yes is given, never copy, and never delete.'
         exit 0 ;;
 esac
 

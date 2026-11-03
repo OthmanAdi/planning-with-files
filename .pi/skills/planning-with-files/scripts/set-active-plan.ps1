@@ -1,12 +1,20 @@
-# planning-with-files: set, display, or list the active plan pointer (PowerShell).
+# planning-with-files: set, display, or list the active plan pointer, and
+# archive or restore named plans (PowerShell).
 #
 # Usage:
 #   .\set-active-plan.ps1 <plan_id>   - pin .planning\.active_plan to plan_id
 #   .\set-active-plan.ps1             - print the current active plan (if any)
 #   .\set-active-plan.ps1 -List       - list available named plans and phase counts
 #   .\set-active-plan.ps1 --list      - equivalent to -List and -l
+#   .\set-active-plan.ps1 -List -Archived          - list archived plans
+#   .\set-active-plan.ps1 -List -Json [-Archived]  - agent-readable inventory
+#   .\set-active-plan.ps1 -Archive <id> [-Yes]     - move a plan to .planning\.archive\<id>
+#   .\set-active-plan.ps1 -Restore <id> [-Yes]     - move it back
 #   .\set-active-plan.ps1 -VerifyRoot - check the planning root and pointer only
 #   .\set-active-plan.ps1 --verify-root - equivalent to -VerifyRoot
+# The double-dash spellings (--archive, --restore, --yes, --archived) bind to
+# the same parameters. Archive and restore preview without -Yes, never copy,
+# and never delete (#355).
 
 param(
     [Parameter(Position = 0)]
@@ -19,6 +27,14 @@ param(
     [string]$Limit = "20",
     [Alias('-offset')]
     [string]$Offset = "0",
+    [Alias('-archived')]
+    [switch]$Archived,
+    [Alias('-archive')]
+    [string]$Archive = "",
+    [Alias('-restore')]
+    [string]$Restore = "",
+    [Alias('-yes')]
+    [switch]$Yes,
     [Alias('verify-root')]
     [switch]$VerifyRoot,
     [Alias('h', '-help')]
@@ -53,6 +69,7 @@ if ($PSVersionTable.PSVersion.Major -eq 5 -and
 }
 $PlanRoot = Join-Path $ProjectRoot ".planning"
 $ActiveFile = Join-Path $PlanRoot ".active_plan"
+$ArchiveRoot = Join-Path $PlanRoot ".archive"
 $script:IsWindowsHost = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
 
 # Resolve-Path can retain a junction's spelling. Like resolve-plan-dir.ps1,
@@ -310,8 +327,36 @@ function Get-ListingCandidate {
         } catch { $phases.status = "unavailable" }
     }
     $planId = $null
-    if ($Kind -eq "named") { $planId = $Id }
+    if ($Kind -ne "root") { $planId = $Id }
     return [ordered]@{ kind = $Kind; plan_id = $planId; ownership = "unknown"; files = $files; phases = $phases }
+}
+
+function Test-RealDirectory {
+    param([string]$Path)
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    return [bool]($item -and $item.PSIsContainer -and
+        ([string]$item.LinkType) -notin @('SymbolicLink', 'Junction') -and (Test-WithinRoot $Path))
+}
+
+# A plan that may move: a real contained directory with a regular task_plan.md.
+function Test-RealPlanDirectory {
+    param([string]$Path)
+    if (-not (Test-RealDirectory $Path)) { return $false }
+    $planItem = Get-Item -LiteralPath (Join-Path $Path 'task_plan.md') -Force -ErrorAction SilentlyContinue
+    return [bool]($planItem -and -not $planItem.PSIsContainer -and
+        ([string]$planItem.LinkType) -notin @('SymbolicLink', 'Junction'))
+}
+
+# Archived plans with the listing filters; no entry is canonicalized.
+function Get-ArchivedCount {
+    if (-not (Test-RealDirectory $ArchiveRoot)) { return 0 }
+    $count = 0
+    foreach ($entry in (Get-ChildItem -LiteralPath $ArchiveRoot -Directory -Force -ErrorAction SilentlyContinue)) {
+        if (([string]$entry.LinkType) -in @('SymbolicLink', 'Junction') -or -not (Test-ValidSlug $entry.Name)) { continue }
+        $planItem = Get-Item -LiteralPath (Join-Path $entry.FullName 'task_plan.md') -Force -ErrorAction SilentlyContinue
+        if ($planItem -and -not $planItem.PSIsContainer -and ([string]$planItem.LinkType) -notin @('SymbolicLink', 'Junction')) { $count++ }
+    }
+    return $count
 }
 
 function Get-ListingSelection {
@@ -351,6 +396,7 @@ function Get-ListingSelection {
 }
 
 function Show-PlanListJson {
+    param([switch]$ArchivedOnly)
     $displayRoot = Get-FinalPath $ProjectRoot
     $pointer = [ordered]@{ plan_id = $null; status = "missing" }
     $pointerItem = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
@@ -368,29 +414,35 @@ function Show-PlanListJson {
             }
         }
     }
-    $report = [ordered]@{ schema_version = 1; scope = [ordered]@{ project_root = $displayRoot; source = "cwd" }; shared_default = $pointer; selection = (Get-ListingSelection); host_session = $null; candidates = @(); limits = [ordered]@{ limit = [int]$Limit; offset = [int]$Offset; returned = 0; truncated = $false; next_offset = $null; skipped = 0 }; warnings = @() }
+    $report = [ordered]@{ schema_version = 1; scope = [ordered]@{ project_root = $displayRoot; source = "cwd" }; shared_default = $pointer; selection = (Get-ListingSelection); host_session = $null; archived_count = (Get-ArchivedCount); candidates = @(); limits = [ordered]@{ limit = [int]$Limit; offset = [int]$Offset; returned = 0; truncated = $false; next_offset = $null; skipped = 0 }; warnings = @() }
     $entries = New-Object 'System.Collections.Generic.List[object]'
-    foreach ($name in @('task_plan.md', 'findings.md', 'progress.md')) {
-        if (Get-Item -LiteralPath (Join-Path $ProjectRoot $name) -Force -ErrorAction SilentlyContinue) {
-            $entries.Add(@{ Directory = $displayRoot; Id = ''; Kind = 'root' }); break
+    # -Archived lists .planning\.archive with the same filters and no root candidate.
+    $scanRoot = $PlanRoot; $kind = 'named'
+    if ($ArchivedOnly) { $scanRoot = $ArchiveRoot; $kind = 'archived' }
+    if (-not $ArchivedOnly) {
+        foreach ($name in @('task_plan.md', 'findings.md', 'progress.md')) {
+            if (Get-Item -LiteralPath (Join-Path $ProjectRoot $name) -Force -ErrorAction SilentlyContinue) {
+                $entries.Add(@{ Directory = $displayRoot; Id = ''; Kind = 'root' }); break
+            }
         }
     }
-    if (Test-Path -LiteralPath $PlanRoot -PathType Container) {
+    if (Test-Path -LiteralPath $scanRoot -PathType Container) {
         $planningItem = Get-Item -LiteralPath $PlanRoot -Force -ErrorAction SilentlyContinue
-        if (([string]$planningItem.LinkType) -in @('SymbolicLink', 'Junction') -or -not (Test-WithinRoot $PlanRoot)) { $report.limits.skipped++ }
+        $scanItem = Get-Item -LiteralPath $scanRoot -Force -ErrorAction SilentlyContinue
+        if (([string]$planningItem.LinkType) -in @('SymbolicLink', 'Junction') -or ([string]$scanItem.LinkType) -in @('SymbolicLink', 'Junction') -or -not (Test-WithinRoot $scanRoot)) { $report.limits.skipped++ }
         else {
             # -Force: a plan directory carrying the Hidden attribute is a plan to
             # every other route; slug validation still drops dot-prefixed names.
-            $names = [string[]]@(Get-ChildItem -LiteralPath $PlanRoot -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+            $names = [string[]]@(Get-ChildItem -LiteralPath $scanRoot -Directory -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
             [Array]::Sort($names, [StringComparer]::Ordinal)
             foreach ($name in $names) {
                 if (-not (Test-ValidSlug $name)) { continue }
-                $directory = Join-Path $PlanRoot $name
+                $directory = Join-Path $scanRoot $name
                 $item = Get-Item -LiteralPath $directory -Force -ErrorAction SilentlyContinue
                 $planFile = Join-Path $directory 'task_plan.md'
                 $planItem = Get-Item -LiteralPath $planFile -Force -ErrorAction SilentlyContinue
                 if (([string]$item.LinkType) -in @('SymbolicLink', 'Junction') -or ($planItem -and ([string]$planItem.LinkType) -in @('SymbolicLink', 'Junction')) -or -not (Test-WithinRoot $directory)) { $report.limits.skipped++; continue }
-                if ($planItem -and -not $planItem.PSIsContainer) { $entries.Add(@{ Directory = $directory; Id = $name; Kind = 'named' }) }
+                if ($planItem -and -not $planItem.PSIsContainer) { $entries.Add(@{ Directory = $directory; Id = $name; Kind = $kind }) }
             }
         }
     }
@@ -451,11 +503,146 @@ function Show-PlanList {
         $found = $true
     }
     if (-not $found) { Write-Output "No named plans found." }
+    else { Write-Output "Archive a finished plan with -Archive <id> (preview first; nothing is deleted)." }
+    $archivedCount = Get-ArchivedCount
+    if ($archivedCount -gt 0) { Write-Output "$archivedCount archived plan(s): -List -Archived" }
+}
+
+function Show-ArchivedList {
+    if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) {
+        Write-Output "No planning directory found."
+        return
+    }
+    if (-not (Test-RealDirectory $PlanRoot)) {
+        Write-Error "Error: planning directory is outside the project or cannot be verified."
+        exit 1
+    }
+    $found = $false
+    if (Test-RealDirectory $ArchiveRoot) {
+        foreach ($entry in (Get-ChildItem -LiteralPath $ArchiveRoot -Directory -Force -ErrorAction SilentlyContinue | Sort-Object Name)) {
+            if (-not (Test-ValidSlug $entry.Name) -or -not (Test-RealPlanDirectory $entry.FullName)) { continue }
+            try { $status = Get-PhaseStatus (Join-Path $entry.FullName 'task_plan.md') } catch { continue }
+            if (-not $found) { Write-Output "Archived plans:" }
+            Write-Output "- $($entry.Name) - $status"
+            $found = $true
+        }
+    }
+    if ($found) { Write-Output "Restore with -Restore <id>." } else { Write-Output "No archived plans found." }
+}
+
+# Archive and restore (#355): a finished plan moves to .planning\.archive\<id>
+# with one rename and comes back the same way. Dot-prefixed names are never
+# plans on any route, so an archived plan is invisible to every resolver and
+# the remaining named plans select automatically again. Every check runs
+# before anything is touched; a failure changes nothing.
+function Invoke-PlanMove {
+    param([string]$Operation, [string]$Id, [switch]$Apply)
+    $archive = $Operation -eq 'archive'
+    if (-not (Test-ValidSlug $Id)) { Write-Error "Error: invalid plan ID. Use a named directory under .planning."; exit 1 }
+    if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) { Write-Error "Error: planning directory not found: $PlanRoot"; exit 1 }
+    if (-not (Test-RealDirectory $PlanRoot)) { Write-Error "Error: planning directory is outside the project, is a link, or cannot be verified."; exit 1 }
+    if ($archive) {
+        $source = Join-Path $PlanRoot $Id
+        $parent = $ArchiveRoot
+        if (-not (Test-RealPlanDirectory $source)) { Write-Error "Error: no plan to archive at $source (needs a real directory inside the project with a regular task_plan.md)."; exit 1 }
+        if ($env:PLAN_ID -ceq $Id) { Write-Error "Error: PLAN_ID selects this plan in the current environment; unset it before archiving."; exit 1 }
+        if ((Get-Item -LiteralPath $ArchiveRoot -Force -ErrorAction SilentlyContinue) -and -not (Test-RealDirectory $ArchiveRoot)) {
+            Write-Error "Error: archive directory is not a real directory inside the project: $ArchiveRoot"; exit 1
+        }
+    } else {
+        $source = Join-Path $ArchiveRoot $Id
+        $parent = $PlanRoot
+        if (-not (Test-RealDirectory $ArchiveRoot)) { Write-Error "Error: no archive directory inside the project at $ArchiveRoot"; exit 1 }
+        if (-not (Test-RealPlanDirectory $source)) { Write-Error "Error: no archived plan at $source (needs a real directory inside the project with a regular task_plan.md)."; exit 1 }
+    }
+    $destination = Join-Path $parent $Id
+    if (Get-Item -LiteralPath $destination -Force -ErrorAction SilentlyContinue) { Write-Error "Error: $destination already exists; restore or rename it first."; exit 1 }
+    $namesPointer = $false
+    if ($archive) {
+        $pointerItem = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
+        $namesPointer = [bool]($pointerItem -and -not $pointerItem.PSIsContainer -and
+            ([string]$pointerItem.LinkType) -notin @('SymbolicLink', 'Junction') -and
+            (Test-WithinRoot $ActiveFile) -and ((Get-CurrentActivePlan) -ceq $Id))
+    }
+    if (-not $Apply) {
+        $planFile = Join-Path $source 'task_plan.md'
+        try { $phases = Get-PhaseStatus -PlanFile $planFile -AsObject } catch { Write-Error "Error: cannot read $planFile"; exit 1 }
+        $summary = "$($phases.complete)/$($phases.total) complete, $($phases.in_progress) in_progress, $($phases.pending) pending"
+        if ($archive) {
+            Write-Output "Would archive plan: $Id ($summary)"
+            Write-Output "  from: $source"
+            Write-Output "  to:   $destination"
+            if ($phases.total -eq 0 -or $phases.complete -ne $phases.total) { Write-Output "  Note: not all phases are complete." }
+            if ($namesPointer) { Write-Output "  The shared default (.active_plan) names this plan and will be cleared." }
+            Write-Output "Nothing is deleted. Restore with: set-active-plan.ps1 -Restore $Id"
+        } else {
+            Write-Output "Would restore plan: $Id ($summary)"
+            Write-Output "  from: $source"
+            Write-Output "  to:   $destination"
+            Write-Output "Nothing is deleted."
+        }
+        Write-Output "Run again with -Yes to apply."
+        return
+    }
+    if ($archive -and -not (Test-Path -LiteralPath $ArchiveRoot -PathType Container)) {
+        try { [IO.Directory]::CreateDirectory($ArchiveRoot) | Out-Null } catch { Write-Error "Error: could not create $ArchiveRoot"; exit 1 }
+        if (-not (Test-RealDirectory $ArchiveRoot)) { Write-Error "Error: archive directory cannot be verified after creation: $ArchiveRoot"; exit 1 }
+    }
+    # One rename only: Directory.Move never copies across volumes and never
+    # overwrites, so a concurrent destination fails instead of nesting.
+    try { [IO.Directory]::Move($source, $destination) } catch { Write-Error "Error: could not move $source to ${destination}: $($_.Exception.Message)"; exit 1 }
+    if ((Test-Path -LiteralPath $source) -or -not (Test-Path -LiteralPath (Join-Path $destination 'task_plan.md') -PathType Leaf)) {
+        Write-Error "Error: move did not complete as expected; inspect $source and $destination."; exit 1
+    }
+    if ($archive) {
+        Write-Output "Archived plan: $Id"
+        Write-Output "  to: $destination"
+        if ($namesPointer) {
+            try {
+                [IO.File]::Delete($ActiveFile)
+                Write-Output "  Cleared the shared default (.active_plan), which named this plan."
+            } catch { [Console]::Error.WriteLine("Warning: could not remove $ActiveFile; it still names the archived plan.") }
+        }
+        Write-Output "Restore with: set-active-plan.ps1 -Restore $Id"
+    } else {
+        Write-Output "Restored plan: $Id"
+        Write-Output "  to: $destination"
+        Write-Output "To make it the default: set-active-plan.ps1 $Id   To pin a session: `$env:PLAN_ID = '$Id'"
+    }
 }
 
 if ($Help -or $PlanId -eq "--help" -or $PlanId -eq "-h") {
-    Write-Output "Usage: set-active-plan.ps1 [-List|-l|--list|-VerifyRoot|PLAN_ID]"
+    Write-Output "Usage: set-active-plan.ps1 [-List [-Archived]|-l|--list|-VerifyRoot|PLAN_ID]"
+    Write-Output "       set-active-plan.ps1 -Archive <id> [-Yes] | -Restore <id> [-Yes]"
+    Write-Output "-List -Json [-Archived] [-Limit 1..100] [-Offset N] emits bounded metadata, including root files."
+    Write-Output "-Archive moves a named plan to .planning\.archive\<id>; -Restore moves it back."
+    Write-Output "Both preview until -Yes is given, never copy, and never delete."
     exit 0
+}
+
+if ($PSBoundParameters.ContainsKey('Archive') -or $PSBoundParameters.ContainsKey('Restore')) {
+    $operation = 'archive'; $switchName = '-Archive'; $target = $Archive
+    if ($PSBoundParameters.ContainsKey('Restore')) { $operation = 'restore'; $switchName = '-Restore'; $target = $Restore }
+    if (($PSBoundParameters.ContainsKey('Archive') -and $PSBoundParameters.ContainsKey('Restore')) -or
+        $List -or $Json -or $VerifyRoot -or $Archived -or $PlanId -or
+        $PSBoundParameters.ContainsKey('Limit') -or $PSBoundParameters.ContainsKey('Offset')) {
+        Write-Error "Error: archive or restore one plan in its own call: -Archive <id> [-Yes] or -Restore <id> [-Yes]."
+        exit 1
+    }
+    if (-not $target) {
+        Write-Error "Error: $switchName needs a plan ID: $switchName <id> [-Yes]"
+        exit 1
+    }
+    Invoke-PlanMove -Operation $operation -Id $target -Apply:$Yes
+    exit 0
+}
+if ($Yes) {
+    Write-Error "Error: -Yes is only valid with -Archive or -Restore."
+    exit 1
+}
+if ($Archived -and -not $List) {
+    Write-Error "Error: -Archived is a listing option: -List -Archived or -List -Json -Archived."
+    exit 1
 }
 
 # Constant-time check for callers that are about to create a plan: the
@@ -483,7 +670,7 @@ if ($Json -or $PSBoundParameters.ContainsKey('Limit') -or $PSBoundParameters.Con
         Write-Error 'Error: use -List -Json with limit 1..100 and nonnegative offset; selection is a separate operation.'
         exit 1
     }
-    Show-PlanListJson
+    Show-PlanListJson -ArchivedOnly:$Archived
     exit 0
 }
 
@@ -492,7 +679,7 @@ if ($List -or $PlanId -eq "--list" -or $PlanId -eq "-l") {
         Write-Error "Error: list plans or set PLAN_ID in separate calls."
         exit 1
     }
-    Show-PlanList
+    if ($Archived) { Show-ArchivedList } else { Show-PlanList }
     exit 0
 }
 
