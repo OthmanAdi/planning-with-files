@@ -10,13 +10,46 @@
 # 16-hex nonce for delimiter framing, and auto-attest the plan. With NO v3 switch
 # and no .mode file, behavior is byte-equivalent to v2.43.0.
 
+<#
+.SYNOPSIS
+Initialize planning files for a new session.
+.DESCRIPTION
+Creates task_plan.md, findings.md, and progress.md. Use -Help / -h / -? to
+print usage without creating files. Unknown dash-prefixed switches are refused.
+.PARAMETER Help
+Print usage and exit without changing files.
+#>
+[CmdletBinding()]
 param(
+    [Alias('h')]
+    [switch]$Help,
     [string]$ProjectName = "project",
     [string]$Template = "default",
     [switch]$PlanDir,
     [switch]$Autonomous,
     [switch]$Gated
 )
+
+function Show-InitSessionUsage {
+    @"
+Usage: .\init-session.ps1 [-Template TYPE] [project-name]
+       .\init-session.ps1 -PlanDir
+       .\init-session.ps1 -Autonomous
+       .\init-session.ps1 -Gated
+
+Options:
+  -Template TYPE   Use the default or analytics template.
+  -PlanDir         Create an isolated plan directory without a name.
+  -Autonomous      Enable autonomous mode and plan attestation.
+  -Gated           Enable autonomous mode with the completion gate.
+  -Help, -h, -?    Print this help and exit without changing files.
+"@
+}
+
+if ($Help) {
+    Show-InitSessionUsage
+    exit 0
+}
 
 # Windows PowerShell 5.1 can silently relocate a -File invocation when the
 # inherited cwd contains wildcard characters such as [ or ]. Recover the
