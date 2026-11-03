@@ -517,19 +517,19 @@ $planFile = Resolve-PlanFile
 if (-not $planFile) {
     switch ($script:ResolveFailureCause) {
         "ambiguous" {
-            Write-Error "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested."
+            [Console]::Error.WriteLine("[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.")
         }
         "target" {
-            Write-Error ("[plan-attest] -Target {0} did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted." -f $Target)
+            [Console]::Error.WriteLine(("[plan-attest] -Target {0} did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted." -f $Target))
         }
         "plan-id" {
-            Write-Error ("[plan-attest] PLAN_ID={0} names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted." -f $env:PLAN_ID)
+            [Console]::Error.WriteLine(("[plan-attest] PLAN_ID={0} names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted." -f $env:PLAN_ID))
         }
         "pwf-plan-root" {
-            Write-Error ("[plan-attest] PWF_PLAN_ROOT={0} did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted." -f $env:PWF_PLAN_ROOT)
+            [Console]::Error.WriteLine(("[plan-attest] PWF_PLAN_ROOT={0} did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted." -f $env:PWF_PLAN_ROOT))
         }
         Default {
-            Write-Error "[plan-attest] No task_plan.md found. Create a plan first."
+            [Console]::Error.WriteLine("[plan-attest] No task_plan.md found. Create a plan first.")
         }
     }
     exit 1
@@ -587,7 +587,7 @@ $storedHash = Write-SafeAscii -Path $attestationFile -ExpectedDirectory $attesta
 # (permissions, full disk) must not leave a stale attestation and exit clean.
 if ($null -ne $storedHash) { $storedHash = $storedHash.Trim() }
 if ($storedHash -ne $hashVal) {
-    Write-Error "[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested."
+    [Console]::Error.WriteLine("[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested.")
     exit 1
 }
 
