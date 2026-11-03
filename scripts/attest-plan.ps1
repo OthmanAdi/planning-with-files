@@ -19,6 +19,10 @@
 
 .PARAMETER Clear
     Remove the attestation (re-open the plan).
+
+.PARAMETER Target
+    Attest a specific plan: `root` for the legacy project-root plan, or a
+    `.planning/<slug>` directory name. An explicit target is a binding.
 #>
 [CmdletBinding(DefaultParameterSetName = "Attest")]
 param(
@@ -26,7 +30,13 @@ param(
     [switch] $Show,
 
     [Parameter(ParameterSetName = "Clear")]
-    [switch] $Clear
+    [switch] $Clear,
+
+    [Parameter(ParameterSetName = "Attest")]
+    [Parameter(ParameterSetName = "Show")]
+    [Parameter(ParameterSetName = "Clear")]
+    [Alias("PlanId")]
+    [string] $Target
 )
 
 $ErrorActionPreference = "Stop"
@@ -409,10 +419,58 @@ function Test-SlugPlanDirectory {
 }
 
 function Resolve-PlanFile {
+    $script:ResolveFailureCause = "not-found"
     $resolver = Join-Path $PSScriptRoot "resolve-plan-dir.ps1"
     if (-not (Test-Path -LiteralPath $resolver -PathType Leaf)) { return $null }
+
+    if ($Target) {
+        if ($Target -eq "root") {
+            $targetRoot = (Get-Location).Path
+            if ($env:PWF_PLAN_ROOT) {
+                $pin = $env:PWF_PLAN_ROOT
+                if ($pin -match '^[\\/]{2}' -or $pin -match '^[A-Za-z]:[^\\/]') {
+                    $script:ResolveFailureCause = "target"
+                    return $null
+                }
+                if (-not (Test-Path -LiteralPath $pin -PathType Container)) {
+                    $script:ResolveFailureCause = "target"
+                    return $null
+                }
+                $targetRoot = (Resolve-Path -LiteralPath $pin).Path
+            }
+            $rootPlan = Join-Path $targetRoot "task_plan.md"
+            $resolved = Resolve-ContainedPlanFile -Candidate $rootPlan -ExpectedDirectory $targetRoot
+            if (-not $resolved) { $script:ResolveFailureCause = "target" }
+            return $resolved
+        }
+
+        if ($Target -notmatch '^[A-Za-z0-9_][A-Za-z0-9._-]*$') {
+            $script:ResolveFailureCause = "target"
+            return $null
+        }
+        $previousPlanId = $env:PLAN_ID
+        $env:PLAN_ID = $Target
+        try {
+            $resolvedDir = @(& $resolver | Where-Object { $_ }) | Select-Object -First 1
+        } finally {
+            if ($null -eq $previousPlanId) { Remove-Item Env:PLAN_ID -ErrorAction SilentlyContinue }
+            else { $env:PLAN_ID = $previousPlanId }
+        }
+        if (-not $resolvedDir) {
+            $script:ResolveFailureCause = "target"
+            return $null
+        }
+        $planFile = Join-Path $resolvedDir "task_plan.md"
+        $resolved = Resolve-ContainedPlanFile -Candidate $planFile -ExpectedDirectory $resolvedDir
+        if (-not $resolved) { $script:ResolveFailureCause = "target" }
+        return $resolved
+    }
+
     $resolvedDir = @(& $resolver | Where-Object { $_ }) | Select-Object -First 1
-    if (-not $resolvedDir -and ((& $resolver -CheckAmbiguity) -eq "PWF_PLAN_AMBIGUOUS_V1")) { return $null }
+    if (-not $resolvedDir -and ((& $resolver -CheckAmbiguity) -eq "PWF_PLAN_AMBIGUOUS_V1")) {
+        $script:ResolveFailureCause = "ambiguous"
+        return $null
+    }
     if ($resolvedDir) {
         $planFile = Join-Path $resolvedDir "task_plan.md"
         return (Resolve-ContainedPlanFile -Candidate $planFile -ExpectedDirectory $resolvedDir)
@@ -420,7 +478,14 @@ function Resolve-PlanFile {
 
     # An explicit pin or a scoped selector that failed validation must never
     # fall through and attest an unrelated legacy-root plan.
-    if ($env:PWF_PLAN_ROOT -or $env:PLAN_ID) { return $null }
+    if ($env:PWF_PLAN_ROOT) {
+        $script:ResolveFailureCause = "pwf-plan-root"
+        return $null
+    }
+    if ($env:PLAN_ID) {
+        $script:ResolveFailureCause = "plan-id"
+        return $null
+    }
     $activePointer = Join-Path (Join-Path (Get-Location) ".planning") ".active_plan"
     $activePointerItem = Get-Item -LiteralPath $activePointer -Force -ErrorAction SilentlyContinue
     if ($activePointerItem) { return $null }
@@ -450,7 +515,23 @@ function Get-AttestationPath {
 
 $planFile = Resolve-PlanFile
 if (-not $planFile) {
-    Write-Error "[plan-attest] No task_plan.md found. Create a plan first."
+    switch ($script:ResolveFailureCause) {
+        "ambiguous" {
+            Write-Error "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested."
+        }
+        "target" {
+            Write-Error ("[plan-attest] -Target {0} did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted." -f $Target)
+        }
+        "plan-id" {
+            Write-Error ("[plan-attest] PLAN_ID={0} names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted." -f $env:PLAN_ID)
+        }
+        "pwf-plan-root" {
+            Write-Error ("[plan-attest] PWF_PLAN_ROOT={0} did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted." -f $env:PWF_PLAN_ROOT)
+        }
+        Default {
+            Write-Error "[plan-attest] No task_plan.md found. Create a plan first."
+        }
+    }
     exit 1
 }
 

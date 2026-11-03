@@ -82,7 +82,10 @@ resolve_plan_file() {
     if [ -f "${RESOLVER}" ]; then
         plan_dir="$(sh "${RESOLVER}" 2>/dev/null)"
         if [ -z "$plan_dir" ] && [ "$(sh "${RESOLVER}" --check-ambiguity 2>/dev/null)" = "PWF_PLAN_AMBIGUOUS_V1" ]; then
-            printf "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.\n" >&2
+            # Do not print here: resolve_plan_file runs under command substitution,
+            # so a message printed inside the function cannot stop the caller's
+            # failure handler from also printing. Signal ambiguity by returning 1
+            # and let the entry point name the cause once.
             return 1
         fi
     fi
@@ -157,12 +160,19 @@ case "${1:-}" in
 esac
 
 plan_file="$(resolve_plan_file)" || {
-    # Name the actual cause. "No task_plan.md found" is true but misleading
-    # when the plan exists and an explicit selector was rejected: before #237
-    # a mistyped PLAN_ID attested a DIFFERENT plan at rc=0, and an operator
-    # who now sees a generic not-found is likely to go looking for the wrong
-    # problem. The selectors are bindings, so say which one refused.
-    if [ -n "${target:-}" ]; then
+    # Name the actual cause once. Ambiguity must be checked here (not only
+    # inside resolve_plan_file): the function runs under $(), so any message it
+    # printed would still leave this handler free to append a second line.
+    if [ -z "${target:-}" ] && [ -z "${PLAN_ID:-}" ] && [ -z "${PWF_PLAN_ROOT:-}" ] \
+        && [ -f "${RESOLVER}" ] \
+        && [ "$(sh "${RESOLVER}" --check-ambiguity 2>/dev/null)" = "PWF_PLAN_AMBIGUOUS_V1" ]; then
+        printf "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.\n" >&2
+    elif [ -n "${target:-}" ]; then
+        # Name the actual cause. "No task_plan.md found" is true but misleading
+        # when the plan exists and an explicit selector was rejected: before #237
+        # a mistyped PLAN_ID attested a DIFFERENT plan at rc=0, and an operator
+        # who now sees a generic not-found is likely to go looking for the wrong
+        # problem. The selectors are bindings, so say which one refused.
         printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "${target}" >&2
     elif [ -n "${PLAN_ID:-}" ]; then
         printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "${PLAN_ID}" >&2

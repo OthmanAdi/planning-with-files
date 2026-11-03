@@ -31,6 +31,27 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
         self.assertNotIn("[IO.File]::WriteAllBytes($Path", source)
         self.assertNotIn("Remove-Item -LiteralPath $Path -Force", source)
 
+    def test_resolve_failure_messages_name_ambiguity_and_selectors(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertIn("[string] $Target", source)
+        self.assertIn('ResolveFailureCause = "ambiguous"', source)
+        self.assertIn(
+            "Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.",
+            source,
+        )
+        self.assertIn(
+            "PLAN_ID={0} names no plan directory under .planning.",
+            source,
+        )
+        self.assertIn(
+            "PWF_PLAN_ROOT={0} did not resolve to a project root holding a plan.",
+            source,
+        )
+        self.assertIn(
+            "-Target {0} did not resolve to a plan.",
+            source,
+        )
+
     def test_directory_identity_is_frozen_before_each_target_open(self) -> None:
         source = ATTEST.read_text(encoding="utf-8")
         contracts = (
@@ -461,6 +482,64 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertNotEqual(0, result.returncode)
             self.assertFalse((root / ".plan-attestation").exists())
 
+
+    def test_ambiguous_named_plans_refuse_once_without_attesting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            alpha = root / ".planning" / "alpha"
+            beta = root / ".planning" / "beta"
+            alpha.mkdir(parents=True)
+            beta.mkdir(parents=True)
+            (alpha / "task_plan.md").write_text("alpha\n", encoding="utf-8")
+            (beta / "task_plan.md").write_text("beta\n", encoding="utf-8")
+
+            result = self._run(root, None, "-Show")
+
+            self.assertNotEqual(0, result.returncode)
+            combined = (result.stderr or "") + (result.stdout or "")
+            self.assertIn(
+                "Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.",
+                combined,
+            )
+            self.assertEqual(1, combined.count("[plan-attest]"))
+            self.assertNotIn("No task_plan.md found", combined)
+            self.assertFalse((alpha / ".attestation").exists())
+            self.assertFalse((beta / ".attestation").exists())
+
+    def test_rejected_plan_id_names_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            decoy = root / ".planning" / "decoy"
+            decoy.mkdir(parents=True)
+            (decoy / "task_plan.md").write_text("decoy\n", encoding="utf-8")
+            (root / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
+
+            result = self._run(root, {"PLAN_ID": "missing-slug"})
+
+            self.assertNotEqual(0, result.returncode)
+            combined = (result.stderr or "") + (result.stdout or "")
+            self.assertIn("PLAN_ID=missing-slug", combined)
+            self.assertIn("explicit selector is a binding", combined)
+            self.assertNotIn("No task_plan.md found", combined)
+            self.assertFalse((decoy / ".attestation").exists())
+
+    def test_rejected_target_names_selector(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            decoy = root / ".planning" / "decoy"
+            decoy.mkdir(parents=True)
+            (decoy / "task_plan.md").write_text("decoy\n", encoding="utf-8")
+            (root / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
+
+            result = self._run(root, None, "-Target", "missing-slug")
+
+            self.assertNotEqual(0, result.returncode)
+            combined = (result.stderr or "") + (result.stdout or "")
+            self.assertIn("-Target missing-slug", combined)
+            self.assertIn("explicit target is a binding", combined)
+            self.assertNotIn("No task_plan.md found", combined)
+            self.assertFalse((decoy / ".attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
 
 if __name__ == "__main__":
     unittest.main()
