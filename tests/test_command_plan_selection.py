@@ -15,6 +15,8 @@ COMMANDS_DIR = Path(__file__).resolve().parents[1] / "commands"
 CREATION_COMMANDS = ("plan.md", "pwf.md")
 SELECTION_COMMANDS = ("plan.md", "pwf.md", "status.md", "plan-goal.md")
 ALL_COMMANDS = CREATION_COMMANDS + ("status.md", "plan-attest.md", "plan-goal.md")
+# Translated prose differs, so these are checked only for the untranslated tokens.
+LOCALIZED_CREATION_COMMANDS = ("plan-de.md", "plan-ar.md", "plan-es.md", "plan-zh.md", "plan-zht.md")
 
 
 def _read(name: str) -> str:
@@ -78,6 +80,30 @@ class CommandPlanSelectionTests(unittest.TestCase):
                 initialization = next(line for line in body.splitlines() if line.startswith("Only for a new task"))
                 self.assertIn("validated project root", initialization)
                 self.assertIn("PWF_PLAN_ROOT", initialization)
+
+    def test_localized_creation_commands_follow_the_selection_contract(self) -> None:
+        for name in LOCALIZED_CREATION_COMMANDS:
+            with self.subTest(command=name):
+                body = _read(name)
+                for token in (
+                    "resolve-plan-dir.sh",
+                    "resolve-plan-dir.ps1",
+                    "--check-ambiguity",
+                    "PWF_PLAN_AMBIGUOUS_V1",
+                    "PWF_PLAN_ROOT",
+                    "PLAN_ID=<slug>",
+                    "legacy",
+                    "init-session.sh",
+                    "init-session.ps1",
+                    "check-complete.sh --validate",
+                    "check-complete.ps1 -Validate",
+                    "### Phase N:",
+                    ".planning/.active_plan",
+                    "**Status:** complete",
+                ):
+                    self.assertIn(token, body)
+                # Restore comes before initialization, as in plan.md.
+                self.assertLess(body.index("resolve-plan-dir.sh"), body.index("init-session.sh"))
 
     def test_status_does_not_load_companion_file_bodies(self) -> None:
         body = _read("status.md")

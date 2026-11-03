@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- The localized `/plan-de`, `/plan-ar`, `/plan-es`, `/plan-zh` and `/plan-zht` commands now restore the selected plan through `resolve-plan-dir`, stop on a rejected pin or `PWF_PLAN_AMBIGUOUS_V1`, and initialize only through `init-session`, matching `/plan`. They no longer create a stray root plan when a named plan is selected (#359).
+
 ## [3.28.0] - 2026-11-03
 
 ### Added
