@@ -7,9 +7,11 @@ present (sh always; Windows PowerShell 5.1 and pwsh when installed).
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -107,7 +109,7 @@ def test_preview_changes_nothing(runtime, tmp_path):
     assert lines[2].startswith("  to:   ") and same_path(lines[2], "/.planning/.archive/beta")
     assert "  Note: not all phases are complete." in lines
     assert "will be cleared" not in output
-    assert "Nothing is deleted. Restore with:" in output
+    assert "The plan is moved, never deleted. Restore with:" in output
     assert lines[-1] == "Run again with --yes to apply." or lines[-1] == "Run again with -Yes to apply."
     assert tree(tmp_path) == before
     assert not (tmp_path / ".planning" / ".archive").exists()
@@ -148,6 +150,7 @@ def test_restore_round_trip_is_byte_identical(runtime, tmp_path):
     assert preview.splitlines()[0] == "Would restore plan: alpha (1/1 complete, 0 in_progress, 0 pending)"
     assert same_path(preview.splitlines()[1], "/.planning/.archive/alpha")
     assert same_path(preview.splitlines()[2], "/.planning/alpha")
+    assert "The plan is moved, never deleted." in preview
     assert tree(tmp_path) == archived
     output = ok(run_selector(runtime, tmp_path, "--restore", "alpha", "--yes"))
     lines = output.splitlines()
@@ -226,15 +229,18 @@ def test_refusals_change_nothing(runtime, tmp_path, case, apply):
     message = refused(run_selector(runtime, project, *args, env_extra=env_extra), tmp_path, before)
     if case == "plan-id-pinned":
         assert "PLAN_ID" in message
-    if case in ("destination-exists", "destination-is-file", "restore-target-exists"):
-        assert "already exists" in message
+    if case in ("destination-exists", "destination-is-file"):
+        assert "already exists; restore or rename it first." in message
+    if case == "restore-target-exists":
+        assert "already exists; archive or rename it first." in message
     if not case.startswith("restore") and case not in ("destination-exists", "destination-is-file", "archive-dir-is-link"):
         assert not (planning / ".archive").exists()
 
 
 @pytest.mark.parametrize("pointer,cleared", [
-    (b"alpha\n", True), (b"\xef\xbb\xbfalpha\r\n", True), (b"beta\n", False), (b"", False),
-], ids=["names-plan", "bom-crlf", "names-other", "empty"])
+    (b"alpha\n", True), (b"\xef\xbb\xbfalpha\r\n", True), (b"alpha  \n", True),
+    (b"beta\n", False), (b"", False), (b"alpha beta\n", False),
+], ids=["names-plan", "bom-crlf", "padded", "names-other", "empty", "two-words"])
 def test_pointer_is_cleared_only_when_it_names_the_archived_plan(runtime, tmp_path, pointer, cleared):
     fixture(tmp_path, "alpha", "beta", pointer=pointer)
     pointer_file = tmp_path / ".planning" / ".active_plan"
@@ -360,3 +366,128 @@ def test_powershell_native_spellings(runtime, tmp_path):
     assert inventory(runtime, tmp_path, "-Archived")["candidates"][0]["plan_id"] == "alpha"
     assert ok(run_selector(runtime, tmp_path, "-Restore", "alpha", "-Yes")).startswith("Restored plan: alpha")
     assert (tmp_path / ".planning" / "alpha" / "task_plan.md").is_file()
+
+
+def case_insensitive(root: Path) -> bool:
+    (root / "case-probe" / "a").mkdir(parents=True)
+    return (root / "case-probe" / "A").is_dir()
+
+
+def test_case_variant_id_never_moves_a_plan(runtime, tmp_path):
+    if not case_insensitive(tmp_path):
+        pytest.skip("case-sensitive filesystem")
+    # NTFS and default APFS find alpha for ALPHA; the ID must match the entry.
+    fixture(tmp_path, "alpha", "beta", pointer=b"alpha\n")
+    before = tree(tmp_path)
+    for args in (("--archive", "ALPHA"), ("--archive", "ALPHA", "--yes")):
+        assert "no plan to archive" in refused(run_selector(runtime, tmp_path, *args), tmp_path, before)
+    assert not (tmp_path / ".planning" / ".archive").exists()
+    ok(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes"))
+    before = tree(tmp_path)
+    for args in (("--restore", "ALPHA"), ("--restore", "ALPHA", "--yes")):
+        assert "no archived plan" in refused(run_selector(runtime, tmp_path, *args), tmp_path, before)
+
+
+def test_plan_id_guard_compares_directories_not_strings(runtime, tmp_path):
+    if not case_insensitive(tmp_path):
+        pytest.skip("case-sensitive filesystem")
+    fixture(tmp_path, "alpha", "beta")
+    before = tree(tmp_path)
+    # A session pinned to ALPHA resolves .planning/alpha on this filesystem.
+    message = refused(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes",
+                                   env_extra={"PLAN_ID": "ALPHA"}), tmp_path, before)
+    assert "PLAN_ID" in message
+    assert not (tmp_path / ".planning" / ".archive").exists()
+    ok(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes", env_extra={"PLAN_ID": "beta"}))
+
+
+@pytest.mark.parametrize("pointer", [b"ALPHA\n", b"\xef\xbb\xbf  Alpha \r\n"], ids=["upper", "bom-padded-mixed"])
+def test_pointer_naming_the_same_directory_is_cleared(runtime, tmp_path, pointer):
+    if not case_insensitive(tmp_path):
+        pytest.skip("case-sensitive filesystem")
+    fixture(tmp_path, "alpha", "beta", pointer=pointer)
+    assert "will be cleared" in ok(run_selector(runtime, tmp_path, "--archive", "alpha"))
+    assert "Cleared the shared default" in ok(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes"))
+    assert not (tmp_path / ".planning" / ".active_plan").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Win32 drops a trailing dot")
+def test_trailing_dot_id_never_moves_a_plan(runtime, tmp_path):
+    fixture(tmp_path, "alpha", "beta")
+    before = tree(tmp_path)
+    for args in (("--archive", "alpha."), ("--archive", "alpha.", "--yes")):
+        assert "no plan to archive" in refused(run_selector(runtime, tmp_path, *args), tmp_path, before)
+    if runtime[0] != "sh":
+        # The PowerShell resolver selects .planning\alpha for PLAN_ID=alpha. here.
+        assert "PLAN_ID" in refused(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes",
+                                                 env_extra={"PLAN_ID": "alpha."}), tmp_path, before)
+    ok(run_selector(runtime, tmp_path, "--archive", "alpha", "--yes"))
+    before = tree(tmp_path)
+    for args in (("--restore", "alpha."), ("--restore", "alpha.", "--yes")):
+        assert "no archived plan" in refused(run_selector(runtime, tmp_path, *args), tmp_path, before)
+
+
+@contextlib.contextmanager
+def held_open(path: Path):
+    """GENERIC_READ with no sharing: every other open fails, and so does renaming its directory."""
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateFileW.restype = ctypes.c_void_p
+    kernel32.CreateFileW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p,
+                                     ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
+    kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+    handle = kernel32.CreateFileW(str(path), 0x80000000, 0, None, 3, 0x80, None)
+    assert handle not in (None, ctypes.c_void_p(-1).value)
+    try:
+        yield
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows share-mode locking")
+def test_text_listing_skips_a_locked_archived_plan_quietly(runtime, tmp_path):
+    fixture(tmp_path, "alpha", "beta", "gamma")
+    for plan_id in ("alpha", "beta"):
+        ok(run_selector(runtime, tmp_path, "--archive", plan_id, "--yes"))
+    archive = tmp_path / ".planning" / ".archive"
+    with held_open(archive / "alpha" / "task_plan.md"):
+        # ok() requires an empty stderr: no shell error for the locked file.
+        listing = ok(run_selector(runtime, tmp_path, "--list", "--archived"))
+        assert "- beta" in listing and "- alpha" not in listing
+        assert inventory(runtime, tmp_path, "--archived")["archived_count"] == 2
+        with held_open(archive / "beta" / "task_plan.md"):
+            assert ok(run_selector(runtime, tmp_path, "--list", "--archived")).strip() == "No archived plans found."
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows share-mode locking")
+@pytest.mark.parametrize("existing", [False, True], ids=["archive-dir-created", "archive-dir-existed"])
+def test_failed_move_leaves_no_archive_directory_it_created(runtime, tmp_path, existing):
+    fixture(tmp_path, "alpha", "beta")
+    if existing:
+        ok(run_selector(runtime, tmp_path, "--archive", "beta", "--yes"))
+    before = tree(tmp_path)
+    with held_open(tmp_path / ".planning" / "alpha" / "task_plan.md"):
+        result = run_selector(runtime, tmp_path, "--archive", "alpha", "--yes")
+    # The snapshot comparison reads every file, so it runs after the release.
+    message = refused(result, tmp_path, before)
+    assert "could not move" in message
+    assert (tmp_path / ".planning" / ".archive").exists() is existing
+
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def test_powershell_move_errors_use_the_top_level_error_shape(runtime, tmp_path):
+    if runtime[0] == "sh":
+        pytest.skip("PowerShell error rendering")
+    fixture(tmp_path, "alpha")
+    before = tree(tmp_path)
+    moved = refused(run_selector(runtime, tmp_path, "--archive", "ghost"), tmp_path, before)
+    plain = refused(run_selector(runtime, tmp_path, "--yes"), tmp_path, before)
+    moved, plain = ANSI.sub("", moved), ANSI.sub("", plain)
+    # pwsh 7 renders an error raised inside a function as a multi-line
+    # "Line | N |" block naming the function; the move errors must look
+    # like every other error of the script.
+    assert "Invoke-PlanMove" not in moved and "Line |" not in moved
+    assert "Error: no plan to archive at" in moved
+    assert moved.split("Error: ")[0] == plain.split("Error: ")[0]

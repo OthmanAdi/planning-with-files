@@ -27,11 +27,17 @@ project, deliberately change to that validated project directory first.
 ## Schema version 1
 
 The shell command writes one UTF-8 JSON line with an LF terminator to stdout.
-Inside a PowerShell session, `& "<skill-dir>/scripts/set-active-plan.ps1" -List -Json | ConvertFrom-Json`
-returns the parsed object. Started from another process with `pwsh -File` or
-`powershell -File`, the PowerShell script also writes one UTF-8 line with an LF
-terminator. No model, service or extra runtime is required. Invalid arguments
-fail without selecting or changing any plan.
+Started from another process with a literal `-File` argument (`pwsh -File` or
+`powershell -File`), the PowerShell script also writes one UTF-8 line with an
+LF terminator. Every other call form, including use inside a session,
+`-Command "& ... -List -Json"`, `-f` and a positional script path, hands the
+same JSON to the pipeline with every non-ASCII character escaped as `\uXXXX`,
+so the text is pure ASCII and decodes identically under any console code page;
+the line ending is then the host's. Inside a PowerShell session,
+`& "<skill-dir>/scripts/set-active-plan.ps1" -List -Json | ConvertFrom-Json`
+returns the parsed object with the real characters. No model, service or extra
+runtime is required. Invalid arguments fail without selecting or changing any
+plan.
 
 | Field | Meaning |
 |---|---|
@@ -127,16 +133,26 @@ sh "<skill-dir>/scripts/set-active-plan.sh" --restore <id> --yes
 & "<skill-dir>/scripts/set-active-plan.ps1" -Restore <id> -Yes
 ```
 
-Without `--yes` (`-Yes`), archive and restore print a preview and change
-nothing. The archive preview shows phase counts, the source and destination
-paths, a note when not all phases are complete, and whether the shared default
-(`.active_plan`) would be cleared. With `--yes`, archive moves
+Both commands act on the current directory's `.planning/` only and ignore
+`PWF_PLAN_ROOT`. Without `--yes` (`-Yes`), archive and restore print a preview
+and change nothing. The archive preview shows phase counts, the source and
+destination paths, a note when not all phases are complete, and whether the
+shared default (`.active_plan`) would be cleared. With `--yes`, archive moves
 `.planning/<id>/` to `.planning/.archive/<id>/` in one rename and creates
-`.planning/.archive/` when needed. Attestation, mode and other files inside the
-plan directory move with it. If `.planning/.active_plan` names the archived
-plan, the pointer file is removed and the output says so. Restore moves the
-directory back and never touches `.active_plan`. Plain `--list` points at
-archiving in its footer and, when archived plans exist, gives their number.
+`.planning/.archive/` when needed; if the rename then fails, a
+`.planning/.archive/` this call created is removed again while it is still
+empty. Attestation, mode and other files inside the plan directory move with
+it. If `.planning/.active_plan` names the archived plan's directory (read as
+the resolver reads it: BOM and whitespace removed), the pointer file is
+removed and the output says so. Restore moves the directory back and never
+touches `.active_plan`. Plain `--list` points at archiving in its footer and,
+when archived plans exist, gives their number.
+
+An ID must match the directory name exactly, including case: on a
+case-insensitive filesystem `ALPHA` does not archive `alpha`, and on Windows
+`alpha.` does not archive `alpha`. The `PLAN_ID` guard compares directories,
+so a pin spelled `ALPHA` still protects `alpha` where the resolver would
+select it.
 
 Both commands exit 1 with an `Error:` line on stderr and change nothing when:
 
@@ -144,9 +160,10 @@ Both commands exit 1 with an `Error:` line on stderr and change nothing when:
   do not form one of the commands above;
 - `.planning/`, `.planning/.archive/` or the source directory is a link, a
   junction or outside the project;
-- the source directory is missing or has no regular `task_plan.md`;
+- the source directory is missing, is not listed under exactly that name, or
+  has no regular `task_plan.md`;
 - the destination exists in any form, including a dangling link;
-- `PLAN_ID` in the current environment names the plan being archived;
+- `PLAN_ID` in the current environment names the directory being archived;
 - (shell) the source and destination are on different filesystems, or this
   cannot be determined.
 

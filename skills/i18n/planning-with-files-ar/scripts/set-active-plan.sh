@@ -323,6 +323,30 @@ is_real_plan_dir() { is_real_dir "$1" && [ -f "$1/task_plan.md" ] && [ ! -L "$1/
 
 device_of() { stat -c %d "$1" 2>/dev/null || stat -f %d "$1" 2>/dev/null; }
 
+# A plan ID must match its directory entry exactly. A case-insensitive
+# filesystem finds alpha for ALPHA and Win32 drops a trailing dot, which
+# would archive under another name and slip past the guards below.
+has_exact_entry() {
+    for _he_entry in "$1"/*; do
+        [ "${_he_entry##*/}" = "$2" ] && return 0
+    done
+    return 1
+}
+
+# True when a slug names the source directory itself ($2), not merely the
+# same string: the resolver would select alpha for ALPHA or alpha. there.
+names_source() { slug_is_valid "$1" && [ "${PLAN_ROOT}/$1" -ef "$2" ]; }
+
+# The pointer read the way the resolver reads it: BOM stripped, all
+# whitespace removed, then a valid slug that names the source directory.
+pointer_names_source() {
+    ! pointer_is_unsafe && [ -f "${ACTIVE_FILE}" ] && can_open "${ACTIVE_FILE}" || return 1
+    _pn_id="$(tr -d '[:space:]' < "${ACTIVE_FILE}")"
+    _pn_bom="$(printf '\357\273\277')"
+    case "${_pn_id}" in "${_pn_bom}"*) _pn_id="${_pn_id#"${_pn_bom}"}" ;; esac
+    names_source "${_pn_id}" "$1"
+}
+
 # Archived plans with the listing filters, counted with builtins only.
 archived_count() {
     _ac_n=0
@@ -350,7 +374,7 @@ list_archived() {
     if is_real_dir "${ARCHIVE_ROOT}"; then
         for _dir in "${ARCHIVE_ROOT}"/*; do
             _id="${_dir##*/}"
-            slug_is_valid "${_id}" && is_real_plan_dir "${_dir}" || continue
+            slug_is_valid "${_id}" && is_real_plan_dir "${_dir}" && can_open "${_dir}/task_plan.md" || continue
             _status="$(phase_status "${_dir}/task_plan.md")" || continue
             [ "${_found}" -eq 1 ] || printf '%s\n' 'Archived plans:'
             printf '%s\n' "- ${_id} - ${_status}"
@@ -373,19 +397,22 @@ move_plan() {
     is_real_dir "${PLAN_ROOT}" || fail 'planning directory is outside the project, is a link, or cannot be verified.'
     if [ "${_mp_op}" = archive ]; then
         _mp_src="${PLAN_ROOT}/${_mp_id}"; _mp_parent="${ARCHIVE_ROOT}"
-        is_real_plan_dir "${_mp_src}" || fail "no plan to archive at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
-        [ "${PLAN_ID:-}" != "${_mp_id}" ] || fail 'PLAN_ID selects this plan in the current environment; unset it before archiving.'
+        is_real_plan_dir "${_mp_src}" && has_exact_entry "${PLAN_ROOT}" "${_mp_id}" ||
+            fail "no plan to archive at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
+        ! names_source "${PLAN_ID:-}" "${_mp_src}" || fail 'PLAN_ID selects this plan in the current environment; unset it before archiving.'
         if [ -e "${ARCHIVE_ROOT}" ] || [ -L "${ARCHIVE_ROOT}" ]; then
             is_real_dir "${ARCHIVE_ROOT}" || fail "archive directory is not a real directory inside the project: ${ARCHIVE_ROOT}"
         fi
     else
         _mp_src="${ARCHIVE_ROOT}/${_mp_id}"; _mp_parent="${PLAN_ROOT}"
         is_real_dir "${ARCHIVE_ROOT}" || fail "no archive directory inside the project at ${ARCHIVE_ROOT}"
-        is_real_plan_dir "${_mp_src}" || fail "no archived plan at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
+        is_real_plan_dir "${_mp_src}" && has_exact_entry "${ARCHIVE_ROOT}" "${_mp_id}" ||
+            fail "no archived plan at ${_mp_src} (needs a real directory inside the project with a regular task_plan.md)."
     fi
     _mp_dest="${_mp_parent}/${_mp_id}"
     if [ -e "${_mp_dest}" ] || [ -L "${_mp_dest}" ]; then
-        fail "${_mp_dest} already exists; restore or rename it first."
+        _mp_remedy=restore; [ "${_mp_op}" = archive ] || _mp_remedy=archive
+        fail "${_mp_dest} already exists; ${_mp_remedy} or rename it first."
     fi
     # One rename only: never a copy across filesystems, never a partial tree.
     _mp_dev_parent="${_mp_parent}"; [ -d "${_mp_parent}" ] || _mp_dev_parent="${PLAN_ROOT}"
@@ -393,8 +420,9 @@ move_plan() {
     _mp_dev_dest="$(device_of "${_mp_dev_parent}")" || _mp_dev_dest=''
     [ -n "${_mp_dev_src}" ] && [ "${_mp_dev_src}" = "${_mp_dev_dest}" ] ||
         fail "${_mp_src} and ${_mp_dev_parent} are not on the same filesystem; a plan is only renamed, never copied."
+    # Decided before the move: afterwards the source no longer exists.
     _mp_names_pointer=0
-    if [ "${_mp_op}" = archive ] && ! pointer_is_unsafe && [ "$(current_active)" = "${_mp_id}" ]; then
+    if [ "${_mp_op}" = archive ] && pointer_names_source "${_mp_src}"; then
         _mp_names_pointer=1
     fi
     if [ "${_mp_apply}" != 1 ]; then
@@ -406,19 +434,26 @@ move_plan() {
                 printf '%s\n' '  Note: not all phases are complete.'
             fi
             [ "${_mp_names_pointer}" -eq 0 ] || printf '%s\n' '  The shared default (.active_plan) names this plan and will be cleared.'
-            printf '%s\n' "Nothing is deleted. Restore with: set-active-plan.sh --restore ${_mp_id}"
+            printf '%s\n' "The plan is moved, never deleted. Restore with: set-active-plan.sh --restore ${_mp_id}"
         else
             printf '%s\n' "Would restore plan: ${_mp_id} (${_mp_status})" "  from: ${_mp_src}" "  to:   ${_mp_dest}" \
-                'Nothing is deleted.'
+                'The plan is moved, never deleted.'
         fi
         printf '%s\n' 'Run again with --yes to apply.'
         return 0
     fi
+    _mp_made_archive=0
     if [ "${_mp_op}" = archive ] && [ ! -d "${ARCHIVE_ROOT}" ]; then
         mkdir -- "${ARCHIVE_ROOT}" 2>/dev/null || fail "could not create ${ARCHIVE_ROOT}"
+        _mp_made_archive=1
         is_real_dir "${ARCHIVE_ROOT}" || fail "archive directory cannot be verified after creation: ${ARCHIVE_ROOT}"
     fi
-    mv -- "${_mp_src}" "${_mp_dest}" || fail "could not move ${_mp_src} to ${_mp_dest}"
+    if ! mv -- "${_mp_src}" "${_mp_dest}"; then
+        # A failed call leaves no .archive it created: rmdir removes only an
+        # empty directory, so anything with content is never touched.
+        [ "${_mp_made_archive}" -eq 0 ] || rmdir -- "${ARCHIVE_ROOT}" 2>/dev/null || :
+        fail "could not move ${_mp_src} to ${_mp_dest}"
+    fi
     if [ -e "${_mp_src}" ] || [ ! -f "${_mp_dest}/task_plan.md" ]; then
         # mv descends into a directory another process created meanwhile.
         [ ! -f "${_mp_dest}/${_mp_id}/task_plan.md" ] ||

@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 - PowerShell inventory `modified_at` values no longer shift by the local UTC offset.
 - The shell inventory reports a plan file held open by another process as unreadable instead of emitting invalid JSON.
 - PowerShell 7 lists and resolves plans whose paths reach 260 characters.
-- `set-active-plan.ps1 -List -Json` returns its JSON to the calling PowerShell session and restores the console encoding. Direct `-File` runs still write one UTF-8 line.
+- `set-active-plan.ps1 -List -Json` returns its JSON to the calling PowerShell session and restores the console encoding. A literal `-File` run still writes one UTF-8 line with LF; every other call form (in-session, `-Command`, `-f`, a positional script path) emits the same JSON through the pipeline with non-ASCII characters escaped as `\uXXXX`, so the output is correct under any console code page.
 - The shell inventory converts the project path with a UTF-8 locale, so non-ASCII paths stay correct under `LC_ALL=C`.
 - PowerShell listing and plan resolution include directories with the Windows Hidden attribute, matching the shell route.
 

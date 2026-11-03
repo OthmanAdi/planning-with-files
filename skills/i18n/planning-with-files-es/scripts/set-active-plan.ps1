@@ -347,6 +347,39 @@ function Test-RealPlanDirectory {
         ([string]$planItem.LinkType) -notin @('SymbolicLink', 'Junction'))
 }
 
+# A plan ID must match its directory entry exactly. NTFS and default APFS
+# find alpha for ALPHA and Win32 drops a trailing dot, which would archive
+# under another name and slip past the guards below.
+function Test-ExactEntry {
+    param([string]$Parent, [string]$Name)
+    return [bool](Get-ChildItem -LiteralPath $Parent -Force -Directory -ErrorAction SilentlyContinue |
+        Where-Object Name -ceq $Name)
+}
+
+# True when a slug names the source directory itself, not merely the same
+# string: the resolver would select alpha for ALPHA or alpha. there.
+function Test-NamesSource {
+    param([string]$Slug, [string]$Source)
+    if (-not (Test-ValidSlug $Slug)) { return $false }
+    try {
+        $comparison = [StringComparison]::Ordinal
+        if ($script:IsWindowsHost) { $comparison = [StringComparison]::OrdinalIgnoreCase }
+        return (Get-FinalPath (Join-Path $PlanRoot $Slug)).Equals((Get-FinalPath $Source), $comparison)
+    } catch { return $false }
+}
+
+# The pointer read the way the resolver reads it: BOM stripped, all
+# whitespace removed, then a valid slug that names the source directory.
+function Test-PointerNamesSource {
+    param([string]$Source)
+    $pointerItem = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
+    if (-not $pointerItem -or $pointerItem.PSIsContainer -or
+        ([string]$pointerItem.LinkType) -in @('SymbolicLink', 'Junction') -or -not (Test-WithinRoot $ActiveFile)) { return $false }
+    # Operators only: Get-Content -Raw yields $null for a zero-byte pointer.
+    try { $content = Get-Content -LiteralPath $ActiveFile -Raw -Encoding UTF8 -ErrorAction Stop } catch { return $false }
+    return Test-NamesSource -Slug ("$content" -replace ('^' + [char]0xFEFF + '|\s'), '') -Source $Source
+}
+
 # Archived plans with the listing filters; no entry is canonicalized.
 function Get-ArchivedCount {
     if (-not (Test-RealDirectory $ArchiveRoot)) { return 0 }
@@ -393,6 +426,15 @@ function Get-ListingSelection {
     elseif ($env:PWF_PLAN_ROOT) { $result.status = "rejected" }
     else { $result.status = "none" }
     return $result
+}
+
+# Every non-ASCII character as \uXXXX, one escape per UTF-16 code unit, so
+# the text is pure ASCII and decodes the same under every console code page.
+function ConvertTo-AsciiJson {
+    param([string]$Text)
+    return [regex]::Replace($Text, '[^\x00-\x7F]', [Text.RegularExpressions.MatchEvaluator]{
+        param($match) '\u{0:x4}' -f [int][char]$match.Value
+    })
 }
 
 function Show-PlanListJson {
@@ -447,12 +489,16 @@ function Show-PlanListJson {
         }
     }
     $encoding = New-Object Text.UTF8Encoding($false)
+    # Measure the form that is written: UTF-8 bytes for a direct -File run,
+    # the escaped ASCII text otherwise (escaping can triple non-ASCII paths).
+    $direct = Test-DirectFileInvocation
+    $measure = { param([string]$Text) if ($direct) { $encoding.GetByteCount($Text) } else { (ConvertTo-AsciiJson $Text).Length } }
     for ($index = [int]$Offset; $index -lt $entries.Count; $index++) {
         if ($report.limits.returned -ge [int]$Limit) { $report.limits.truncated = $true; $report.limits.next_offset = $index; break }
         $entry = $entries[$index]
         $candidate = Get-ListingCandidate -Directory $entry.Directory -Id $entry.Id -Kind $entry.Kind
         $report.candidates += $candidate
-        if ($encoding.GetByteCount(($report | ConvertTo-Json -Depth 10 -Compress)) -gt 15800) {
+        if ((& $measure ($report | ConvertTo-Json -Depth 10 -Compress)) -gt 15800) {
             $report.candidates = @($report.candidates | Select-Object -SkipLast 1)
             $report.limits.truncated = $true; $report.limits.next_offset = $index
             if ($report.limits.returned -eq 0) { $report.limits.skipped++; $report.limits.next_offset = $index + 1 }
@@ -462,8 +508,8 @@ function Show-PlanListJson {
     }
     if ($report.limits.skipped) { $report.warnings = @('linked_unsafe_or_oversized_entries_skipped') }
     $serialized = $report | ConvertTo-Json -Depth 10 -Compress
-    if ($encoding.GetByteCount($serialized) -gt 16383) { $serialized = '{"schema_version":1,"error":"project_path_exceeds_output_limit"}' }
-    if (Test-DirectFileInvocation) {
+    if ((& $measure $serialized) -gt 16383) { $serialized = '{"schema_version":1,"error":"project_path_exceeds_output_limit"}' }
+    if ($direct) {
         # The command-line entry writes one UTF-8 line ending in LF, whatever
         # the console code page; the console setting is restored afterwards.
         $previousEncoding = [Console]::OutputEncoding
@@ -472,8 +518,10 @@ function Show-PlanListJson {
             [Console]::Write($serialized + [char]10)
         } finally { [Console]::OutputEncoding = $previousEncoding }
     } else {
-        # Inside a session the document belongs to the caller's pipeline.
-        Write-Output $serialized
+        # Every other entry (a session, -Command, a positional script path)
+        # hands the document to the pipeline, whose host encodes it with the
+        # console code page; ASCII-only text survives that unchanged.
+        Write-Output (ConvertTo-AsciiJson $serialized)
     }
 }
 
@@ -534,39 +582,38 @@ function Show-ArchivedList {
 # with one rename and comes back the same way. Dot-prefixed names are never
 # plans on any route, so an archived plan is invisible to every resolver and
 # the remaining named plans select automatically again. Every check runs
-# before anything is touched; a failure changes nothing.
+# before anything is touched; a failure throws its "Error: ..." line and
+# changes nothing. The single caller reports it and exits 1.
 function Invoke-PlanMove {
     param([string]$Operation, [string]$Id, [switch]$Apply)
     $archive = $Operation -eq 'archive'
-    if (-not (Test-ValidSlug $Id)) { Write-Error "Error: invalid plan ID. Use a named directory under .planning."; exit 1 }
-    if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) { Write-Error "Error: planning directory not found: $PlanRoot"; exit 1 }
-    if (-not (Test-RealDirectory $PlanRoot)) { Write-Error "Error: planning directory is outside the project, is a link, or cannot be verified."; exit 1 }
+    if (-not (Test-ValidSlug $Id)) { throw "Error: invalid plan ID. Use a named directory under .planning." }
+    if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) { throw "Error: planning directory not found: $PlanRoot" }
+    if (-not (Test-RealDirectory $PlanRoot)) { throw "Error: planning directory is outside the project, is a link, or cannot be verified." }
     if ($archive) {
         $source = Join-Path $PlanRoot $Id
         $parent = $ArchiveRoot
-        if (-not (Test-RealPlanDirectory $source)) { Write-Error "Error: no plan to archive at $source (needs a real directory inside the project with a regular task_plan.md)."; exit 1 }
-        if ($env:PLAN_ID -ceq $Id) { Write-Error "Error: PLAN_ID selects this plan in the current environment; unset it before archiving."; exit 1 }
+        if (-not (Test-RealPlanDirectory $source) -or -not (Test-ExactEntry $PlanRoot $Id)) { throw "Error: no plan to archive at $source (needs a real directory inside the project with a regular task_plan.md)." }
+        if (Test-NamesSource -Slug $env:PLAN_ID -Source $source) { throw "Error: PLAN_ID selects this plan in the current environment; unset it before archiving." }
         if ((Get-Item -LiteralPath $ArchiveRoot -Force -ErrorAction SilentlyContinue) -and -not (Test-RealDirectory $ArchiveRoot)) {
-            Write-Error "Error: archive directory is not a real directory inside the project: $ArchiveRoot"; exit 1
+            throw "Error: archive directory is not a real directory inside the project: $ArchiveRoot"
         }
     } else {
         $source = Join-Path $ArchiveRoot $Id
         $parent = $PlanRoot
-        if (-not (Test-RealDirectory $ArchiveRoot)) { Write-Error "Error: no archive directory inside the project at $ArchiveRoot"; exit 1 }
-        if (-not (Test-RealPlanDirectory $source)) { Write-Error "Error: no archived plan at $source (needs a real directory inside the project with a regular task_plan.md)."; exit 1 }
+        if (-not (Test-RealDirectory $ArchiveRoot)) { throw "Error: no archive directory inside the project at $ArchiveRoot" }
+        if (-not (Test-RealPlanDirectory $source) -or -not (Test-ExactEntry $ArchiveRoot $Id)) { throw "Error: no archived plan at $source (needs a real directory inside the project with a regular task_plan.md)." }
     }
     $destination = Join-Path $parent $Id
-    if (Get-Item -LiteralPath $destination -Force -ErrorAction SilentlyContinue) { Write-Error "Error: $destination already exists; restore or rename it first."; exit 1 }
-    $namesPointer = $false
-    if ($archive) {
-        $pointerItem = Get-Item -LiteralPath $ActiveFile -Force -ErrorAction SilentlyContinue
-        $namesPointer = [bool]($pointerItem -and -not $pointerItem.PSIsContainer -and
-            ([string]$pointerItem.LinkType) -notin @('SymbolicLink', 'Junction') -and
-            (Test-WithinRoot $ActiveFile) -and ((Get-CurrentActivePlan) -ceq $Id))
+    if (Get-Item -LiteralPath $destination -Force -ErrorAction SilentlyContinue) {
+        $remedy = 'restore'; if (-not $archive) { $remedy = 'archive' }
+        throw "Error: $destination already exists; $remedy or rename it first."
     }
+    # Decided before the move: afterwards the source no longer exists.
+    $namesPointer = $archive -and (Test-PointerNamesSource $source)
     if (-not $Apply) {
         $planFile = Join-Path $source 'task_plan.md'
-        try { $phases = Get-PhaseStatus -PlanFile $planFile -AsObject } catch { Write-Error "Error: cannot read $planFile"; exit 1 }
+        try { $phases = Get-PhaseStatus -PlanFile $planFile -AsObject } catch { throw "Error: cannot read $planFile" }
         $summary = "$($phases.complete)/$($phases.total) complete, $($phases.in_progress) in_progress, $($phases.pending) pending"
         if ($archive) {
             Write-Output "Would archive plan: $Id ($summary)"
@@ -574,25 +621,33 @@ function Invoke-PlanMove {
             Write-Output "  to:   $destination"
             if ($phases.total -eq 0 -or $phases.complete -ne $phases.total) { Write-Output "  Note: not all phases are complete." }
             if ($namesPointer) { Write-Output "  The shared default (.active_plan) names this plan and will be cleared." }
-            Write-Output "Nothing is deleted. Restore with: set-active-plan.ps1 -Restore $Id"
+            Write-Output "The plan is moved, never deleted. Restore with: set-active-plan.ps1 -Restore $Id"
         } else {
             Write-Output "Would restore plan: $Id ($summary)"
             Write-Output "  from: $source"
             Write-Output "  to:   $destination"
-            Write-Output "Nothing is deleted."
+            Write-Output "The plan is moved, never deleted."
         }
         Write-Output "Run again with -Yes to apply."
         return
     }
+    $madeArchive = $false
     if ($archive -and -not (Test-Path -LiteralPath $ArchiveRoot -PathType Container)) {
-        try { [IO.Directory]::CreateDirectory($ArchiveRoot) | Out-Null } catch { Write-Error "Error: could not create $ArchiveRoot"; exit 1 }
-        if (-not (Test-RealDirectory $ArchiveRoot)) { Write-Error "Error: archive directory cannot be verified after creation: $ArchiveRoot"; exit 1 }
+        try { [IO.Directory]::CreateDirectory($ArchiveRoot) | Out-Null } catch { throw "Error: could not create $ArchiveRoot" }
+        $madeArchive = $true
+        if (-not (Test-RealDirectory $ArchiveRoot)) { throw "Error: archive directory cannot be verified after creation: $ArchiveRoot" }
     }
     # One rename only: Directory.Move never copies across volumes and never
     # overwrites, so a concurrent destination fails instead of nesting.
-    try { [IO.Directory]::Move($source, $destination) } catch { Write-Error "Error: could not move $source to ${destination}: $($_.Exception.Message)"; exit 1 }
+    try { [IO.Directory]::Move($source, $destination) } catch {
+        $reason = $_.Exception.Message
+        # A failed call leaves no .archive it created: a non-recursive Delete
+        # removes only an empty directory, so anything with content stays.
+        if ($madeArchive) { try { [IO.Directory]::Delete($ArchiveRoot, $false) } catch { } }
+        throw "Error: could not move $source to ${destination}: $reason"
+    }
     if ((Test-Path -LiteralPath $source) -or -not (Test-Path -LiteralPath (Join-Path $destination 'task_plan.md') -PathType Leaf)) {
-        Write-Error "Error: move did not complete as expected; inspect $source and $destination."; exit 1
+        throw "Error: move did not complete as expected; inspect $source and $destination."
     }
     if ($archive) {
         Write-Output "Archived plan: $Id"
@@ -633,7 +688,8 @@ if ($PSBoundParameters.ContainsKey('Archive') -or $PSBoundParameters.ContainsKey
         Write-Error "Error: $switchName needs a plan ID: $switchName <id> [-Yes]"
         exit 1
     }
-    Invoke-PlanMove -Operation $operation -Id $target -Apply:$Yes
+    try { Invoke-PlanMove -Operation $operation -Id $target -Apply:$Yes }
+    catch { Write-Error $_.Exception.Message; exit 1 }
     exit 0
 }
 if ($Yes) {

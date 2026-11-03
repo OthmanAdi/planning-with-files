@@ -270,24 +270,89 @@ def test_json_in_session_call_feeds_the_pipeline_and_restores_the_console(runtim
     name, executable = runtime
     if name == "sh":
         pytest.skip("PowerShell session semantics")
-    plan(tmp_path, "alpha")
+    root = tmp_path / "Übung 计划"
+    plan(root, "alpha")
     script = str(SCRIPTS / "set-active-plan.ps1").replace("'", "''")
+    # Inside a session the document is one ASCII string whose \uXXXX escapes
+    # ConvertFrom-Json turns back into the real characters.
     command = ("$before = [Console]::OutputEncoding.CodePage; "
                f"$report = & '{script}' -List -Json; "
-               "Write-Output (($report | ConvertFrom-Json).candidates[0].plan_id); "
+               "Write-Output ($report -is [string] -and $report -cmatch '^[\\x00-\\x7F]+$'); "
+               "$parsed = $report | ConvertFrom-Json; "
+               "Write-Output $parsed.candidates[0].plan_id; "
+               "Write-Output ($parsed.scope.project_root.EndsWith([char]0x00DC + 'bung ' + [char]0x8BA1 + [char]0x5212)); "
                "Write-Output ([Console]::OutputEncoding.CodePage -eq $before)")
     result = subprocess.run(
         [executable, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", command],
-        cwd=tmp_path, env=clean_env(), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        cwd=root, env=clean_env(), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout.split() == ["alpha", "True"], result.stdout + result.stderr
+    assert result.stdout.split() == ["True", "alpha", "True", "True"], result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("form", ["-f", "positional", "-Command"])
+def test_json_other_entry_forms_emit_ascii_that_matches_the_file_run(runtime, tmp_path, form):
+    name, executable = runtime
+    if name == "sh":
+        pytest.skip("PowerShell entry forms")
+    # Only a literal -File entry writes UTF-8 itself; every other entry goes
+    # through the pipeline, which the host encodes with the console code page
+    # (cp850 turned U-umlaut into 0x81). Escaped to ASCII, the bytes decode
+    # the same everywhere and name the same files as the -File run.
+    root = tmp_path / "Übung 计划"
+    path = plan(root, "alpha")
+    script = str(SCRIPTS / "set-active-plan.ps1")
+    base = [executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass"]
+    if form == "-Command":
+        args = base + ["-Command", "& '" + script.replace("'", "''") + "' -List -Json"]
+    elif form == "-f":
+        args = base + ["-f", script, "-List", "-Json"]
+    else:
+        args = base + [script, "-List", "-Json"]
+    reference = subprocess.run(base + ["-File", script, "-List", "-Json"], cwd=root, env=clean_env(),
+                               capture_output=True, timeout=60)
+    expected = json.loads(reference.stdout.decode("utf-8"))
+    result = subprocess.run(args, cwd=root, env=clean_env(), capture_output=True, timeout=60)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.isascii(), result.stdout[:200]
+    assert b"\\u00dc" in result.stdout and b"\\u8ba1\\u5212" in result.stdout
+    value = json.loads(result.stdout.decode("ascii"))
+    assert value["scope"]["project_root"] == expected["scope"]["project_root"]
+    assert value["scope"]["project_root"].endswith("Übung 计划")
+    assert value["candidates"] == expected["candidates"]
+    assert Path(value["candidates"][0]["files"]["task_plan"]["path"]).samefile(path)
+
+
+def test_json_escaped_entry_form_stays_within_the_output_ceiling(runtime, tmp_path):
+    name, executable = runtime
+    if name == "sh":
+        pytest.skip("PowerShell entry forms")
+    # Escaping turns each U-umlaut into six ASCII bytes, so paging must measure
+    # the escaped text, not its UTF-8 form, to keep the documented 16 KiB cap.
+    root = tmp_path / ("ü" * 60)
+    for index in range(40):
+        path = plan(root, f"plan-{index:02d}")
+        (path.parent / "findings.md").write_text("notes\n", encoding="utf-8")
+    script = str(SCRIPTS / "set-active-plan.ps1")
+    args = [executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-Command", "& '" + script.replace("'", "''") + "' -List -Json -Limit 100"]
+    result = subprocess.run(args, cwd=root, env=clean_env(), capture_output=True, timeout=120)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.isascii()
+    assert len(result.stdout.rstrip(b"\r\n")) <= 16383, len(result.stdout)
+    value = json.loads(result.stdout.decode("ascii"))
+    assert value["limits"]["truncated"] is True
+    assert 0 < value["limits"]["returned"] < 40
 
 
 def test_json_modified_at_is_the_unix_epoch_second(runtime, tmp_path):
     path = plan(tmp_path, "alpha")
     # A fixed instant far from now: a local-time epoch would show as the UTC offset.
     os.utime(path, (1700000000, 1700000000))
-    value = inventory(runtime, tmp_path)
+    # GitHub's runners are UTC, where the old PowerShell bug had offset 0 and
+    # proved nothing; a zone three hours east shows a regression as 10800 s.
+    # Windows ignores TZ and is left to its configured zone.
+    env_extra = {"TZ": "Etc/GMT-3"} if runtime[0] != "sh" and os.name != "nt" else None
+    value = inventory(runtime, tmp_path, env_extra=env_extra)
     assert value["candidates"][0]["files"]["task_plan"]["modified_at"] == int(os.stat(path).st_mtime) == 1700000000
 
 

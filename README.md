@@ -396,7 +396,7 @@ They are complementary stages, not alternatives. Plan mode is where you design a
 
 ### What happens to the plan files after a task is complete?
 
-They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory stays in `.planning/`. Anything worth keeping should be promoted into code, a commit, or a doc. To set a finished named plan aside, `set-active-plan.sh --archive <slug>` previews the move to `.planning/.archive/<slug>/` and `--yes` applies it; `--restore <slug>` moves it back. With one named plan left, hooks select it automatically again. See [After Completion: What Happens to the Plan Files](docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan.
+They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory stays in `.planning/`. Anything worth keeping should be promoted into code, a commit, or a doc. To set a finished named plan aside, `set-active-plan.sh --archive <slug>` previews the move to `.planning/.archive/<slug>/` and `--yes` applies it; `--restore <slug>` previews the move back and `--yes` applies it the same way. With one named plan left, hooks select it automatically again. See [After Completion: What Happens to the Plan Files](docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan.
 
 ### How fast are the hooks?
 
@@ -650,7 +650,7 @@ To find a saved plan, run the installed `scripts/set-active-plan.sh --list` help
 
 For agent-readable paths and state, add `--json` (PowerShell: `-Json`). The read-only response includes root and named triplets, missing/unreadable files, phase parse status, and the shared default separately from process-visible selection. Results are paged and capped at 16 KiB; this query does not run during ordinary activation. See the [inventory schema and worker handoff](skills/planning-with-files/plan-inventory.md).
 
-To set a finished named plan aside, run `set-active-plan.sh --archive <id>` (PowerShell: `-Archive <id>`). It previews the move to `.planning/.archive/<id>/`; `--yes` (`-Yes`) applies it, and `--restore <id>` moves it back. Nothing is deleted and nothing is archived automatically. Once one named plan remains, hooks select it again without `PLAN_ID`. `--list --archived` shows archived plans.
+To set a finished named plan aside, run `set-active-plan.sh --archive <id>` (PowerShell: `-Archive <id>`). It previews the move to `.planning/.archive/<id>/`; `--yes` (`-Yes`) applies it. `--restore <id>` previews the move back and applies it with `--yes` the same way. Nothing is deleted and nothing is archived automatically. Once one named plan remains, hooks select it again without `PLAN_ID`. `--list --archived` shows archived plans.
 
 ## How It Works
 
