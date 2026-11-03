@@ -89,6 +89,27 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
                 rf"^{date.today().isoformat()}-untitled-[a-f0-9]{{8}}$",
             )
 
+    def test_help_switches_print_usage_without_creating_files(self) -> None:
+        for flag in ("-Help", "-h"):
+            with self.subTest(flag=flag), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                result = self.run_init(root, flag)
+                self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+                self.assertIn("Usage:", result.stdout)
+                self.assertEqual([], list(root.iterdir()))
+
+    def test_unknown_switch_exits_without_creating_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_init(root, "-Autonomus")
+            self.assertNotEqual(0, result.returncode, result.stdout)
+            combined = flat(result.stderr + result.stdout)
+            self.assertTrue(
+                "Autonomus" in combined or "Parameter" in combined,
+                combined,
+            )
+            self.assertEqual([], list(root.iterdir()))
+
     def test_slug_sanitizes_unsafe_characters(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

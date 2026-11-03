@@ -70,6 +70,11 @@ while [ $# -gt 0 ]; do
             usage
             exit 0
             ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
         *)
             if [ -z "$PROJECT_NAME" ]; then
                 PROJECT_NAME="$1"
