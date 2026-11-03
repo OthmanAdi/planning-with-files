@@ -403,6 +403,46 @@ class PlanAttestationTests(unittest.TestCase):
         result = self._run()
         self.assertNotEqual(0, result.returncode)
 
+    def test_ambiguous_plans_report_one_actionable_refusal(self) -> None:
+        for name in ("alpha", "beta"):
+            plan_dir = self.tmp / ".planning" / name
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text(name, encoding="utf-8")
+
+        result = self._run("--show")
+
+        self.assertEqual(1, result.returncode)
+        self.assertEqual(
+            [
+                "[plan-attest] Multiple plans are available. "
+                "Set PLAN_ID=<slug>; nothing was attested."
+            ],
+            result.stderr.splitlines(),
+        )
+        self.assertFalse(any(self.tmp.rglob(".attestation")))
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+
+    def test_rejected_selectors_name_the_refused_binding(self) -> None:
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active decoy", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("root decoy", encoding="utf-8")
+        missing_root = self.tmp / "missing-project"
+        cases = (
+            (("--target", "missing"), {}, "--target missing"),
+            ((), {"PLAN_ID": "missing"}, "PLAN_ID=missing"),
+            ((), {"PWF_PLAN_ROOT": str(missing_root)}, f"PWF_PLAN_ROOT={missing_root}"),
+        )
+
+        for args, env, refusal in cases:
+            with self.subTest(refusal=refusal):
+                result = self._run(*args, env=env)
+                self.assertEqual(1, result.returncode)
+                self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+                self.assertNotIn("No task_plan.md found", result.stderr)
+                self.assertFalse((active / ".attestation").exists())
+                self.assertFalse((self.tmp / ".plan-attestation").exists())
+
     def test_concurrent_attest_writes_do_not_corrupt_file(self) -> None:
         # v2.40 regression: parallel legacy-mode attestations used to race
         # via a non-atomic `> file` redirect, occasionally yielding a
