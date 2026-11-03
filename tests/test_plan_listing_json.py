@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -420,3 +422,44 @@ def test_json_hidden_plan_directory_is_a_plan_on_every_route(runtime, tmp_path):
     # The resolver probe behind this status enumerates the same directories.
     assert value["selection"]["status"] == "ambiguous"
     assert "- hidden" in listed(runtime, tmp_path)
+
+
+# Commands the shell listing may start. Builtins are free; each of these is a
+# process, which costs about 30 ms under Git Bash (#356). phase_status stands
+# for its awk, which runs with stderr redirected and so never reaches the trace.
+EXTERNAL_COMMANDS = {"awk", "cygpath", "dirname", "phase_status", "python", "python3",
+                     "readlink", "realpath", "sh", "stat", "tr", "wc"}
+
+
+def external_commands(root: Path) -> int:
+    sh = shutil.which("sh")
+    env = clean_env({"PS4": "+ "})
+    result = subprocess.run([sh, "-x", str(SCRIPTS / "set-active-plan.sh"), "--list", "--json", "--limit", "100"],
+                            cwd=root, env=env, capture_output=True, text=True, encoding="utf-8",
+                            errors="replace", timeout=120)
+    assert result.returncode == 0, result.stderr[-2000:]
+    count = 0
+    for line in result.stderr.splitlines():
+        words = re.sub(r"^\++\s*", "", line).split() if line.startswith("+") else []
+        while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
+            words.pop(0)
+        if words and Path(words[0]).name.removesuffix(".exe") in EXTERNAL_COMMANDS:
+            count += 1
+    return count
+
+
+@pytest.mark.skipif(shutil.which("sh") is None, reason="sh is not installed")
+def test_json_listing_starts_a_bounded_number_of_commands_per_plan(tmp_path):
+    def project(name, plans):
+        root = tmp_path / name
+        for index in range(plans):
+            path = plan(root, f"plan-{index}", "### Phase 1: Work\n**Status:** in_progress\n")
+            (path.parent / "findings.md").write_text("f", encoding="utf-8")
+            (path.parent / "progress.md").write_text("p", encoding="utf-8")
+        return root
+
+    # The difference between two plan counts leaves out the fixed cost of the
+    # header, the pointer and the resolver probe.
+    per_plan = (external_commands(project("seven", 7)) - external_commands(project("two", 2))) / 5
+    # A realpath for the directory and each file, a stat per file, and the phase parse.
+    assert per_plan <= 9, per_plan
