@@ -4,15 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.28.0] - 2026-11-03
+
 ### Added
-- Opt-in archive and restore for named plans: `set-active-plan.sh --archive <id>` and `--restore <id>`, PowerShell `-Archive` and `-Restore`. The command previews by default and applies with `--yes` (`-Yes`). The plan directory moves with its sidecars to `.planning/.archive/<id>/`, nothing is deleted, and the shared `.active_plan` pointer is cleared only when it names the archived plan. `--list --archived` lists archived plans, and the JSON inventory reports `archived_count` (#355).
+- Opt-in archive and restore for named plans: `set-active-plan.sh --archive <id>` and `--restore <id>`, PowerShell `-Archive` and `-Restore`. The command previews by default and applies with `--yes` (`-Yes`). The plan directory moves with its sidecars to `.planning/.archive/<id>/`, nothing is deleted, and the shared `.active_plan` pointer is cleared only when it names the archived plan. An ID must match the directory name exactly, including case. `--list --archived` lists archived plans, and the JSON inventory reports `archived_count` (#355).
 - The multiple-plans hook notice names the archive command. Once one named plan remains, hooks select it again without `PLAN_ID` (#355).
 
 ### Fixed
 - PowerShell inventory `modified_at` values no longer shift by the local UTC offset.
 - The shell inventory reports a plan file held open by another process as unreadable instead of emitting invalid JSON.
 - PowerShell 7 lists and resolves plans whose paths reach 260 characters.
-- `set-active-plan.ps1 -List -Json` returns its JSON to the calling PowerShell session and restores the console encoding. A literal `-File` run still writes one UTF-8 line with LF; every other call form (in-session, `-Command`, `-f`, a positional script path) emits the same JSON through the pipeline with non-ASCII characters escaped as `\uXXXX`, so the output is correct under any console code page.
+- `set-active-plan.ps1 -List -Json` returns its JSON to the calling PowerShell session and restores the console encoding. A literal `-File` run still writes one UTF-8 line with LF; every other call form (in-session, `-Command`, `-f`, a positional script path) emits the same JSON through the pipeline with non-ASCII characters escaped as `\uXXXX`, so the output is correct under any console code page and stays within the 16 KiB limit.
 - The shell inventory converts the project path with a UTF-8 locale, so non-ASCII paths stay correct under `LC_ALL=C`.
 - PowerShell listing and plan resolution include directories with the Windows Hidden attribute, matching the shell route.
 
