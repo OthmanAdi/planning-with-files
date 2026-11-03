@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from test_plan_listing import (RUNTIMES, SCRIPTS, flat, make_junction, make_symlink,
-                               plan, run_selector, runtime)
+                               plan, run_selector, runtime, share_lock_blocks_reads)
 
 
 def is_link(path: Path) -> bool:
@@ -330,7 +330,9 @@ def test_json_archived_count_ignores_a_linked_archive_directory(runtime, tmp_pat
         archived = inventory(runtime, project, "--archived")
         assert archived["candidates"] == [] and archived["limits"]["skipped"] >= 1
     finally:
-        (project / ".planning" / ".archive").rmdir()
+        link = project / ".planning" / ".archive"
+        # A Windows junction is removed with rmdir; a POSIX symlink with unlink.
+        link.rmdir() if os.name == "nt" else link.unlink()
 
 
 def normalized(value):
@@ -451,6 +453,8 @@ def test_text_listing_skips_a_locked_archived_plan_quietly(runtime, tmp_path):
         ok(run_selector(runtime, tmp_path, "--archive", plan_id, "--yes"))
     archive = tmp_path / ".planning" / ".archive"
     with held_open(archive / "alpha" / "task_plan.md"):
+        if not share_lock_blocks_reads(runtime, archive / "alpha" / "task_plan.md"):
+            pytest.skip("this host's runtime reads files held open without sharing")
         # ok() requires an empty stderr: no shell error for the locked file.
         listing = ok(run_selector(runtime, tmp_path, "--list", "--archived"))
         assert "- beta" in listing and "- alpha" not in listing

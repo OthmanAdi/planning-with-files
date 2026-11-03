@@ -342,6 +342,23 @@ def make_junction(link: Path, target: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def share_lock_blocks_reads(runtime, path: Path) -> bool:
+    """Whether this runtime fails to open a file another process holds without sharing.
+
+    Some Git for Windows runtimes still read such a file (GitHub's Windows
+    runner does), so the locked-file branch can only be exercised where an
+    open really fails. Call it while the lock is held.
+    """
+    name, executable = runtime
+    if name == "sh":
+        command = [executable, "-c", 'true < "$1"', "sh", str(path)]
+    else:
+        quoted = str(path).replace("'", "''")
+        command = [executable, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command",
+                   f"try {{ [IO.File]::OpenRead('{quoted}').Dispose(); exit 0 }} catch {{ exit 1 }}"]
+    return subprocess.run(command, capture_output=True, timeout=60).returncode != 0
+
+
 @pytest.mark.parametrize("link_root", [False, True], ids=["plan-directory", "planning-root"])
 def test_windows_junction_cannot_list_external_plans(runtime, tmp_path, link_root):
     project = tmp_path / "project"

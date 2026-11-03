@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from test_plan_listing import runtime, run_selector, plan, make_symlink, listed, SCRIPTS
-from test_plan_listing import make_junction
+from test_plan_listing import make_junction, share_lock_blocks_reads
 
 
 def clean_env(extra=None):
@@ -381,6 +381,8 @@ def test_json_exclusively_locked_plan_file_keeps_the_document_valid(runtime, tmp
     handles = [kernel32.CreateFileW(str(p), 0x80000000, 0, None, 3, 0x80, None) for p in (named, root_file)]
     assert all(h not in (None, ctypes.c_void_p(-1).value) for h in handles)
     try:
+        if not share_lock_blocks_reads(runtime, named):
+            pytest.skip("this host's runtime reads files held open without sharing")
         value = inventory(runtime, tmp_path)
         states = [(c["kind"], c["files"]["task_plan"]["status"], c["phases"]["status"]) for c in value["candidates"]]
         assert states == [("root", "unreadable", "unavailable"), ("named", "unreadable", "unavailable"),
