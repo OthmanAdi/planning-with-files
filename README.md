@@ -185,6 +185,19 @@ Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBU
 Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
 </p>
 
+<!-- sponsor:evomi:start -->
+<a id="sponsor"></a>
+<p align="center"><sub>Sponsor</sub></p>
+
+<p align="center">
+  <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="520" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a>
+</p>
+<p align="center">
+  <strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong><br>
+  <sub>Connect the <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-text">Scrape.ly MCP server</a> to Claude Code, Cursor or any MCP client: your agent searches the Store, runs a scraper and reads structured results, without leaving the task.</sub>
+</p>
+<!-- sponsor:evomi:end -->
+
 <p align="center">
   <a href="https://github.com/OthmanAdi/planning-with-files/stargazers"><img src="https://img.shields.io/github/stars/OthmanAdi/planning-with-files?style=flat&color=yellow" alt="Stars"></a>
   <a href="https://github.com/OthmanAdi/planning-with-files/releases"><img src="https://img.shields.io/github/v/release/OthmanAdi/planning-with-files?style=flat&label=release" alt="Latest release"></a>
