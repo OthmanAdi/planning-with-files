@@ -107,13 +107,21 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[@ShahadatTest](https://github.com/ShahadatTest)**, [PR #360](https://github.com/OthmanAdi/planning-with-files/pull/360)
+  - Made initializer help requests safe and rejected unknown switches before planning files are created, with shell and PowerShell regression coverage.
+
+- **[Ankit Kumar Jha](https://github.com/ankitjha1405)**, [PR #364](https://github.com/OthmanAdi/planning-with-files/pull/364)
+  - Aligned all five localized plan commands with the selected-plan, initializer and format-validation contracts.
+
+
 - **[Dylan Duan](https://github.com/Kiddo4993)** — [PR #351](https://github.com/OthmanAdi/planning-with-files/pull/351)
   - Aligned Claude plugin commands with selected-plan, initialization and validation contracts, with focused command checks.
 
 - **[Thanut Jongteerathanachote](https://github.com/winxtxrgit)**, [PR #340](https://github.com/OthmanAdi/planning-with-files/pull/340)
   - Corrected startup and post-tool context output for the current Copilot harness, with schema, Unicode and disabled-hook regression coverage.
 
-- **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345)
+- **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345), [PR #363](https://github.com/OthmanAdi/planning-with-files/pull/363)
+  - Reduced external-process work in shell JSON plan listing while preserving containment and escaping.
   - Reworked Cursor workspace installation and documented preserving existing hook registrations during Unix and Windows setup.
   - Corrected Codex setup for existing hooks directories and documented merging existing hook registrations.
 
@@ -513,6 +521,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 111 (110 community contributors plus the maintainer)
+**Total Contributors:** 113 (112 community contributors plus the maintainer)
 
-*Last updated: 2026-10-30*
+*Last updated: 2026-11-04*

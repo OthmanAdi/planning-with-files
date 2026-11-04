@@ -4,8 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.28.1] - 2026-11-04
+
 ### Fixed
-- The localized `/plan-de`, `/plan-ar`, `/plan-es`, `/plan-zh` and `/plan-zht` commands now restore the selected plan through `resolve-plan-dir`, stop on a rejected pin or `PWF_PLAN_AMBIGUOUS_V1`, and initialize only through `init-session`, matching `/plan`. They no longer create a stray root plan when a named plan is selected (#359).
+- PowerShell initializer help through `-Help` or `-h` prints usage without creating files. Unknown dash-prefixed switches now fail before writing planning files on both PowerShell and shell routes (PR #360, #357).
+- The five localized `/plan` commands restore the selected plan, reject invalid or ambiguous selectors, and initialize new tasks through the bundled scripts with explicit plan-format validation (PR #364, #359).
+
+### Changed
+- Shell JSON plan listing starts fewer external processes per candidate while retaining path containment, JSON escaping and bounded output. Shared helper copies remain synchronized (PR #363, #356).
+- README opening, installation choices and navigation are clearer. Contributor portraits and community projects follow the technical introduction; source links, credits and reference material are retained.
+
+### Thanks
+- @ShahadatTest, for refusing unknown initializer switches and adding PowerShell help (PR #360).
+- Parman Mohammadalizadeh (@MannXo), for reducing shell plan-listing process overhead (PR #363).
+- Ankit Kumar Jha (@ankitjha1405), for aligning the localized plan commands with selection and initialization (PR #364).
 
 ## [3.28.0] - 2026-11-03
 

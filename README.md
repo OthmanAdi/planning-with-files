@@ -239,6 +239,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.28.1** | Safe initializer help and unknown-switch refusal, selected-plan handling in five localized commands, fewer shell plan-listing processes, and clearer README installation and navigation (PRs #360, #363, #364). |
 | **v3.28.0** | Adds opt-in archive and restore for finished named plans (`--archive` / `--restore`, preview first, nothing deleted), so hooks select the remaining plan again; the multiple-plans notice names the command; fixes inventory timestamps, locked files, long paths, hidden folders and PowerShell output on Windows (#355). |
 | **v3.27.0** | Adds optional agent-readable plan inventory (`--list --json` / `-List -Json`) with paths, phase metadata, selection uncertainty and bounded paging; aligns Claude plugin commands with selected-plan and initializer contracts (#349, #350, PR #351). |
 | **v3.26.0** | Adds opt-in Claude Code subagent tool-hook isolation (`PWF_SKIP_SUBAGENTS=1`); fixes Codex setup, Copilot PreToolUse output and Gemini lifecycle opt-out (PRs #345, #346, #347; #348). |
@@ -791,6 +792,8 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
 
 <!-- contributor-portraits:start -->
 <p align="center">
+  <a href="https://github.com/ShahadatTest" title="@ShahadatTest"><img src="https://github.com/ShahadatTest.png?size=56" width="48" height="48" alt="@ShahadatTest"></a>
+  <a href="https://github.com/ankitjha1405" title="@ankitjha1405"><img src="https://github.com/ankitjha1405.png?size=56" width="48" height="48" alt="@ankitjha1405"></a>
   <a href="https://github.com/MannXo" title="@MannXo"><img src="https://github.com/MannXo.png?size=56" width="48" height="48" alt="@MannXo"></a>
   <a href="https://github.com/winxtxrgit" title="@winxtxrgit"><img src="https://github.com/winxtxrgit.png?size=56" width="48" height="48" alt="@winxtxrgit"></a>
   <a href="https://github.com/EmadMokhtar" title="@EmadMokhtar"><img src="https://github.com/EmadMokhtar.png?size=56" width="48" height="48" alt="@EmadMokhtar"></a>
