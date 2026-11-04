@@ -332,6 +332,45 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
                 pass
 
 
+
+    def test_no_git_fallback_keeps_adapters_and_excludes_scratch(self) -> None:
+        """Without Git metadata, the walk still validates adapters and skips scratch."""
+        from unittest import mock
+
+        scratch = REPO / ".planning" / "_pwf352_nogit_scratch"
+        scratch.mkdir(parents=True, exist_ok=True)
+        bad = scratch / "check-complete.sh"
+        bad.write_text("#!/bin/sh\necho no guard\n", encoding="utf-8")
+        try:
+            with mock.patch("subprocess.run", side_effect=OSError("no git")):
+                copies = shipped_check_complete_copies()
+            resolved = {c.resolve() for c in copies}
+            self.assertNotIn(bad.resolve(), resolved)
+            self.assertGreater(len(copies), 10)
+            rel_roots = {c.relative_to(REPO).parts[0] for c in copies}
+            # Hidden / dotted adapter trees must remain discoverable.
+            self.assertTrue(
+                {".agents", ".codex", ".cursor"} & rel_roots
+                or any(
+                    part.startswith(".")
+                    for c in copies
+                    for part in c.relative_to(REPO).parts
+                ),
+                f"no adapter paths in no-Git fallback: {sorted(rel_roots)[:20]}",
+            )
+            for copy in copies:
+                text = copy.read_text(encoding="utf-8", errors="replace")
+                self.assertIn("PLANNING_DISABLED", text)
+        finally:
+            bad.unlink(missing_ok=True)
+            try:
+                scratch.rmdir()
+            except OSError:
+                pass
+
+
+
+
 @unittest.skipUnless(POWERSHELL, "PowerShell is not available")
 class CopilotPowerShellPlanningDisabledTests(unittest.TestCase):
     def setUp(self) -> None:
