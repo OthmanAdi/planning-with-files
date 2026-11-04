@@ -215,7 +215,7 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
 
             result = self._run(root, None, "-Show")
 
-            self.assertNotEqual(0, result.returncode)
+            self.assertEqual(1, result.returncode, result.stderr)
             refusal = "Multiple plans are available. Set PLAN_ID=<slug>"
             self.assertEqual(1, result.stderr.count(refusal), result.stderr)
             self.assertNotIn("No task_plan.md found", result.stderr)
@@ -257,7 +257,7 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             finally:
                 locker.communicate("\n", timeout=30)
 
-            self.assertNotEqual(0, result.returncode)
+            self.assertEqual(1, result.returncode, result.stderr)
             self.assertIn("selected plan could not be read safely", result.stderr)
             self.assertFalse((selected / ".attestation").exists())
             self.assertFalse((root / ".plan-attestation").exists())
@@ -284,7 +284,7 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             for env, args, refusal in cases:
                 with self.subTest(refusal=refusal):
                     result = self._run(root, env, *args)
-                    self.assertNotEqual(0, result.returncode)
+                    self.assertEqual(1, result.returncode, result.stderr)
                     self.assertEqual(1, result.stderr.count(refusal), result.stderr)
                     self.assertNotIn("No task_plan.md found", result.stderr)
                     self.assertFalse((active / ".attestation").exists())
