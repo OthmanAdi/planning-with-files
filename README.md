@@ -12,17 +12,25 @@
 </p>
 
 <!-- sponsor:evomi:start -->
-<a id="sponsor"></a>
-<p align="center"><sub>Sponsor</sub></p>
+### Sponsor
 
 <p align="center">
   <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="520" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a>
 </p>
-<p align="center">
-  <strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong><br>
-  <sub>Connect the <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-text">Scrape.ly MCP server</a> to Claude Code, Cursor or any MCP client: your agent searches the Store, runs a scraper and reads structured results, without leaving the task.</sub>
-</p>
+
+**Your agent keeps the plan. Scrape.ly brings the web data.**
+
+Connect the [Scrape.ly MCP server](https://scrape.ly/?utm_source=github&utm_medium=readme&utm_campaign=planning-with-files&utm_content=v2-text) to Claude Code, Cursor or any MCP client: your agent searches the Store, runs a scraper and reads structured results, without leaving the task.
 <!-- sponsor:evomi:end -->
+
+---
+
+<!-- oss-support:coderabbit:start -->
+**OSS code review support**<br>
+Provided through [CodeRabbit’s open-source program](https://www.coderabbit.ai/oss).
+<!-- oss-support:coderabbit:end -->
+
+---
 
 <p align="center">
   <em>Your agent's context window dies. The plan does not.</em>
