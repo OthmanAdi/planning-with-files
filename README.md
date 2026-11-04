@@ -1,28 +1,211 @@
+## Contributors
+
+Code, documentation, and issue contributors. Select a portrait to open a GitHub profile or archived credit. [Full credits](CONTRIBUTORS.md).
+
+<!-- contributor-portraits:start -->
+<p align="center">
+  <a href="https://github.com/MannXo" title="@MannXo"><img src="https://github.com/MannXo.png?size=56" width="48" height="48" alt="@MannXo"></a>
+  <a href="https://github.com/winxtxrgit" title="@winxtxrgit"><img src="https://github.com/winxtxrgit.png?size=56" width="48" height="48" alt="@winxtxrgit"></a>
+  <a href="https://github.com/EmadMokhtar" title="@EmadMokhtar"><img src="https://github.com/EmadMokhtar.png?size=56" width="48" height="48" alt="@EmadMokhtar"></a>
+  <a href="https://github.com/MbappeWU" title="@MbappeWU"><img src="https://github.com/MbappeWU.png?size=56" width="48" height="48" alt="@MbappeWU"></a>
+  <a href="https://github.com/Vyzygota" title="@Vyzygota"><img src="https://github.com/Vyzygota.png?size=56" width="48" height="48" alt="@Vyzygota"></a>
+  <a href="https://github.com/littleblacklb" title="@littleblacklb"><img src="https://github.com/littleblacklb.png?size=56" width="48" height="48" alt="@littleblacklb"></a>
+  <a href="https://github.com/Amiirhosseini" title="@Amiirhosseini"><img src="https://github.com/Amiirhosseini.png?size=56" width="48" height="48" alt="@Amiirhosseini"></a>
+  <a href="https://github.com/AvitalAviv" title="@AvitalAviv"><img src="https://github.com/AvitalAviv.png?size=56" width="48" height="48" alt="@AvitalAviv"></a>
+  <a href="https://github.com/DorianZheng" title="@DorianZheng"><img src="https://github.com/DorianZheng.png?size=56" width="48" height="48" alt="@DorianZheng"></a>
+  <a href="https://github.com/dubes394" title="@dubes394"><img src="https://github.com/dubes394.png?size=56" width="48" height="48" alt="@dubes394"></a>
+  <a href="https://github.com/dylanpulver" title="@dylanpulver"><img src="https://github.com/dylanpulver.png?size=56" width="48" height="48" alt="@dylanpulver"></a>
+  <a href="https://github.com/Enard52" title="@Enard52"><img src="https://github.com/Enard52.png?size=56" width="48" height="48" alt="@Enard52"></a>
+  <a href="https://github.com/JianweiWangs" title="@JianweiWangs"><img src="https://github.com/JianweiWangs.png?size=56" width="48" height="48" alt="@JianweiWangs"></a>
+  <a href="https://github.com/lazyst" title="@lazyst"><img src="https://github.com/lazyst.png?size=56" width="48" height="48" alt="@lazyst"></a>
+  <a href="https://github.com/loarland" title="@loarland"><img src="https://github.com/loarland.png?size=56" width="48" height="48" alt="@loarland"></a>
+  <a href="https://github.com/luyanfeng" title="@luyanfeng"><img src="https://github.com/luyanfeng.png?size=56" width="48" height="48" alt="@luyanfeng"></a>
+  <a href="https://github.com/marcmuon" title="@marcmuon"><img src="https://github.com/marcmuon.png?size=56" width="48" height="48" alt="@marcmuon"></a>
+  <a href="https://github.com/mfehlhaber" title="@mfehlhaber"><img src="https://github.com/mfehlhaber.png?size=56" width="48" height="48" alt="@mfehlhaber"></a>
+  <a href="https://github.com/mixian939" title="@mixian939"><img src="https://github.com/mixian939.png?size=56" width="48" height="48" alt="@mixian939"></a>
+  <a href="https://github.com/msuadOf" title="@msuadOf"><img src="https://github.com/msuadOf.png?size=56" width="48" height="48" alt="@msuadOf"></a>
+  <a href="https://github.com/mtuwei" title="@mtuwei"><img src="https://github.com/mtuwei.png?size=56" width="48" height="48" alt="@mtuwei"></a>
+  <a href="https://github.com/nazeshinjite" title="@nazeshinjite"><img src="https://github.com/nazeshinjite.png?size=56" width="48" height="48" alt="@nazeshinjite"></a>
+  <a href="https://github.com/sean3808" title="@sean3808"><img src="https://github.com/sean3808.png?size=56" width="48" height="48" alt="@sean3808"></a>
+  <a href="https://github.com/shouldnotappearcalm" title="@shouldnotappearcalm"><img src="https://github.com/shouldnotappearcalm.png?size=56" width="48" height="48" alt="@shouldnotappearcalm"></a>
+  <a href="https://github.com/st01cs" title="@st01cs"><img src="https://github.com/st01cs.png?size=56" width="48" height="48" alt="@st01cs"></a>
+  <a href="https://github.com/tingles2233" title="@tingles2233"><img src="https://github.com/tingles2233.png?size=56" width="48" height="48" alt="@tingles2233"></a>
+  <a href="https://github.com/Whxuan0701" title="@Whxuan0701"><img src="https://github.com/Whxuan0701.png?size=56" width="48" height="48" alt="@Whxuan0701"></a>
+  <a href="https://github.com/wqh17101" title="@wqh17101"><img src="https://github.com/wqh17101.png?size=56" width="48" height="48" alt="@wqh17101"></a>
+  <a href="https://github.com/kaichen" title="@kaichen"><img src="https://github.com/kaichen.png?size=56" width="48" height="48" alt="@kaichen"></a>
+  <a href="https://github.com/fuahyo" title="@fuahyo"><img src="https://github.com/fuahyo.png?size=56" width="48" height="48" alt="@fuahyo"></a>
+  <a href="https://github.com/lasmarois" title="@lasmarois"><img src="https://github.com/lasmarois.png?size=56" width="48" height="48" alt="@lasmarois"></a>
+  <a href="https://github.com/aimasteracc" title="@aimasteracc"><img src="https://github.com/aimasteracc.png?size=56" width="48" height="48" alt="@aimasteracc"></a>
+  <a href="https://github.com/SaladDay" title="@SaladDay"><img src="https://github.com/SaladDay.png?size=56" width="48" height="48" alt="@SaladDay"></a>
+  <a href="https://github.com/murphyXu" title="@murphyXu"><img src="https://github.com/murphyXu.png?size=56" width="48" height="48" alt="@murphyXu"></a>
+  <a href="https://github.com/ZWkang" title="@ZWkang"><img src="https://github.com/ZWkang.png?size=56" width="48" height="48" alt="@ZWkang"></a>
+  <a href="https://github.com/EListenX" title="@EListenX"><img src="https://github.com/EListenX.png?size=56" width="48" height="48" alt="@EListenX"></a>
+  <a href="https://github.com/lincolnwan" title="@lincolnwan"><img src="https://github.com/lincolnwan.png?size=56" width="48" height="48" alt="@lincolnwan"></a>
+  <a href="https://github.com/ciberponk" title="@ciberponk"><img src="https://github.com/ciberponk.png?size=56" width="48" height="48" alt="@ciberponk"></a>
+  <a href="https://github.com/ttttmr" title="@ttttmr"><img src="https://github.com/ttttmr.png?size=56" width="48" height="48" alt="@ttttmr"></a>
+  <a href="https://github.com/mvanhorn" title="@mvanhorn"><img src="https://github.com/mvanhorn.png?size=56" width="48" height="48" alt="@mvanhorn"></a>
+  <a href="https://github.com/ebrevdo" title="@ebrevdo"><img src="https://github.com/ebrevdo.png?size=56" width="48" height="48" alt="@ebrevdo"></a>
+  <a href="https://github.com/bailob" title="@bailob"><img src="https://github.com/bailob.png?size=56" width="48" height="48" alt="@bailob"></a>
+  <a href="https://github.com/as992949791" title="@as992949791"><img src="https://github.com/as992949791.png?size=56" width="48" height="48" alt="@as992949791"></a>
+  <a href="https://github.com/shuoxuekeji" title="@shuoxuekeji"><img src="https://github.com/shuoxuekeji.png?size=56" width="48" height="48" alt="@shuoxuekeji"></a>
+  <a href="https://github.com/Jinzy" title="@Jinzy"><img src="https://github.com/Jinzy.png?size=56" width="48" height="48" alt="@Jinzy"></a>
+  <a href="https://github.com/SomSamantray" title="@SomSamantray"><img src="https://github.com/SomSamantray.png?size=56" width="48" height="48" alt="@SomSamantray"></a>
+  <a href="https://github.com/mmychu" title="@mmychu"><img src="https://github.com/mmychu.png?size=56" width="48" height="48" alt="@mmychu"></a>
+  <a href="https://github.com/ericshunhinglee-cloud" title="@ericshunhinglee-cloud"><img src="https://github.com/ericshunhinglee-cloud.png?size=56" width="48" height="48" alt="@ericshunhinglee-cloud"></a>
+  <a href="https://github.com/ShaunLinTW" title="@ShaunLinTW"><img src="https://github.com/ShaunLinTW.png?size=56" width="48" height="48" alt="@ShaunLinTW"></a>
+  <a href="https://github.com/TayfurYldz" title="@TayfurYldz"><img src="https://github.com/TayfurYldz.png?size=56" width="48" height="48" alt="@TayfurYldz"></a>
+  <a href="https://github.com/kuei51307-hub" title="@kuei51307-hub"><img src="https://github.com/kuei51307-hub.png?size=56" width="48" height="48" alt="@kuei51307-hub"></a>
+  <a href="https://github.com/Dphoshoba" title="@Dphoshoba"><img src="https://github.com/Dphoshoba.png?size=56" width="48" height="48" alt="@Dphoshoba"></a>
+  <a href="https://github.com/sunznx" title="@sunznx"><img src="https://github.com/sunznx.png?size=56" width="48" height="48" alt="@sunznx"></a>
+  <a href="https://github.com/hzura" title="@hzura"><img src="https://github.com/hzura.png?size=56" width="48" height="48" alt="@hzura"></a>
+  <a href="https://github.com/wangxiaodong1021" title="@wangxiaodong1021"><img src="https://github.com/wangxiaodong1021.png?size=56" width="48" height="48" alt="@wangxiaodong1021"></a>
+  <a href="https://github.com/sortakool" title="@sortakool"><img src="https://github.com/sortakool.png?size=56" width="48" height="48" alt="@sortakool"></a>
+  <a href="https://github.com/lowmiaq-gmail" title="@lowmiaq-gmail"><img src="https://github.com/lowmiaq-gmail.png?size=56" width="48" height="48" alt="@lowmiaq-gmail"></a>
+  <a href="https://github.com/webwww123" title="@webwww123"><img src="https://github.com/webwww123.png?size=56" width="48" height="48" alt="@webwww123"></a>
+  <a href="https://github.com/killianMei" title="@killianMei"><img src="https://github.com/killianMei.png?size=56" width="48" height="48" alt="@killianMei"></a>
+  <a href="https://github.com/GlitterKill" title="@GlitterKill"><img src="https://github.com/GlitterKill.png?size=56" width="48" height="48" alt="@GlitterKill"></a>
+  <a href="https://github.com/seathatflowsinourveins" title="@seathatflowsinourveins"><img src="https://github.com/seathatflowsinourveins.png?size=56" width="48" height="48" alt="@seathatflowsinourveins"></a>
+  <a href="https://github.com/fd44fdg" title="@fd44fdg"><img src="https://github.com/fd44fdg.png?size=56" width="48" height="48" alt="@fd44fdg"></a>
+  <a href="https://github.com/jschmied" title="@jschmied"><img src="https://github.com/jschmied.png?size=56" width="48" height="48" alt="@jschmied"></a>
+  <a href="https://github.com/yolo0731" title="@yolo0731"><img src="https://github.com/yolo0731.png?size=56" width="48" height="48" alt="@yolo0731"></a>
+  <a href="https://github.com/ziyu4huang" title="@ziyu4huang"><img src="https://github.com/ziyu4huang.png?size=56" width="48" height="48" alt="@ziyu4huang"></a>
+  <a href="https://github.com/kcinzgg" title="@kcinzgg"><img src="https://github.com/kcinzgg.png?size=56" width="48" height="48" alt="@kcinzgg"></a>
+  <a href="https://github.com/mahdiit" title="@mahdiit"><img src="https://github.com/mahdiit.png?size=56" width="48" height="48" alt="@mahdiit"></a>
+  <a href="https://github.com/Dikshj" title="@Dikshj"><img src="https://github.com/Dikshj.png?size=56" width="48" height="48" alt="@Dikshj"></a>
+  <a href="https://github.com/2023Anita" title="@2023Anita"><img src="https://github.com/2023Anita.png?size=56" width="48" height="48" alt="@2023Anita"></a>
+  <a href="https://github.com/GongYuanCaiJi" title="@GongYuanCaiJi"><img src="https://github.com/GongYuanCaiJi.png?size=56" width="48" height="48" alt="@GongYuanCaiJi"></a>
+  <a href="https://github.com/Alonso-li" title="@Fat-Jan, now @Alonso-li"><img src="https://github.com/Alonso-li.png?size=56" width="48" height="48" alt="@Fat-Jan"></a>
+  <a href="https://github.com/shunfeng8421" title="@shunfeng8421"><img src="https://github.com/shunfeng8421.png?size=56" width="48" height="48" alt="@shunfeng8421"></a>
+  <a href="https://github.com/Skulli485" title="@Skulli485"><img src="https://github.com/Skulli485.png?size=56" width="48" height="48" alt="@Skulli485"></a>
+  <a href="https://github.com/carterusedulm2-maker" title="@carterusedulm2-maker"><img src="https://github.com/carterusedulm2-maker.png?size=56" width="48" height="48" alt="@carterusedulm2-maker"></a>
+  <a href="https://github.com/gauravvojha" title="@gauravvojha"><img src="https://github.com/gauravvojha.png?size=56" width="48" height="48" alt="@gauravvojha"></a>
+  <a href="CONTRIBUTORS.md" title="@CleanDev-Fix, archived credit"><img src="https://github.com/identicons/CleanDev-Fix.png" width="48" height="48" alt="@CleanDev-Fix"></a>
+  <a href="https://github.com/bmyury" title="@bmyury"><img src="https://github.com/bmyury.png?size=56" width="48" height="48" alt="@bmyury"></a>
+  <a href="https://github.com/oaabahussain" title="@oaabahussain"><img src="https://github.com/oaabahussain.png?size=56" width="48" height="48" alt="@oaabahussain"></a>
+  <a href="https://github.com/gavinlinasd" title="@gavinlinasd"><img src="https://github.com/gavinlinasd.png?size=56" width="48" height="48" alt="@gavinlinasd"></a>
+  <a href="https://github.com/xiaolai" title="@xiaolai"><img src="https://github.com/xiaolai.png?size=56" width="48" height="48" alt="@xiaolai"></a>
+  <a href="https://github.com/githubYiheng" title="@githubYiheng"><img src="https://github.com/githubYiheng.png?size=56" width="48" height="48" alt="@githubYiheng"></a>
+  <a href="https://github.com/09ashishkapoor" title="@09ashishkapoor"><img src="https://github.com/09ashishkapoor.png?size=56" width="48" height="48" alt="@09ashishkapoor"></a>
+  <a href="https://github.com/shawnli1874" title="@shawnli1874"><img src="https://github.com/shawnli1874.png?size=56" width="48" height="48" alt="@shawnli1874"></a>
+  <a href="https://github.com/Leon-Algo" title="@Leon-Algo"><img src="https://github.com/Leon-Algo.png?size=56" width="48" height="48" alt="@Leon-Algo"></a>
+  <a href="https://github.com/YSAA1" title="@YSAA1"><img src="https://github.com/YSAA1.png?size=56" width="48" height="48" alt="@YSAA1"></a>
+  <a href="https://github.com/kevinaimonster" title="@kevinaimonster"><img src="https://github.com/kevinaimonster.png?size=56" width="48" height="48" alt="@kevinaimonster"></a>
+  <a href="https://github.com/wd041216-bit" title="@wd041216-bit"><img src="https://github.com/wd041216-bit.png?size=56" width="48" height="48" alt="@wd041216-bit"></a>
+  <a href="https://github.com/popey" title="@popey"><img src="https://github.com/popey.png?size=56" width="48" height="48" alt="@popey"></a>
+  <a href="https://github.com/jonthebeef" title="@jonthebeef"><img src="https://github.com/jonthebeef.png?size=56" width="48" height="48" alt="@jonthebeef"></a>
+  <a href="https://github.com/codelyc" title="@codelyc"><img src="https://github.com/codelyc.png?size=56" width="48" height="48" alt="@codelyc"></a>
+  <a href="https://github.com/Guozihong" title="@Guozihong"><img src="https://github.com/Guozihong.png?size=56" width="48" height="48" alt="@Guozihong"></a>
+  <a href="https://github.com/fahmyelraie" title="@fahmyelraie"><img src="https://github.com/fahmyelraie.png?size=56" width="48" height="48" alt="@fahmyelraie"></a>
+  <a href="https://github.com/olgasafonova" title="@olgasafonova"><img src="https://github.com/olgasafonova.png?size=56" width="48" height="48" alt="@olgasafonova"></a>
+  <a href="https://github.com/AZLabsAI" title="@AZLabsAI"><img src="https://github.com/AZLabsAI.png?size=56" width="48" height="48" alt="@AZLabsAI"></a>
+  <a href="https://github.com/raykuo998" title="@raykuo998"><img src="https://github.com/raykuo998.png?size=56" width="48" height="48" alt="@raykuo998"></a>
+  <a href="https://github.com/gydx6" title="@gydx6"><img src="https://github.com/gydx6.png?size=56" width="48" height="48" alt="@gydx6"></a>
+  <a href="https://github.com/waynelee2048" title="@waynelee2048"><img src="https://github.com/waynelee2048.png?size=56" width="48" height="48" alt="@waynelee2048"></a>
+  <a href="https://github.com/tobrun" title="@tobrun"><img src="https://github.com/tobrun.png?size=56" width="48" height="48" alt="@tobrun"></a>
+  <a href="https://github.com/markocupic024" title="@markocupic024"><img src="https://github.com/markocupic024.png?size=56" width="48" height="48" alt="@markocupic024"></a>
+  <a href="https://github.com/tt-a1i" title="@tt-a1i"><img src="https://github.com/tt-a1i.png?size=56" width="48" height="48" alt="@tt-a1i"></a>
+  <a href="https://github.com/Emin017" title="@Emin017"><img src="https://github.com/Emin017.png?size=56" width="48" height="48" alt="@Emin017"></a>
+  <a href="https://github.com/TomXPRIME" title="@TomXPRIME"><img src="https://github.com/TomXPRIME.png?size=56" width="48" height="48" alt="@TomXPRIME"></a>
+  <a href="https://github.com/DLI1996" title="@DLI1996"><img src="https://github.com/DLI1996.png?size=56" width="48" height="48" alt="@DLI1996"></a>
+  <a href="https://github.com/Stephen-abc" title="@Stephen-abc"><img src="https://github.com/Stephen-abc.png?size=56" width="48" height="48" alt="@Stephen-abc"></a>
+  <a href="https://github.com/igorcosta" title="@igorcosta"><img src="https://github.com/igorcosta.png?size=56" width="48" height="48" alt="@igorcosta"></a>
+  <a href="https://github.com/Yigtwxx" title="@Yigtwxx"><img src="https://github.com/Yigtwxx.png?size=56" width="48" height="48" alt="@Yigtwxx"></a>
+  <a href="https://github.com/RioTheGreat-ai" title="@RioTheGreat-ai"><img src="https://github.com/RioTheGreat-ai.png?size=56" width="48" height="48" alt="@RioTheGreat-ai"></a>
+  <a href="https://github.com/kmichels" title="@kmichels"><img src="https://github.com/kmichels.png?size=56" width="48" height="48" alt="@kmichels"></a>
+  <a href="CONTRIBUTORS.md" title="@voidborne-d, archived credit"><img src="https://github.com/identicons/voidborne-d.png" width="48" height="48" alt="@voidborne-d"></a>
+  <a href="https://github.com/Kiddo4993" title="@Kiddo4993"><img src="https://github.com/Kiddo4993.png?size=56" width="48" height="48" alt="@Kiddo4993"></a>
+</p>
+<!-- contributor-portraits:end -->
+
+<a id="community"></a>
+
+<details>
+<summary><div align="center"><strong>🌍 Built with Planning with Files</strong></div></summary>
+
+### Forks & Extensions
+
+| Fork | Author | What They Built |
+|------|--------|-----------------|
+| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
+| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
+| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
+| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
+| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
+| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
+
+### Used in the Wild
+
+| Project | What It Is |
+|---------|-----------|
+| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
+| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
+| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
+| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
+| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
+| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
+
+### Skill Registries & Hubs
+
+| Registry | What It Is |
+|----------|-----------|
+| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
+
+### Bundled snapshots & adaptations
+
+| Project | Verified relationship |
+|---------|-----------------------|
+| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
+| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
+
+*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
+
+Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBUTORS.md).
+
+</details>
+
+
 <div align="center">
 <img src="media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
 </div>
 
-<h1 align="center">Planning with Files</h1>
+<h1 align="center">
+  Planning with Files&nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
+</h1>
 
-<p align="center">Persistent planning for AI coding agents. Keep the plan, findings and progress in Markdown files, then resume from those files after a context reset.</p>
+<p align="center">
+  <strong>The planning skill your agent cannot ignore.</strong><br>
+  Not a prompt it might follow. A hook that fires every turn, a plan on disk that survives <code>/clear</code>, and 3 out of 3 blind A/B wins to show it works.
+</p>
 
-<p align="center">Activated lifecycle hooks restore selected planning context. Native plugin integrations and the portable Agent Skills install are available below.</p>
+<p align="center">
+  <em>Your agent's context window dies. The plan does not.</em>
+</p>
+
+<p align="center">
+Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
+</p>
 
 <p align="center">
   <a href="https://github.com/OthmanAdi/planning-with-files/stargazers"><img src="https://img.shields.io/github/stars/OthmanAdi/planning-with-files?style=flat&color=yellow" alt="Stars"></a>
   <a href="https://github.com/OthmanAdi/planning-with-files/releases"><img src="https://img.shields.io/github/v/release/OthmanAdi/planning-with-files?style=flat&label=release" alt="Latest release"></a>
   <a href="https://skills.sh/othmanadi/planning-with-files"><img src="https://skills.sh/b/othmanadi/planning-with-files" alt="skills.sh installs"></a>
+  <a href="https://skillsplayground.com/skills/othmanadi-planning-with-files-planning-with-files/"><img src="https://skillsplayground.com/badges/installs/othmanadi-planning-with-files-planning-with-files.svg" alt="Skills Playground installs"></a>
+  <a href="https://skill-history.com/othmanadi/planning-with-files"><img src="https://skill-history.com/badge/othmanadi/planning-with-files.svg" alt="Downloads"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/issues?q=is%3Aissue+is%3Aclosed"><img src="https://img.shields.io/github/issues-closed/OthmanAdi/planning-with-files?color=success" alt="Closed issues"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/pulls?q=is%3Apr+is%3Aclosed"><img src="https://img.shields.io/github/issues-pr-closed/OthmanAdi/planning-with-files?color=success" alt="Closed PRs"></a>
+</p>
+
+<p align="center">
+  <a href="docs/evals.md"><img src="https://img.shields.io/badge/benchmark-96.7%25_pass_(29%2F30)-2da44e?style=flat" alt="Benchmark: 96.7 percent assertion pass rate with skill"></a>
+  <a href="docs/evals.md"><img src="https://img.shields.io/badge/blind_A%2FB-3%2F3_wins-2da44e?style=flat" alt="Blind A/B: 3 of 3 wins"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/OthmanAdi/planning-with-files?style=flat" alt="MIT license"></a>
 </p>
 
-
 <p align="center">
+  <a href="#readme-nav-before-clear"><strong>See it survive /clear</strong></a> ·
   <a href="#readme-nav-quick-install"><strong>Install</strong></a> ·
-  <a href="#the-solution-3-file-pattern">How it works</a> ·
   <a href="#readme-nav-long-running">Long-running tasks</a> ·
-  <a href="#readme-nav-hosts">First-class hosts</a> ·
-  <a href="#full-reference">Reference</a> ·
-  <a href="#contributors">Contributors</a>
+  <a href="#readme-nav-hosts">First-class hosts</a>
 </p>
 
 <p align="center">
@@ -34,22 +217,11 @@
 
 ## Quick Install
 
-Choose the route for your agent.
-
-**Portable skill (Agent Skills)**
-
 ```bash
 npx skills add OthmanAdi/planning-with-files --skill planning-with-files -g
 ```
 
-**Claude Code plugin (startup recovery and full slash commands)**
-
-```text
-/plugin marketplace add OthmanAdi/planning-with-files
-/plugin install planning-with-files@planning-with-files
-```
-
-The portable skill registers activation-scoped hooks after invocation; native plugins provide their host integrations. [Compare install routes](docs/installation.md#what-each-install-route-actually-ships) · [First session](docs/quickstart.md) · [Other agents](#readme-nav-hosts).
+All install methods: [docs/installation.md](docs/installation.md).
 
 ---
 
@@ -57,7 +229,7 @@ The portable skill registers activation-scoped hooks after invocation; native pl
 
 ## Before and after /clear
 
-A context reset clears the conversation. The planning files retain the current phase, decisions and test results for the next session.
+Every coding agent loses its working memory when the context window resets. The plan does not have to die with it.
 
 <p align="center">
   <a href="media/pwf-context-story-v1.mp4"><img src="media/pwf-context-story-v1.gif" alt="Illustrated workflow: planning files preserve the task state through a context reset" width="760"></a>
@@ -67,19 +239,19 @@ A context reset clears the conversation. The planning files retain the current p
 
 ## Built for long-running agent tasks
 
-The plan lives in your project. Lifecycle hooks restore selected context, and optional autonomous or gated modes help maintain progress during longer runs. Gate behavior depends on the host; see the [capability table](#hooks-and-modes-reference).
+> [!IMPORTANT]
+> **Most harnesses ship a to-do list that lives inside the context window. planning-with-files ships a plan that lives on disk, is re-injected every turn, is hash-attested, and can hold the agent's stop until the plan reports complete.**
+>
+> That is the difference between an agent that forgets after `/clear`, compaction or a crash and one that resumes at the current phase. In the project's own measurements the plan on disk turned a 13.3-turn re-orientation into 5.0 turns, and the skill won 3 of 3 blind A/B comparisons ([numbers and limits](#benchmark-results)). Every mechanism below is a file on disk plus a hook, so it works the same on hour ten as on turn one.
 
-The project's internal benchmark measured 5.0 turns to resume with planning files versus 13.3 for a raw agent. An earlier evaluation recorded 3 of 3 blind A/B wins. These runs used specific versions and models; [methods and limits](#benchmark-results) explain what they measured.
 
 <div><a id="the-problem"></a><a id="the-solution-3-file-pattern"></a><a id="the-core-principle"></a><a id="why-this-skill"></a><a id="the-manus-principles"></a></div>
 
 ## The 3-file pattern
 
-Automatic recovery reads project planning files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. The portable skill supports 60+ agents through the Agent Skills standard; native plugins integrate with Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
-
 ```
 Context Window = RAM (volatile, limited)
-Filesystem = Disk (persistent, inspectable)
+Filesystem = Disk (persistent, unlimited)
 
 → Anything important gets written to disk.
 ```
@@ -93,7 +265,7 @@ your-project/
 └── progress.md    ← session log and test results
 ```
 
-Parallel tasks can use isolated directories: `.planning/YYYY-MM-DD-slug/` with the same three files, selected via `.active_plan` (v2.36.0+). The planning records are plain Markdown and gitignored by default; hooks and plugins also keep small selection, cache and ledger files.
+Parallel tasks get isolated directories instead: `.planning/YYYY-MM-DD-slug/` with the same three files, selected via `.active_plan` (v2.36.0+). Plain markdown, gitignored by default, no runtime state anywhere else.
 
 The pattern is the one Manus described before [Meta acquired it for $2 billion on December 29, 2025](https://techcrunch.com/2025/12/29/meta-just-bought-manus-an-ai-startup-everyone-has-been-talking-about/), eight months and $100M+ of revenue after launch:
 
@@ -442,6 +614,7 @@ Install acting up? Open your agent and say: *"Read docs/installation.md and docs
 Hermes needs its skill bundle from `.hermes/skills/planning-with-files` (`hermes skills install OthmanAdi/planning-with-files/.hermes/skills/planning-with-files --yes`); OpenCode and DeepSeek Harness read the skill that `npx skills add ... -g` places in `~/.agents/skills/`. Each host's own `/plan` command is never shadowed.
 
 
+
 <a id="works-across-18-platforms"></a>
 
 ## Works across 19+ platforms
@@ -597,6 +770,7 @@ The DSH plugin registers these in-session commands, typed with no prefix. `/plan
 On the plugin route the model-invocable SKILL is `planning-with-files:planning-with-files`; the doubled form is the skill id, not a command you type. The five language variants live under `skills/i18n/`, which the plugin scan does not reach, so there is no `planning-with-files:planning-with-files-de` to invoke by name — reach a translation through its `/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh` or `/plan-zht` command, or install it as its own skill with `npx skills add OthmanAdi/planning-with-files --skill planning-with-files-de -g`, which registers it under its own name. There is no `/pwf-de` and no `/planning-with-files:planning-with-files-goal`; `/pwf` is just a short alias for `/plan`.
 
 
+
 ## v3 Long-Running Agent Features
 
 The v3 line adds features aimed at long-running agentic runs. Each one is listed with the command or flag that turns it on. Without a mode marker, hooks retain the legacy content format. Since v3.24.0, Claude Code suppresses repeated unchanged PreToolUse views when session identity and private cache storage are available.
@@ -689,11 +863,6 @@ Everything below is the proof and the reference half: the benchmarks and their l
 
 > **Methodology note:** the 96.7% figure comes from the v2.21.0 evaluation run on `claude-sonnet-4-6` (2026-03-06). It measures file-pattern fidelity (does the agent create and maintain the 3-file structure), not goal-drift over long autonomous runs. Newer models and the autonomous-mode work are not yet covered by this number. Full methodology, dataset, and assertion list: [docs/evals.md](docs/evals.md).
 
-<p align="center">
-  <a href="docs/evals.md"><img src="https://img.shields.io/badge/benchmark-96.7%25_pass_(29%2F30)-2da44e?style=flat" alt="Benchmark: 96.7 percent assertion pass rate with skill"></a>
-  <a href="docs/evals.md"><img src="https://img.shields.io/badge/blind_A%2FB-3%2F3_wins-2da44e?style=flat" alt="Blind A/B: 3 of 3 wins"></a>
-</p>
-
 Evaluated with Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) framework: skill v2.21.0, model `claude-sonnet-4-6`, 2026-03-06. 10 parallel subagents, 5 task types, 30 objectively verifiable assertions, 3 blind A/B comparisons.
 
 <p align="center">
@@ -748,7 +917,9 @@ planning-with-files/
 └── README.md
 ```
 
-Every release maintains the parity targets defined in `scripts/bump-version.py` and checked by `tests/test_skill_md_version_parity.py`, including the gitignored ClawHub upload stage when present. `scripts/bump-version.py` updates every available target, and CI fails if a tracked variant lags. The npm package's `SKILL.md` is byte-identical to the canonical skill.
+Every release maintains 20 tracked parity targets plus the gitignored ClawHub upload stage when it is present. `scripts/bump-version.py` updates every available target, and CI fails if a tracked variant lags. The npm package's `SKILL.md` is byte-identical to the canonical skill.
+
+
 
 
 ## Documentation
@@ -784,179 +955,6 @@ MIT License — feel free to use, modify, and distribute.
 **Author:** [Ahmad Othman Ammar Adi](https://github.com/OthmanAdi)
 
 </details>
-
-## Contributors
-
-Code, documentation, and issue contributors. Select a portrait to open a GitHub profile or archived credit. [Full credits](CONTRIBUTORS.md).
-
-<!-- contributor-portraits:start -->
-<p align="center">
-  <a href="https://github.com/MannXo" title="@MannXo"><img src="https://github.com/MannXo.png?size=56" width="48" height="48" alt="@MannXo"></a>
-  <a href="https://github.com/winxtxrgit" title="@winxtxrgit"><img src="https://github.com/winxtxrgit.png?size=56" width="48" height="48" alt="@winxtxrgit"></a>
-  <a href="https://github.com/EmadMokhtar" title="@EmadMokhtar"><img src="https://github.com/EmadMokhtar.png?size=56" width="48" height="48" alt="@EmadMokhtar"></a>
-  <a href="https://github.com/MbappeWU" title="@MbappeWU"><img src="https://github.com/MbappeWU.png?size=56" width="48" height="48" alt="@MbappeWU"></a>
-  <a href="https://github.com/Vyzygota" title="@Vyzygota"><img src="https://github.com/Vyzygota.png?size=56" width="48" height="48" alt="@Vyzygota"></a>
-  <a href="https://github.com/littleblacklb" title="@littleblacklb"><img src="https://github.com/littleblacklb.png?size=56" width="48" height="48" alt="@littleblacklb"></a>
-  <a href="https://github.com/Amiirhosseini" title="@Amiirhosseini"><img src="https://github.com/Amiirhosseini.png?size=56" width="48" height="48" alt="@Amiirhosseini"></a>
-  <a href="https://github.com/AvitalAviv" title="@AvitalAviv"><img src="https://github.com/AvitalAviv.png?size=56" width="48" height="48" alt="@AvitalAviv"></a>
-  <a href="https://github.com/DorianZheng" title="@DorianZheng"><img src="https://github.com/DorianZheng.png?size=56" width="48" height="48" alt="@DorianZheng"></a>
-  <a href="https://github.com/dubes394" title="@dubes394"><img src="https://github.com/dubes394.png?size=56" width="48" height="48" alt="@dubes394"></a>
-  <a href="https://github.com/dylanpulver" title="@dylanpulver"><img src="https://github.com/dylanpulver.png?size=56" width="48" height="48" alt="@dylanpulver"></a>
-  <a href="https://github.com/Enard52" title="@Enard52"><img src="https://github.com/Enard52.png?size=56" width="48" height="48" alt="@Enard52"></a>
-  <a href="https://github.com/JianweiWangs" title="@JianweiWangs"><img src="https://github.com/JianweiWangs.png?size=56" width="48" height="48" alt="@JianweiWangs"></a>
-  <a href="https://github.com/lazyst" title="@lazyst"><img src="https://github.com/lazyst.png?size=56" width="48" height="48" alt="@lazyst"></a>
-  <a href="https://github.com/loarland" title="@loarland"><img src="https://github.com/loarland.png?size=56" width="48" height="48" alt="@loarland"></a>
-  <a href="https://github.com/luyanfeng" title="@luyanfeng"><img src="https://github.com/luyanfeng.png?size=56" width="48" height="48" alt="@luyanfeng"></a>
-  <a href="https://github.com/marcmuon" title="@marcmuon"><img src="https://github.com/marcmuon.png?size=56" width="48" height="48" alt="@marcmuon"></a>
-  <a href="https://github.com/mfehlhaber" title="@mfehlhaber"><img src="https://github.com/mfehlhaber.png?size=56" width="48" height="48" alt="@mfehlhaber"></a>
-  <a href="https://github.com/mixian939" title="@mixian939"><img src="https://github.com/mixian939.png?size=56" width="48" height="48" alt="@mixian939"></a>
-  <a href="https://github.com/msuadOf" title="@msuadOf"><img src="https://github.com/msuadOf.png?size=56" width="48" height="48" alt="@msuadOf"></a>
-  <a href="https://github.com/mtuwei" title="@mtuwei"><img src="https://github.com/mtuwei.png?size=56" width="48" height="48" alt="@mtuwei"></a>
-  <a href="https://github.com/nazeshinjite" title="@nazeshinjite"><img src="https://github.com/nazeshinjite.png?size=56" width="48" height="48" alt="@nazeshinjite"></a>
-  <a href="https://github.com/sean3808" title="@sean3808"><img src="https://github.com/sean3808.png?size=56" width="48" height="48" alt="@sean3808"></a>
-  <a href="https://github.com/shouldnotappearcalm" title="@shouldnotappearcalm"><img src="https://github.com/shouldnotappearcalm.png?size=56" width="48" height="48" alt="@shouldnotappearcalm"></a>
-  <a href="https://github.com/st01cs" title="@st01cs"><img src="https://github.com/st01cs.png?size=56" width="48" height="48" alt="@st01cs"></a>
-  <a href="https://github.com/tingles2233" title="@tingles2233"><img src="https://github.com/tingles2233.png?size=56" width="48" height="48" alt="@tingles2233"></a>
-  <a href="https://github.com/Whxuan0701" title="@Whxuan0701"><img src="https://github.com/Whxuan0701.png?size=56" width="48" height="48" alt="@Whxuan0701"></a>
-  <a href="https://github.com/wqh17101" title="@wqh17101"><img src="https://github.com/wqh17101.png?size=56" width="48" height="48" alt="@wqh17101"></a>
-  <a href="https://github.com/kaichen" title="@kaichen"><img src="https://github.com/kaichen.png?size=56" width="48" height="48" alt="@kaichen"></a>
-  <a href="https://github.com/fuahyo" title="@fuahyo"><img src="https://github.com/fuahyo.png?size=56" width="48" height="48" alt="@fuahyo"></a>
-  <a href="https://github.com/lasmarois" title="@lasmarois"><img src="https://github.com/lasmarois.png?size=56" width="48" height="48" alt="@lasmarois"></a>
-  <a href="https://github.com/aimasteracc" title="@aimasteracc"><img src="https://github.com/aimasteracc.png?size=56" width="48" height="48" alt="@aimasteracc"></a>
-  <a href="https://github.com/SaladDay" title="@SaladDay"><img src="https://github.com/SaladDay.png?size=56" width="48" height="48" alt="@SaladDay"></a>
-  <a href="https://github.com/murphyXu" title="@murphyXu"><img src="https://github.com/murphyXu.png?size=56" width="48" height="48" alt="@murphyXu"></a>
-  <a href="https://github.com/ZWkang" title="@ZWkang"><img src="https://github.com/ZWkang.png?size=56" width="48" height="48" alt="@ZWkang"></a>
-  <a href="https://github.com/EListenX" title="@EListenX"><img src="https://github.com/EListenX.png?size=56" width="48" height="48" alt="@EListenX"></a>
-  <a href="https://github.com/lincolnwan" title="@lincolnwan"><img src="https://github.com/lincolnwan.png?size=56" width="48" height="48" alt="@lincolnwan"></a>
-  <a href="https://github.com/ciberponk" title="@ciberponk"><img src="https://github.com/ciberponk.png?size=56" width="48" height="48" alt="@ciberponk"></a>
-  <a href="https://github.com/ttttmr" title="@ttttmr"><img src="https://github.com/ttttmr.png?size=56" width="48" height="48" alt="@ttttmr"></a>
-  <a href="https://github.com/mvanhorn" title="@mvanhorn"><img src="https://github.com/mvanhorn.png?size=56" width="48" height="48" alt="@mvanhorn"></a>
-  <a href="https://github.com/ebrevdo" title="@ebrevdo"><img src="https://github.com/ebrevdo.png?size=56" width="48" height="48" alt="@ebrevdo"></a>
-  <a href="https://github.com/bailob" title="@bailob"><img src="https://github.com/bailob.png?size=56" width="48" height="48" alt="@bailob"></a>
-  <a href="https://github.com/as992949791" title="@as992949791"><img src="https://github.com/as992949791.png?size=56" width="48" height="48" alt="@as992949791"></a>
-  <a href="https://github.com/shuoxuekeji" title="@shuoxuekeji"><img src="https://github.com/shuoxuekeji.png?size=56" width="48" height="48" alt="@shuoxuekeji"></a>
-  <a href="https://github.com/Jinzy" title="@Jinzy"><img src="https://github.com/Jinzy.png?size=56" width="48" height="48" alt="@Jinzy"></a>
-  <a href="https://github.com/SomSamantray" title="@SomSamantray"><img src="https://github.com/SomSamantray.png?size=56" width="48" height="48" alt="@SomSamantray"></a>
-  <a href="https://github.com/mmychu" title="@mmychu"><img src="https://github.com/mmychu.png?size=56" width="48" height="48" alt="@mmychu"></a>
-  <a href="https://github.com/ericshunhinglee-cloud" title="@ericshunhinglee-cloud"><img src="https://github.com/ericshunhinglee-cloud.png?size=56" width="48" height="48" alt="@ericshunhinglee-cloud"></a>
-  <a href="https://github.com/ShaunLinTW" title="@ShaunLinTW"><img src="https://github.com/ShaunLinTW.png?size=56" width="48" height="48" alt="@ShaunLinTW"></a>
-  <a href="https://github.com/TayfurYldz" title="@TayfurYldz"><img src="https://github.com/TayfurYldz.png?size=56" width="48" height="48" alt="@TayfurYldz"></a>
-  <a href="https://github.com/kuei51307-hub" title="@kuei51307-hub"><img src="https://github.com/kuei51307-hub.png?size=56" width="48" height="48" alt="@kuei51307-hub"></a>
-  <a href="https://github.com/Dphoshoba" title="@Dphoshoba"><img src="https://github.com/Dphoshoba.png?size=56" width="48" height="48" alt="@Dphoshoba"></a>
-  <a href="https://github.com/sunznx" title="@sunznx"><img src="https://github.com/sunznx.png?size=56" width="48" height="48" alt="@sunznx"></a>
-  <a href="https://github.com/hzura" title="@hzura"><img src="https://github.com/hzura.png?size=56" width="48" height="48" alt="@hzura"></a>
-  <a href="https://github.com/wangxiaodong1021" title="@wangxiaodong1021"><img src="https://github.com/wangxiaodong1021.png?size=56" width="48" height="48" alt="@wangxiaodong1021"></a>
-  <a href="https://github.com/sortakool" title="@sortakool"><img src="https://github.com/sortakool.png?size=56" width="48" height="48" alt="@sortakool"></a>
-  <a href="https://github.com/lowmiaq-gmail" title="@lowmiaq-gmail"><img src="https://github.com/lowmiaq-gmail.png?size=56" width="48" height="48" alt="@lowmiaq-gmail"></a>
-  <a href="https://github.com/webwww123" title="@webwww123"><img src="https://github.com/webwww123.png?size=56" width="48" height="48" alt="@webwww123"></a>
-  <a href="https://github.com/killianMei" title="@killianMei"><img src="https://github.com/killianMei.png?size=56" width="48" height="48" alt="@killianMei"></a>
-  <a href="https://github.com/GlitterKill" title="@GlitterKill"><img src="https://github.com/GlitterKill.png?size=56" width="48" height="48" alt="@GlitterKill"></a>
-  <a href="https://github.com/seathatflowsinourveins" title="@seathatflowsinourveins"><img src="https://github.com/seathatflowsinourveins.png?size=56" width="48" height="48" alt="@seathatflowsinourveins"></a>
-  <a href="https://github.com/fd44fdg" title="@fd44fdg"><img src="https://github.com/fd44fdg.png?size=56" width="48" height="48" alt="@fd44fdg"></a>
-  <a href="https://github.com/jschmied" title="@jschmied"><img src="https://github.com/jschmied.png?size=56" width="48" height="48" alt="@jschmied"></a>
-  <a href="https://github.com/yolo0731" title="@yolo0731"><img src="https://github.com/yolo0731.png?size=56" width="48" height="48" alt="@yolo0731"></a>
-  <a href="https://github.com/ziyu4huang" title="@ziyu4huang"><img src="https://github.com/ziyu4huang.png?size=56" width="48" height="48" alt="@ziyu4huang"></a>
-  <a href="https://github.com/kcinzgg" title="@kcinzgg"><img src="https://github.com/kcinzgg.png?size=56" width="48" height="48" alt="@kcinzgg"></a>
-  <a href="https://github.com/mahdiit" title="@mahdiit"><img src="https://github.com/mahdiit.png?size=56" width="48" height="48" alt="@mahdiit"></a>
-  <a href="https://github.com/Dikshj" title="@Dikshj"><img src="https://github.com/Dikshj.png?size=56" width="48" height="48" alt="@Dikshj"></a>
-  <a href="https://github.com/2023Anita" title="@2023Anita"><img src="https://github.com/2023Anita.png?size=56" width="48" height="48" alt="@2023Anita"></a>
-  <a href="https://github.com/GongYuanCaiJi" title="@GongYuanCaiJi"><img src="https://github.com/GongYuanCaiJi.png?size=56" width="48" height="48" alt="@GongYuanCaiJi"></a>
-  <a href="https://github.com/Alonso-li" title="@Fat-Jan, now @Alonso-li"><img src="https://github.com/Alonso-li.png?size=56" width="48" height="48" alt="@Fat-Jan"></a>
-  <a href="https://github.com/shunfeng8421" title="@shunfeng8421"><img src="https://github.com/shunfeng8421.png?size=56" width="48" height="48" alt="@shunfeng8421"></a>
-  <a href="https://github.com/Skulli485" title="@Skulli485"><img src="https://github.com/Skulli485.png?size=56" width="48" height="48" alt="@Skulli485"></a>
-  <a href="https://github.com/carterusedulm2-maker" title="@carterusedulm2-maker"><img src="https://github.com/carterusedulm2-maker.png?size=56" width="48" height="48" alt="@carterusedulm2-maker"></a>
-  <a href="https://github.com/gauravvojha" title="@gauravvojha"><img src="https://github.com/gauravvojha.png?size=56" width="48" height="48" alt="@gauravvojha"></a>
-  <a href="CONTRIBUTORS.md" title="@CleanDev-Fix, archived credit"><img src="https://github.com/identicons/CleanDev-Fix.png" width="48" height="48" alt="@CleanDev-Fix"></a>
-  <a href="https://github.com/bmyury" title="@bmyury"><img src="https://github.com/bmyury.png?size=56" width="48" height="48" alt="@bmyury"></a>
-  <a href="https://github.com/oaabahussain" title="@oaabahussain"><img src="https://github.com/oaabahussain.png?size=56" width="48" height="48" alt="@oaabahussain"></a>
-  <a href="https://github.com/gavinlinasd" title="@gavinlinasd"><img src="https://github.com/gavinlinasd.png?size=56" width="48" height="48" alt="@gavinlinasd"></a>
-  <a href="https://github.com/xiaolai" title="@xiaolai"><img src="https://github.com/xiaolai.png?size=56" width="48" height="48" alt="@xiaolai"></a>
-  <a href="https://github.com/githubYiheng" title="@githubYiheng"><img src="https://github.com/githubYiheng.png?size=56" width="48" height="48" alt="@githubYiheng"></a>
-  <a href="https://github.com/09ashishkapoor" title="@09ashishkapoor"><img src="https://github.com/09ashishkapoor.png?size=56" width="48" height="48" alt="@09ashishkapoor"></a>
-  <a href="https://github.com/shawnli1874" title="@shawnli1874"><img src="https://github.com/shawnli1874.png?size=56" width="48" height="48" alt="@shawnli1874"></a>
-  <a href="https://github.com/Leon-Algo" title="@Leon-Algo"><img src="https://github.com/Leon-Algo.png?size=56" width="48" height="48" alt="@Leon-Algo"></a>
-  <a href="https://github.com/YSAA1" title="@YSAA1"><img src="https://github.com/YSAA1.png?size=56" width="48" height="48" alt="@YSAA1"></a>
-  <a href="https://github.com/kevinaimonster" title="@kevinaimonster"><img src="https://github.com/kevinaimonster.png?size=56" width="48" height="48" alt="@kevinaimonster"></a>
-  <a href="https://github.com/wd041216-bit" title="@wd041216-bit"><img src="https://github.com/wd041216-bit.png?size=56" width="48" height="48" alt="@wd041216-bit"></a>
-  <a href="https://github.com/popey" title="@popey"><img src="https://github.com/popey.png?size=56" width="48" height="48" alt="@popey"></a>
-  <a href="https://github.com/jonthebeef" title="@jonthebeef"><img src="https://github.com/jonthebeef.png?size=56" width="48" height="48" alt="@jonthebeef"></a>
-  <a href="https://github.com/codelyc" title="@codelyc"><img src="https://github.com/codelyc.png?size=56" width="48" height="48" alt="@codelyc"></a>
-  <a href="https://github.com/Guozihong" title="@Guozihong"><img src="https://github.com/Guozihong.png?size=56" width="48" height="48" alt="@Guozihong"></a>
-  <a href="https://github.com/fahmyelraie" title="@fahmyelraie"><img src="https://github.com/fahmyelraie.png?size=56" width="48" height="48" alt="@fahmyelraie"></a>
-  <a href="https://github.com/olgasafonova" title="@olgasafonova"><img src="https://github.com/olgasafonova.png?size=56" width="48" height="48" alt="@olgasafonova"></a>
-  <a href="https://github.com/AZLabsAI" title="@AZLabsAI"><img src="https://github.com/AZLabsAI.png?size=56" width="48" height="48" alt="@AZLabsAI"></a>
-  <a href="https://github.com/raykuo998" title="@raykuo998"><img src="https://github.com/raykuo998.png?size=56" width="48" height="48" alt="@raykuo998"></a>
-  <a href="https://github.com/gydx6" title="@gydx6"><img src="https://github.com/gydx6.png?size=56" width="48" height="48" alt="@gydx6"></a>
-  <a href="https://github.com/waynelee2048" title="@waynelee2048"><img src="https://github.com/waynelee2048.png?size=56" width="48" height="48" alt="@waynelee2048"></a>
-  <a href="https://github.com/tobrun" title="@tobrun"><img src="https://github.com/tobrun.png?size=56" width="48" height="48" alt="@tobrun"></a>
-  <a href="https://github.com/markocupic024" title="@markocupic024"><img src="https://github.com/markocupic024.png?size=56" width="48" height="48" alt="@markocupic024"></a>
-  <a href="https://github.com/tt-a1i" title="@tt-a1i"><img src="https://github.com/tt-a1i.png?size=56" width="48" height="48" alt="@tt-a1i"></a>
-  <a href="https://github.com/Emin017" title="@Emin017"><img src="https://github.com/Emin017.png?size=56" width="48" height="48" alt="@Emin017"></a>
-  <a href="https://github.com/TomXPRIME" title="@TomXPRIME"><img src="https://github.com/TomXPRIME.png?size=56" width="48" height="48" alt="@TomXPRIME"></a>
-  <a href="https://github.com/DLI1996" title="@DLI1996"><img src="https://github.com/DLI1996.png?size=56" width="48" height="48" alt="@DLI1996"></a>
-  <a href="https://github.com/Stephen-abc" title="@Stephen-abc"><img src="https://github.com/Stephen-abc.png?size=56" width="48" height="48" alt="@Stephen-abc"></a>
-  <a href="https://github.com/igorcosta" title="@igorcosta"><img src="https://github.com/igorcosta.png?size=56" width="48" height="48" alt="@igorcosta"></a>
-  <a href="https://github.com/Yigtwxx" title="@Yigtwxx"><img src="https://github.com/Yigtwxx.png?size=56" width="48" height="48" alt="@Yigtwxx"></a>
-  <a href="https://github.com/RioTheGreat-ai" title="@RioTheGreat-ai"><img src="https://github.com/RioTheGreat-ai.png?size=56" width="48" height="48" alt="@RioTheGreat-ai"></a>
-  <a href="https://github.com/kmichels" title="@kmichels"><img src="https://github.com/kmichels.png?size=56" width="48" height="48" alt="@kmichels"></a>
-  <a href="CONTRIBUTORS.md" title="@voidborne-d, archived credit"><img src="https://github.com/identicons/voidborne-d.png" width="48" height="48" alt="@voidborne-d"></a>
-  <a href="https://github.com/Kiddo4993" title="@Kiddo4993"><img src="https://github.com/Kiddo4993.png?size=56" width="48" height="48" alt="@Kiddo4993"></a>
-</p>
-<!-- contributor-portraits:end -->
-
-<a id="community"></a>
-
-<details>
-<summary><div align="center"><strong>🌍 Built with Planning with Files</strong></div></summary>
-
-### Forks & Extensions
-
-| Fork | Author | What They Built |
-|------|--------|-----------------|
-| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
-| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
-| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
-| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
-| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
-| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
-
-### Used in the Wild
-
-| Project | What It Is |
-|---------|-----------|
-| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
-| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
-| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
-| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
-| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
-| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
-
-### Skill Registries & Hubs
-
-| Registry | What It Is |
-|----------|-----------|
-| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
-
-### Bundled snapshots & adaptations
-
-| Project | Verified relationship |
-|---------|-----------------------|
-| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
-| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
-
-*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
-
-Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBUTORS.md).
-
-</details>
-
-<p align="center">
-  <a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
-  <a href="https://skillsplayground.com/skills/othmanadi-planning-with-files-planning-with-files/"><img src="https://skillsplayground.com/badges/installs/othmanadi-planning-with-files-planning-with-files.svg" alt="Skills Playground installs"></a>
-  <a href="https://skill-history.com/othmanadi/planning-with-files"><img src="https://skill-history.com/badge/othmanadi/planning-with-files.svg" alt="Downloads"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/issues?q=is%3Aissue+is%3Aclosed"><img src="https://img.shields.io/github/issues-closed/OthmanAdi/planning-with-files?color=success" alt="Closed issues"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/pulls?q=is%3Apr+is%3Aclosed"><img src="https://img.shields.io/github/issues-pr-closed/OthmanAdi/planning-with-files?color=success" alt="Closed PRs"></a>
-</p>
 
 ## Star History
 
