@@ -232,6 +232,7 @@ $script:SecurityRootHandle = $null
 $script:SecurityRootFinalPath = $null
 if ($script:IsWindowsHost) {
     $securityRootPath = (Get-Location).Path
+    $pinMissing = $false
     if ($env:PWF_PLAN_ROOT) {
         $pin = $env:PWF_PLAN_ROOT
         # Windows PowerShell 5.1 has no IsPathFullyQualified; a drive-qualified
@@ -240,11 +241,20 @@ if ($script:IsWindowsHost) {
         if ($isUnc -or ($pin -notmatch '^[A-Za-z]:[\\/]')) {
             throw "[plan-attest] PWF_PLAN_ROOT must be an absolute local path."
         }
-        $securityRootPath = $pin
+        # A nonexistent pin must reach Resolve-PlanFile's selector refusal
+        # instead of throwing from OpenDirectory first.
+        if (-not (Test-Path -LiteralPath $pin -PathType Container)) {
+            $pinMissing = $true
+        } else {
+            $securityRootPath = $pin
+        }
     }
-    $script:SecurityRootHandle = [PwfAttestationNative]::OpenDirectory($securityRootPath)
-    $script:SecurityRootFinalPath = [PwfAttestationNative]::FinalPath($script:SecurityRootHandle).TrimEnd('\', '/')
+    if (-not $pinMissing) {
+        $script:SecurityRootHandle = [PwfAttestationNative]::OpenDirectory($securityRootPath)
+        $script:SecurityRootFinalPath = [PwfAttestationNative]::FinalPath($script:SecurityRootHandle).TrimEnd('\', '/')
+    }
 }
+
 
 function Test-FinalPathWithinSecurityRoot {
     param([string] $FinalPath)
@@ -504,6 +514,11 @@ function Get-AttestationPath {
     param([string] $PlanFile)
     $planDir = Split-Path -Parent $PlanFile
     $cwd     = (Get-Location).Path
+    # Explicit -Target root always uses the legacy root filename, even when
+    # PWF_PLAN_ROOT pins a project whose planDir differs from cwd (shell parity).
+    if ($Target -eq "root") {
+        return (Join-Path $planDir ".plan-attestation")
+    }
     if ($planDir -eq $cwd) {
         if (Test-SlugPlanDirectory $cwd) {
             return (Join-Path $cwd ".attestation")

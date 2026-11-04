@@ -52,6 +52,30 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
             source,
         )
 
+    def test_get_attestation_path_has_explicit_root_target_branch(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        start = source.index("function Get-AttestationPath")
+        end = source.index("$planFile = Resolve-PlanFile", start)
+        body = source[start:end]
+        self.assertIn('$Target -eq "root"', body)
+        self.assertLess(body.index('$Target -eq "root"'), body.index(".plan-attestation"))
+        self.assertIn(
+            "PWF_PLAN_ROOT pins a project whose planDir differs from cwd",
+            body,
+        )
+
+    def test_nonexistent_pwf_plan_root_skips_opendirectory(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        start = source.index("if ($script:IsWindowsHost)")
+        end = source.index("function Test-FinalPathWithinSecurityRoot")
+        body = source[start:end]
+        self.assertIn("Test-Path -LiteralPath $pin -PathType Container", body)
+        self.assertIn("$pinMissing", body)
+        self.assertLess(
+            body.index("Test-Path -LiteralPath $pin -PathType Container"),
+            body.index("OpenDirectory($securityRootPath)"),
+        )
+
     def test_directory_identity_is_frozen_before_each_target_open(self) -> None:
         source = ATTEST.read_text(encoding="utf-8")
         contracts = (
@@ -540,6 +564,67 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertNotIn("No task_plan.md found", combined)
             self.assertFalse((decoy / ".attestation").exists())
             self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_target_root_with_pinned_root_writes_plan_attestation(self) -> None:
+        """From another cwd, -Target root + PWF_PLAN_ROOT must write .plan-attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp)
+            pinned = outer / "pinned"
+            pinned.mkdir()
+            plan = pinned / "task_plan.md"
+            plan.write_text("# Root plan\n", encoding="utf-8")
+            cwd = outer / "other"
+            cwd.mkdir()
+
+            result = self._run(
+                cwd,
+                {"PWF_PLAN_ROOT": str(pinned)},
+                "-Target",
+                "root",
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((pinned / ".plan-attestation").is_file())
+            self.assertFalse((pinned / ".attestation").exists())
+            self.assertFalse((cwd / ".plan-attestation").exists())
+            self.assertFalse((cwd / ".attestation").exists())
+
+    def test_slug_cwd_invocation_keeps_slug_attestation_name(self) -> None:
+        """Attesting while cwd is the slug plan dir still uses .attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan_dir = root / ".planning" / "safe-plan"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text("# Slug\n", encoding="utf-8")
+            (root / ".planning" / ".active_plan").write_text(
+                "safe-plan\n", encoding="utf-8"
+            )
+
+            result = self._run(plan_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((plan_dir / ".attestation").is_file())
+            self.assertFalse((plan_dir / ".plan-attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_nonexistent_pwf_plan_root_uses_selector_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_text("# Decoy\n", encoding="utf-8")
+            missing = root / "missing-project"
+
+            result = self._run(root, {"PWF_PLAN_ROOT": str(missing)})
+
+            self.assertNotEqual(0, result.returncode)
+            combined = (result.stderr or "") + (result.stdout or "")
+            self.assertIn(f"PWF_PLAN_ROOT={missing}", combined)
+            self.assertIn("explicit pin is a binding", combined)
+            self.assertNotIn("Win32Exception", combined)
+            self.assertFalse((root / ".plan-attestation").exists())
+            self.assertFalse((root / ".attestation").exists())
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
