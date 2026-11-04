@@ -459,6 +459,8 @@ function Resolve-PlanFile {
         $planFile = Join-Path $resolvedDir "task_plan.md"
         $resolvedPlan = Resolve-ContainedPlanFile -Candidate $planFile -ExpectedDirectory $resolvedDir
         if ($resolvedPlan) { return $resolvedPlan }
+        $script:PlanResolutionFailure = "ResolvedPlan"
+        return $null
     }
 
     # An explicit pin or a scoped selector that failed validation must never
@@ -505,15 +507,17 @@ $script:PlanResolutionFailure = $null
 $planFile = Resolve-PlanFile
 if (-not $planFile) {
     if ($script:PlanResolutionFailure -eq "Ambiguous") {
-        Write-Error "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested."
+        [Console]::Error.WriteLine("[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.")
     } elseif ($script:PlanResolutionFailure -eq "Target") {
-        Write-Error "[plan-attest] -Target $Target did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted."
+        [Console]::Error.WriteLine("[plan-attest] -Target $Target did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.")
     } elseif ($script:PlanResolutionFailure -eq "PLAN_ID") {
-        Write-Error "[plan-attest] PLAN_ID=$($env:PLAN_ID) names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted."
+        [Console]::Error.WriteLine("[plan-attest] PLAN_ID=$($env:PLAN_ID) names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.")
     } elseif ($script:PlanResolutionFailure -eq "PWF_PLAN_ROOT") {
-        Write-Error "[plan-attest] PWF_PLAN_ROOT=$($env:PWF_PLAN_ROOT) did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted."
+        [Console]::Error.WriteLine("[plan-attest] PWF_PLAN_ROOT=$($env:PWF_PLAN_ROOT) did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.")
+    } elseif ($script:PlanResolutionFailure -eq "ResolvedPlan") {
+        [Console]::Error.WriteLine("[plan-attest] The selected plan could not be read safely; nothing was attested.")
     } else {
-        Write-Error "[plan-attest] No task_plan.md found. Create a plan first."
+        [Console]::Error.WriteLine("[plan-attest] No task_plan.md found. Create a plan first.")
     }
     exit 1
 }
@@ -570,7 +574,7 @@ $storedHash = Write-SafeAscii -Path $attestationFile -ExpectedDirectory $attesta
 # (permissions, full disk) must not leave a stale attestation and exit clean.
 if ($null -ne $storedHash) { $storedHash = $storedHash.Trim() }
 if ($storedHash -ne $hashVal) {
-    Write-Error "[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested."
+    [Console]::Error.WriteLine("[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested.")
     exit 1
 }
 

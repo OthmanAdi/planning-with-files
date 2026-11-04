@@ -63,6 +63,12 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, source)
 
+    def test_resolution_failures_use_single_line_stderr_and_fail_closed(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertNotIn('Write-Error "[plan-attest]', source)
+        self.assertIn('[Console]::Error.WriteLine(', source)
+        self.assertIn('$script:PlanResolutionFailure = "ResolvedPlan"', source)
+
 
 @unittest.skipUnless(SHELL and os.name != "nt", "Unix PowerShell is unavailable")
 class UnixPowerShellAttestationFailClosedTests(unittest.TestCase):
@@ -214,6 +220,46 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertEqual(1, result.stderr.count(refusal), result.stderr)
             self.assertNotIn("No task_plan.md found", result.stderr)
             self.assertFalse(any(root.rglob(".attestation")))
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_unreadable_selected_plan_does_not_attest_legacy_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selected = root / ".planning" / "selected"
+            selected.mkdir(parents=True)
+            selected_plan = selected / "task_plan.md"
+            selected_plan.write_text("selected", encoding="utf-8")
+            (root / "task_plan.md").write_text("legacy decoy", encoding="utf-8")
+
+            locker = subprocess.Popen(
+                [
+                    SHELL,
+                    "-NoProfile",
+                    "-Command",
+                    (
+                        "& { param($path) $stream = [IO.File]::Open($path, "
+                        "[IO.FileMode]::Open, [IO.FileAccess]::Read, "
+                        "[IO.FileShare]::None); try { 'READY'; "
+                        "[Console]::In.ReadLine() | Out-Null } finally { "
+                        "$stream.Dispose() } }"
+                    ),
+                    str(selected_plan),
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+            )
+            try:
+                self.assertEqual("READY", locker.stdout.readline().strip())
+                result = self._run(root)
+            finally:
+                locker.communicate("\n", timeout=30)
+
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("selected plan could not be read safely", result.stderr)
+            self.assertFalse((selected / ".attestation").exists())
             self.assertFalse((root / ".plan-attestation").exists())
 
     def test_rejected_selectors_name_the_refused_binding(self) -> None:
