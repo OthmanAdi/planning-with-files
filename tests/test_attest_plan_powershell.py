@@ -78,6 +78,11 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
         self.assertIn(guard, body)
         self.assertLess(body.index(guard), body.index("$candidate ="))
 
+    def test_root_target_comparisons_are_case_sensitive(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertEqual(2, source.count('$Target -ceq "root"'))
+        self.assertNotIn('$Target -eq "root"', source)
+
 
 @unittest.skipUnless(SHELL and os.name != "nt", "Unix PowerShell is unavailable")
 class UnixPowerShellAttestationFailClosedTests(unittest.TestCase):
@@ -338,6 +343,21 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertTrue((root / ".plan-attestation").is_file())
             self.assertTrue((selected / ".attestation").is_file())
             self.assertFalse((active / ".attestation").exists())
+
+    def test_root_target_keyword_is_case_sensitive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_text("root plan", encoding="utf-8")
+            named = root / ".planning" / "Root"
+            named.mkdir(parents=True)
+            (named / "task_plan.md").write_text("named plan", encoding="utf-8")
+
+            result = self._run(root, None, "-Target", "Root")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((named / ".attestation").is_file())
+            self.assertFalse((named / ".plan-attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
 
     def test_attest_from_inside_plan_dir_uses_slug_attestation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
