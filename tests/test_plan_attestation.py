@@ -432,6 +432,11 @@ class PlanAttestationTests(unittest.TestCase):
             (("--target", "missing"), {}, "--target missing"),
             ((), {"PLAN_ID": "missing"}, "PLAN_ID=missing"),
             ((), {"PWF_PLAN_ROOT": str(missing_root)}, f"PWF_PLAN_ROOT={missing_root}"),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": str(missing_root)},
+                f"PWF_PLAN_ROOT={missing_root}",
+            ),
         )
 
         for args, env, refusal in cases:

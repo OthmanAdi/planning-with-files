@@ -291,6 +291,19 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
                     self.assertFalse((root / ".plan-attestation").exists())
                     self.assertFalse((missing_root / ".plan-attestation").exists())
 
+    def test_nonexistent_pwf_plan_root_reports_binding_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            missing_root = root / "missing-project"
+            (root / "task_plan.md").write_text("root decoy", encoding="utf-8")
+
+            result = self._run(root, {"PWF_PLAN_ROOT": str(missing_root)})
+
+            self.assertEqual(1, result.returncode, result.stderr)
+            refusal = f"PWF_PLAN_ROOT={missing_root} did not resolve"
+            self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+            self.assertFalse((root / ".plan-attestation").exists())
+
     def test_target_root_and_named_plan_attest_exact_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
