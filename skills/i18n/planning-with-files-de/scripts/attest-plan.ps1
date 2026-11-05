@@ -240,8 +240,10 @@ if ($script:IsWindowsHost) {
         }
         $securityRootPath = $pin
     }
-    $script:SecurityRootHandle = [PwfAttestationNative]::OpenDirectory($securityRootPath)
-    $script:SecurityRootFinalPath = [PwfAttestationNative]::FinalPath($script:SecurityRootHandle).TrimEnd('\', '/')
+    if (Test-Path -LiteralPath $securityRootPath -PathType Container) {
+        $script:SecurityRootHandle = [PwfAttestationNative]::OpenDirectory($securityRootPath)
+        $script:SecurityRootFinalPath = [PwfAttestationNative]::FinalPath($script:SecurityRootHandle).TrimEnd('\', '/')
+    }
 }
 
 function Test-FinalPathWithinSecurityRoot {
