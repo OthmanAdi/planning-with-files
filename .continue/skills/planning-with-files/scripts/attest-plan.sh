@@ -34,6 +34,15 @@ slug_is_valid() {
     return 1
 }
 
+pwf_plan_root_is_accepted() {
+    case "${PWF_PLAN_ROOT:-}" in
+        \\\\*|//*|[A-Za-z]:[!\\/]*) return 1 ;;
+        /*|[A-Za-z]:[\\/]*) ;;
+        *) return 1 ;;
+    esac
+    [ -d "${PWF_PLAN_ROOT}" ]
+}
+
 resolve_from_slug_cwd() {
     slug_cwd="$(pwd -P 2>/dev/null)" || return 1
     planning_dir="${slug_cwd%/*}"
@@ -51,11 +60,7 @@ resolve_plan_file() {
             if [ -n "${PWF_PLAN_ROOT:-}" ]; then
                 # Match the shared resolver's supported absolute local pins.
                 # A valid project-root junction is intentional, so resolve it.
-                case "${PWF_PLAN_ROOT}" in
-                    \\\\*|//*|[A-Za-z]:[!\\/]*) return 1 ;;
-                    /*|[A-Za-z]:[\\/]*) ;;
-                    *) return 1 ;;
-                esac
+                pwf_plan_root_is_accepted || return 1
                 target_root="$(cd "${PWF_PLAN_ROOT}" 2>/dev/null && pwd -P)" || return 1
             fi
             [ ! -L "${target_root}/task_plan.md" ] || return 1
@@ -167,10 +172,12 @@ if [ "${resolve_status}" -ne 0 ]; then
         printf "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.\n" >&2
     elif [ -n "${target:-}" ]; then
         printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "${target}" >&2
-    elif [ -n "${PWF_PLAN_ROOT:-}" ]; then
+    elif [ -n "${PWF_PLAN_ROOT:-}" ] && ! pwf_plan_root_is_accepted; then
         printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "${PWF_PLAN_ROOT}" >&2
     elif [ -n "${PLAN_ID:-}" ]; then
         printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "${PLAN_ID}" >&2
+    elif [ -n "${PWF_PLAN_ROOT:-}" ]; then
+        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "${PWF_PLAN_ROOT}" >&2
     else
         printf "[plan-attest] No task_plan.md found. Create a plan first.\n" >&2
     fi

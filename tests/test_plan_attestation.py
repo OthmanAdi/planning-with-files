@@ -428,6 +428,8 @@ class PlanAttestationTests(unittest.TestCase):
         (active / "task_plan.md").write_text("active decoy", encoding="utf-8")
         (self.tmp / "task_plan.md").write_text("root decoy", encoding="utf-8")
         missing_root = self.tmp / "missing-project"
+        accepted_root = self.tmp / "accepted-project"
+        accepted_root.mkdir()
         cases = (
             (("--target", "missing"), {}, "--target missing"),
             ((), {"PLAN_ID": "missing"}, "PLAN_ID=missing"),
@@ -436,6 +438,16 @@ class PlanAttestationTests(unittest.TestCase):
                 (),
                 {"PLAN_ID": "missing", "PWF_PLAN_ROOT": str(missing_root)},
                 f"PWF_PLAN_ROOT={missing_root}",
+            ),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": str(accepted_root)},
+                "PLAN_ID=missing",
+            ),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": accepted_root.name},
+                f"PWF_PLAN_ROOT={accepted_root.name}",
             ),
         )
 

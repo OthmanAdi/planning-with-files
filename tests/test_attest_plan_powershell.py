@@ -69,6 +69,15 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
         self.assertIn('[Console]::Error.WriteLine(', source)
         self.assertIn('$script:PlanResolutionFailure = "ResolvedPlan"', source)
 
+    def test_missing_frozen_security_root_fails_closed_before_matching(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        start = source.index("function Test-FinalPathWithinSecurityRoot")
+        end = source.index("\nfunction Open-TrustedDirectory", start)
+        body = source[start:end]
+        guard = "if (-not $script:SecurityRootFinalPath) { return $false }"
+        self.assertIn(guard, body)
+        self.assertLess(body.index(guard), body.index("$candidate ="))
+
 
 @unittest.skipUnless(SHELL and os.name != "nt", "Unix PowerShell is unavailable")
 class UnixPowerShellAttestationFailClosedTests(unittest.TestCase):
@@ -277,6 +286,11 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
                     {"PWF_PLAN_ROOT": str(missing_root)},
                     (),
                     f"PWF_PLAN_ROOT={missing_root}",
+                ),
+                (
+                    {"PWF_PLAN_ROOT": str(missing_root), "PLAN_ID": "missing"},
+                    (),
+                    "PLAN_ID=missing",
                 ),
                 (None, ("-Target", "missing"), "-Target missing"),
             )

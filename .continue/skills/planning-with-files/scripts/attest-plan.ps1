@@ -248,6 +248,7 @@ if ($script:IsWindowsHost) {
 
 function Test-FinalPathWithinSecurityRoot {
     param([string] $FinalPath)
+    if (-not $script:SecurityRootFinalPath) { return $false }
     $candidate = $FinalPath.TrimEnd('\', '/')
     if ([string]::Equals($candidate, $script:SecurityRootFinalPath, [StringComparison]::OrdinalIgnoreCase)) {
         return $true
@@ -467,12 +468,16 @@ function Resolve-PlanFile {
 
     # An explicit pin or a scoped selector that failed validation must never
     # fall through and attest an unrelated legacy-root plan.
-    if ($env:PWF_PLAN_ROOT) {
+    if ($env:PWF_PLAN_ROOT -and -not $script:SecurityRootFinalPath) {
         $script:PlanResolutionFailure = "PWF_PLAN_ROOT"
         return $null
     }
     if ($env:PLAN_ID) {
         $script:PlanResolutionFailure = "PLAN_ID"
+        return $null
+    }
+    if ($env:PWF_PLAN_ROOT) {
+        $script:PlanResolutionFailure = "PWF_PLAN_ROOT"
         return $null
     }
     $activePointer = Join-Path (Join-Path (Get-Location) ".planning") ".active_plan"
