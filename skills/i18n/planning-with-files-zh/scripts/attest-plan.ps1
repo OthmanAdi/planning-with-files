@@ -424,7 +424,7 @@ function Resolve-PlanFile {
     if (-not (Test-Path -LiteralPath $resolver -PathType Leaf)) { return $null }
 
     if ($Target) {
-        if ($Target -eq "root") {
+        if ($Target -ceq "root") {
             $rootPlan = Join-Path $securityRootPath "task_plan.md"
             $resolvedRoot = Resolve-ContainedPlanFile -Candidate $rootPlan -ExpectedDirectory $securityRootPath
             if (-not $resolvedRoot) { $script:PlanResolutionFailure = "Target" }
@@ -498,7 +498,7 @@ function Get-AttestationPath {
     param([string] $PlanFile)
     $planDir = Split-Path -Parent $PlanFile
     $cwd     = (Get-Location).Path
-    if ($Target -eq "root") {
+    if ($Target -ceq "root") {
         return (Join-Path $planDir ".plan-attestation")
     }
     if ($planDir -eq $cwd) {
