@@ -157,13 +157,18 @@ compute_hash() {
 
 mode="attest"
 target=""
+checkbox_only=0
 usage_error() {
-    printf "Usage: %s [--show|--clear|--target root|<plan-id>]\n" "$0" >&2
+    printf "Usage: %s [--show|--clear|--checkbox-only|--target root|<plan-id>]\n" "$0" >&2
     exit 2
 }
 case "${1:-}" in
     --show)  [ "$#" -eq 1 ] || usage_error; mode="show"  ;;
     --clear) [ "$#" -eq 1 ] || usage_error; mode="clear" ;;
+    --checkbox-only)
+        [ "$#" -eq 1 ] || usage_error
+        mode="checkbox-only"
+        ;;
     --target)
         [ "$#" -eq 2 ] || usage_error
         [ -n "$2" ] || usage_error
@@ -319,10 +324,182 @@ case "${mode}" in
             exit 1
         fi
 
+        # Store the attested plan content for future checkbox-only re-attestation
+        attested_plan_file="$(dirname "${attestation_file}")/.attested-plan"
+        cp "${plan_file}" "${attested_plan_file}" 2>/dev/null || {
+            printf "[plan-attest] Warning: could not save attested plan copy.\n" >&2
+        }
+
         short_hash="$(printf "%s" "${hash_val}" | cut -c1-12)"
         printf "[plan-attest] Locked %s\n" "${plan_file}"
         printf "[plan-attest] SHA-256: %s... (stored in %s)\n" "${short_hash}" "${attestation_file}"
         printf "[plan-attest] Hooks will block injection if the file is modified without re-running this command.\n"
+        ;;
+    checkbox-only)
+        # Checkbox-only re-attestation: only allow if changes are exclusively
+        # [ ] -> [x] transitions compared to the last attested plan.
+        # Requires existing attestation and stored attested plan.
+        if [ ! -f "${attestation_file}" ]; then
+            printf "[plan-attest] No existing attestation to update. Run attest-plan.sh first.\n" >&2
+            exit 1
+        fi
+        stored_hash="$(tr -d '\r\n[:space:]' < "${attestation_file}" 2>/dev/null)"
+        if [ -z "${stored_hash}" ]; then
+            printf "[plan-attest] Attestation file is empty.\n" >&2
+            exit 1
+        fi
+
+        attested_plan_file="$(dirname "${attestation_file}")/.attested-plan"
+        if [ ! -f "${attested_plan_file}" ]; then
+            printf "[plan-attest] No stored attested plan for comparison. Re-attest manually first.\n" >&2
+            exit 1
+        fi
+
+        # Verify the stored attested plan matches the attestation hash
+        attested_plan_hash="$(compute_hash "${attested_plan_file}")" || exit 1
+        if [ "${attested_plan_hash}" != "${stored_hash}" ]; then
+            printf "[plan-attest] Stored attested plan does not match attestation; manual re-attestation required.\n" >&2
+            exit 1
+        fi
+
+        # Compute hash of current plan
+        current_hash="$(compute_hash "${plan_file}")" || exit 1
+
+        # If already matches, nothing to do
+        if [ "${current_hash}" = "${stored_hash}" ]; then
+            printf "[plan-attest] Plan already matches attestation; no checkbox changes detected.\n"
+            exit 0
+        fi
+
+        # Compare current plan with attested plan using diff
+        # Only allow changes that are [ ] -> [x] on task checkbox lines
+        diff_output="$(diff -u "${attested_plan_file}" "${plan_file}" 2>/dev/null || true)"
+        if [ -z "${diff_output}" ]; then
+            printf "[plan-attest] Plan content unchanged despite hash mismatch; manual re-attestation required.\n" >&2
+            exit 1
+        fi
+
+        # Check each changed line in the diff
+        # Only allow: -[ ] -> +[x] (i.e., line removed with [ ] and line added with [x] at same position)
+        # Reject: any other changes including [x] -> [ ], added/removed lines, text changes, etc.
+        # Unified diff shows all removals then all additions per hunk; match by position.
+        allowed=1
+        # Use awk to parse unified diff and validate changes
+        echo "${diff_output}" | awk '
+            BEGIN { 
+                in_hunk = 0
+                r_idx = 0
+                a_idx = 0
+                total_changes = 0
+            }
+            /^@@ / { 
+                # Validate previous hunk before starting new one
+                if (in_hunk && r_idx > 0) {
+                    if (r_idx != a_idx) exit 1
+                    for (i = 1; i <= r_idx; i++) {
+                        check_removed = removed_lines[i]
+                        gsub(/\[[[:space:]]*\]/, "[ ]", check_removed)
+                        check_added = added_lines[i]
+                        gsub(/\[x\]/, "[ ]", check_added)
+                        if (check_added != check_removed) exit 1
+                    }
+                    total_changes += r_idx
+                }
+                in_hunk = 1
+                r_idx = 0
+                a_idx = 0
+                next 
+            }
+            /^--- / || /^\+\+\+ / { next }
+            in_hunk && /^[-+]/ {
+                line = substr($0, 2)
+                if (substr($0, 1, 1) == "-") {
+                    # Removed line - must be a checkbox with [ ]
+                    if (line ~ /^[[:space:]]*[-*][[:space:]]*\[[[:space:]]*\]/) {
+                        r_idx++
+                        removed_lines[r_idx] = line
+                    } else {
+                        exit 1
+                    }
+                } else {
+                    # Added line - must be a checkbox with [x]
+                    if (line ~ /^[[:space:]]*[-*][[:space:]]*\[x\]/) {
+                        a_idx++
+                        added_lines[a_idx] = line
+                    } else {
+                        exit 1
+                    }
+                }
+            }
+            # Ignore context lines (starting with space) within hunk
+            in_hunk && /^ / { next }
+            END {
+                # Validate last hunk
+                if (in_hunk && r_idx > 0) {
+                    if (r_idx != a_idx) exit 1
+                    for (i = 1; i <= r_idx; i++) {
+                        check_removed = removed_lines[i]
+                        gsub(/\[[[:space:]]*\]/, "[ ]", check_removed)
+                        check_added = added_lines[i]
+                        gsub(/\[x\]/, "[ ]", check_added)
+                        if (check_added != check_removed) exit 1
+                    }
+                    total_changes += r_idx
+                }
+                if (total_changes == 0) exit 1
+            }
+        ' || allowed=0
+
+        if [ "${allowed}" -eq 1 ]; then
+            # Only checkbox [ ] -> [x] changes detected; update attestation
+            printf "[plan-attest] Checkbox-only changes detected; updating attestation.\n"
+            hash_val="${current_hash}"
+            tmp_file="${attestation_file}.tmp.$$"
+            printf "%s\n" "${hash_val}" > "${tmp_file}" 2>/dev/null || {
+                printf "[plan-attest] Failed to write %s\n" "${tmp_file}" >&2
+                exit 1
+            }
+            mv_ok=1
+            if command -v flock >/dev/null 2>&1; then
+                lock_dir="$(dirname "${attestation_file}")"
+                (
+                    flock -w 5 9 || true
+                    mv -f "${tmp_file}" "${attestation_file}"
+                ) 9>"${lock_dir}/.attestation.lock" 2>/dev/null || mv_ok=0
+                rm -f "${lock_dir}/.attestation.lock" 2>/dev/null
+            else
+                mv -f "${tmp_file}" "${attestation_file}" 2>/dev/null || mv_ok=0
+            fi
+            if [ "${mv_ok}" -eq 0 ] || [ ! -f "${attestation_file}" ]; then
+                fb_tmp="${attestation_file}.fb.$$"
+                printf "%s\n" "${hash_val}" > "${fb_tmp}" 2>/dev/null                     && mv -f "${fb_tmp}" "${attestation_file}" 2>/dev/null || {
+                    rm -f "${fb_tmp}" "${tmp_file}" 2>/dev/null
+                    printf "[plan-attest] Failed to write attestation %s\n" "${attestation_file}" >&2
+                    exit 1
+                }
+            fi
+            rm -f "${tmp_file}" 2>/dev/null
+
+            # Read-back verification
+            stored_hash="$(tr -d '\r\n[:space:]' < "${attestation_file}" 2>/dev/null)"
+            if [ "${stored_hash}" != "${hash_val}" ]; then
+                printf "[plan-attest] Attestation write verification FAILED for %s\n" "${attestation_file}" >&2
+                printf "[plan-attest] Expected %s, found %s. The plan is NOT attested.\n" "${hash_val}" "${stored_hash}" >&2
+                exit 1
+            fi
+
+            # Update the stored attested plan
+            cp "${plan_file}" "${attested_plan_file}" 2>/dev/null || {
+                printf "[plan-attest] Warning: could not update attested plan copy.\n" >&2
+            }
+
+            short_hash="$(printf "%s" "${hash_val}" | cut -c1-12)"
+            printf "[plan-attest] Re-attested %s (checkbox-only)\n" "${plan_file}"
+            printf "[plan-attest] SHA-256: %s... (stored in %s)\n" "${short_hash}" "${attestation_file}"
+        else
+            printf "[plan-attest] Changes exceed checkbox-only scope; manual re-attestation required.\n" >&2
+            exit 1
+        fi
         ;;
 esac
 
