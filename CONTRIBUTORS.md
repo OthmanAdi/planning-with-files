@@ -107,17 +107,29 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[BingEdward](https://github.com/7487)** — [PR #362](https://github.com/OthmanAdi/planning-with-files/pull/362)
+  - Made attestation refusals name their actual cause once on both routes and added `-Target` to the PowerShell route.
+
+- **[ShahadatTest](https://github.com/ShahadatTest)** — [PR #360](https://github.com/OthmanAdi/planning-with-files/pull/360)
+  - Stopped `init-session` from creating planning files on help flags and mistyped switches.
+
+- **[Ankit Kumar Jha](https://github.com/ankitjha1405)** — [PR #364](https://github.com/OthmanAdi/planning-with-files/pull/364)
+  - Aligned the localized `/plan` commands with plan selection and the initializer.
+
 - **[Dylan Duan](https://github.com/Kiddo4993)** — [PR #351](https://github.com/OthmanAdi/planning-with-files/pull/351)
   - Aligned Claude plugin commands with selected-plan, initialization and validation contracts, with focused command checks.
 
 - **[Thanut Jongteerathanachote](https://github.com/winxtxrgit)**, [PR #340](https://github.com/OthmanAdi/planning-with-files/pull/340)
   - Corrected startup and post-tool context output for the current Copilot harness, with schema, Unicode and disabled-hook regression coverage.
 
-- **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345)
+- **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345), [PR #363](https://github.com/OthmanAdi/planning-with-files/pull/363)
+  - Reduced the processes `set-active-plan.sh --list --json` starts per plan.
   - Reworked Cursor workspace installation and documented preserving existing hook registrations during Unix and Windows setup.
   - Corrected Codex setup for existing hooks directories and documented merging existing hook registrations.
 
-- **[WU Leizhi](https://github.com/MbappeWU)**, [PR #331](https://github.com/OthmanAdi/planning-with-files/pull/331), [PR #342](https://github.com/OthmanAdi/planning-with-files/pull/342), [PR #346](https://github.com/OthmanAdi/planning-with-files/pull/346), [PR #347](https://github.com/OthmanAdi/planning-with-files/pull/347)
+- **[WU Leizhi](https://github.com/MbappeWU)**, [PR #331](https://github.com/OthmanAdi/planning-with-files/pull/331), [PR #342](https://github.com/OthmanAdi/planning-with-files/pull/342), [PR #346](https://github.com/OthmanAdi/planning-with-files/pull/346), [PR #347](https://github.com/OthmanAdi/planning-with-files/pull/347), [PR #353](https://github.com/OthmanAdi/planning-with-files/pull/353)
+  - Moved the shipped-file validators to the tracked inventory so ignored scratch trees cannot fail them.
+  - Wrote the attestation regression tests for pinned-root targets and slug-directory invocation, carried over from [PR #361](https://github.com/OthmanAdi/planning-with-files/pull/361).
   - Added current attestation validity to OpenCode status while preserving the marker-presence field, with root and named-plan regression coverage.
   - Added named-plan selection to Cursor's bash hooks and regression coverage for explicit and missing selectors.
   - Corrected Copilot PreToolUse output and added Gemini lifecycle opt-out guards with regression coverage.
@@ -513,6 +525,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 111 (110 community contributors plus the maintainer)
+**Total Contributors:** 114 (113 community contributors plus the maintainer)
 
-*Last updated: 2026-10-30*
+*Last updated: 2026-11-07*

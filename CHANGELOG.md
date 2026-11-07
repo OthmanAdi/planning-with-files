@@ -4,8 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.28.1] - 2026-11-07
+
+### Security
+- `attest-plan` prints control characters in an echoed selector as `?` on both routes, so a newline or escape sequence in `PLAN_ID`, `PWF_PLAN_ROOT` or a target cannot forge a status line (PR #362, #358).
+
 ### Fixed
-- The localized `/plan-de`, `/plan-ar`, `/plan-es`, `/plan-zh` and `/plan-zht` commands now restore the selected plan through `resolve-plan-dir`, stop on a rejected pin or `PWF_PLAN_AMBIGUOUS_V1`, and initialize only through `init-session`, matching `/plan`. They no longer create a stray root plan when a named plan is selected (#359).
+- `attest-plan.sh` no longer stores a hash prefixed with a backslash when `PWF_PLAN_ROOT` is a native Windows path, which made the hook report the plan as tampered (PR #362).
+- `attest-plan` reports the multiple-plans refusal once on both routes, exits 1 and attests nothing. The extra `No task_plan.md found` line is gone (PR #362, #358).
+- `attest-plan.ps1` gains `-Target root|<plan-id>` and one-line refusals that name a rejected `PLAN_ID`, `PWF_PLAN_ROOT` or `-Target`, as the shell route does. A nonexistent, relative or UNC pin reaches that refusal instead of throwing, and a plan that exists but cannot be opened safely has its own message (PR #362, #358).
+- `init-session` refuses unknown dash-prefixed arguments on both routes and creates nothing. `init-session.ps1` gains `-Help` and `-h`. `-?` under a native Windows PowerShell 5.1 `-File` call still prints no help, which #357 tracks (PR #360).
+- The localized `/plan-de`, `/plan-ar`, `/plan-es`, `/plan-zh` and `/plan-zht` commands now restore the selected plan through `resolve-plan-dir`, stop on a rejected pin or `PWF_PLAN_AMBIGUOUS_V1`, and initialize only through `init-session`, matching `/plan`. They no longer create a stray root plan when a named plan is selected (PR #364, #359).
+- The shipped-file validators read the tracked inventory, so an old copy under the gitignored `.planning/` no longer fails them. A tracked helper without its guard still fails, ClawHub staging is still checked when present, and a checkout without Git metadata falls back to a filtered walk (PR #353, #352).
+
+### Changed
+- `set-active-plan.sh --list --json` starts far fewer processes per plan. The output is unchanged byte for byte (PR #363, #356).
+
+### Thanks
+- BingEdward (@7487), for the attestation refusal reporting and `-Target` on PowerShell (PR #362).
+- WU Leizhi (@MbappeWU), for the shipped-file inventory (PR #353) and the pinned-root and slug-directory attestation tests carried over from PR #361.
+- @ShahadatTest, for `init-session` help and unknown-switch handling (PR #360).
+- Ankit Kumar Jha (@ankitjha1405), for aligning the localized `/plan` commands (PR #364).
+- Parman Mohammadalizadeh (@MannXo), for the JSON listing process reduction (PR #363).
 
 ## [3.28.0] - 2026-11-03
 

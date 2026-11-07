@@ -432,6 +432,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.28.1** | `attest-plan` reports one refusal that names its cause on both routes and adds `-Target` on PowerShell; echoed selectors cannot forge output; `init-session` refuses mistyped switches; localized `/plan` commands follow plan selection; faster JSON listing on Git Bash (PR #353, #360, #362, #363, #364) |
 | **v3.28.0** | Adds opt-in archive and restore for finished named plans (`--archive` / `--restore`, preview first, nothing deleted), so hooks select the remaining plan again; the multiple-plans notice names the command; fixes inventory timestamps, locked files, long paths, hidden folders and PowerShell output on Windows (#355). |
 | **v3.27.0** | Adds optional agent-readable plan inventory (`--list --json` / `-List -Json`) with paths, phase metadata, selection uncertainty and bounded paging; aligns Claude plugin commands with selected-plan and initializer contracts (#349, #350, PR #351). |
 | **v3.26.0** | Adds opt-in Claude Code subagent tool-hook isolation (`PWF_SKIP_SUBAGENTS=1`); fixes Codex setup, Copilot PreToolUse output and Gemini lifecycle opt-out (PRs #345, #346, #347; #348). |
