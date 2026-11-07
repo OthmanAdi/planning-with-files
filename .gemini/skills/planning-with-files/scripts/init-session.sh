@@ -66,7 +66,7 @@ while [ $# -gt 0 ]; do
             MODE="gated"
             shift
             ;;
-        --help|-h)
+        --help|-h|-Help)
             usage
             exit 0
             ;;
