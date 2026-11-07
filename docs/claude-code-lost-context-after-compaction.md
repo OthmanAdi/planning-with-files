@@ -46,7 +46,7 @@ The catchup script contains no network request or upload operation. Output place
 
 Keep automatic compaction enabled. `PreCompact` gives the agent a final planning-state reminder, and the plugin route restores the active plan on the post-compaction `SessionStart` event. You can still run `/compact` or `/clear` manually when you want an explicit boundary.
 
-**Quick answer for multi-step tasks nearing the token limit:** see [the FAQ in long-running-agent-tasks.md](long-running-agent-tasks.md#faq-what-do-i-do-when-context-nears-the-compaction-limit). In short: no new window or special prompt needed—hooks re-inject the plan automatically.
+**Quick answer for multi-step tasks nearing the token limit:** see [the FAQ in long-running-agent-tasks.md](long-running-agent-tasks.md#faq-what-do-i-do-when-context-nears-the-compaction-limit). In short: no new window or special prompt needed: hooks re-inject the plan automatically.
 
 ## Related pages
 
