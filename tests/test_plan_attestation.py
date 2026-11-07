@@ -558,5 +558,143 @@ class PlanAttestationTests(unittest.TestCase):
         )
 
 
+
+
+    def test_checkbox_only_reattest_allows_pure_checkbox_change(self) -> None:
+        """Checkbox-only re-attestation accepts [ ] -> [x] transitions."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text(
+            "# Plan\n- [ ] Task 1\n- [ ] Task 2\n", encoding="utf-8"
+        )
+        self._run()
+        # Change one checkbox
+        plan.write_text("# Plan\n- [x] Task 1\n- [ ] Task 2\n", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("Checkbox-only changes detected", result.stdout)
+        # Verify attestation was updated
+        attest = self.tmp / ".plan-attestation"
+        self.assertEqual(
+            self.sha256_of(plan), attest.read_text().strip()
+        )
+
+    def test_checkbox_only_reattest_rejects_text_change(self) -> None:
+        """Checkbox-only re-attestation rejects text changes on same line."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        self._run()
+        # Change both checkbox and text
+        plan.write_text("# Plan\n- [x] Task 1 MODIFIED\n", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("exceed checkbox-only scope", result.stderr)
+
+    def test_checkbox_only_reattest_rejects_checkbox_reversal(self) -> None:
+        """Checkbox-only re-attestation rejects [x] -> [ ] reversal."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [x] Task 1\n", encoding="utf-8")
+        self._run()
+        # Reverse the checkbox
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("exceed checkbox-only scope", result.stderr)
+
+    def test_checkbox_only_reattest_rejects_added_line(self) -> None:
+        """Checkbox-only re-attestation rejects added task lines."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        self._run()
+        # Add a new task line
+        plan.write_text("# Plan\n- [ ] Task 1\n- [x] Task 2\n", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("exceed checkbox-only scope", result.stderr)
+
+    def test_checkbox_only_reattest_rejects_removed_line(self) -> None:
+        """Checkbox-only re-attestation rejects removed task lines."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n- [ ] Task 2\n", encoding="utf-8")
+        self._run()
+        # Remove a task line
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("exceed checkbox-only scope", result.stderr)
+
+    def test_checkbox_only_reattest_requires_existing_attestation(self) -> None:
+        """Checkbox-only re-attestation fails if no attestation exists."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        # No prior attestation
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("No existing attestation", result.stderr)
+
+    def test_checkbox_only_reattest_requires_stored_attested_plan(self) -> None:
+        """Checkbox-only re-attestation fails if .attested-plan is missing."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        self._run()
+        # Remove the stored attested plan
+        (self.tmp / ".attested-plan").unlink()
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("No stored attested plan", result.stderr)
+
+    def test_checkbox_only_reattest_detects_corrupted_attested_plan(self) -> None:
+        """Checkbox-only re-attestation fails if .attested-plan doesn't match attestation."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        self._run()
+        # Corrupt the attested plan
+        attested = self.tmp / ".attested-plan"
+        attested.write_text("corrupted content", encoding="utf-8")
+
+        result = self._run("--checkbox-only")
+        self.assertNotEqual(0, result.returncode, result.stdout)
+        self.assertIn("does not match attestation", result.stderr)
+
+    def test_checkbox_only_reattest_multiple_checkbox_changes(self) -> None:
+        """Checkbox-only re-attestation allows multiple [ ] -> [x] changes."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text(
+            "# Plan\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n", encoding="utf-8"
+        )
+        self._run()
+        # Change multiple checkboxes
+        plan.write_text(
+            "# Plan\n- [x] Task 1\n- [x] Task 2\n- [ ] Task 3\n", encoding="utf-8"
+        )
+
+        result = self._run("--checkbox-only")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("Checkbox-only changes detected", result.stdout)
+        attest = self.tmp / ".plan-attestation"
+        self.assertEqual(
+            self.sha256_of(plan), attest.read_text().strip()
+        )
+
+    def test_checkbox_only_reattest_noop_when_unchanged(self) -> None:
+        """Checkbox-only re-attestation succeeds silently when plan unchanged."""
+        plan = self.tmp / "task_plan.md"
+        plan.write_text("# Plan\n- [ ] Task 1\n", encoding="utf-8")
+        self._run()
+        # No changes
+
+        result = self._run("--checkbox-only")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("already matches attestation", result.stdout)
+
+    def sha256_of(self, path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
 if __name__ == "__main__":
     unittest.main()
