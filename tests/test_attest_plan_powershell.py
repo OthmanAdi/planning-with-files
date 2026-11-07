@@ -429,6 +429,48 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
                     self.assertIn("did not resolve to a plan", result.stderr)
                     self.assertFalse((plan_dir / ".attestation").exists())
 
+    def test_target_root_with_pinned_root_writes_plan_attestation(self) -> None:
+        """From another cwd, -Target root + PWF_PLAN_ROOT must write .plan-attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp)
+            pinned = outer / "pinned"
+            pinned.mkdir()
+            plan = pinned / "task_plan.md"
+            plan.write_text("# Root plan\n", encoding="utf-8")
+            cwd = outer / "other"
+            cwd.mkdir()
+
+            result = self._run(
+                cwd,
+                {"PWF_PLAN_ROOT": str(pinned)},
+                "-Target",
+                "root",
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((pinned / ".plan-attestation").is_file())
+            self.assertFalse((pinned / ".attestation").exists())
+            self.assertFalse((cwd / ".plan-attestation").exists())
+            self.assertFalse((cwd / ".attestation").exists())
+
+    def test_slug_cwd_invocation_keeps_slug_attestation_name(self) -> None:
+        """Attesting while cwd is the slug plan dir still uses .attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan_dir = root / ".planning" / "safe-plan"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text("# Slug\n", encoding="utf-8")
+            (root / ".planning" / ".active_plan").write_text(
+                "safe-plan\n", encoding="utf-8"
+            )
+
+            result = self._run(plan_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((plan_dir / ".attestation").is_file())
+            self.assertFalse((plan_dir / ".plan-attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
+
     def test_target_junction_escape_is_refused_when_supported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
             root = Path(tmp)
