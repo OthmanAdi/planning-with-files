@@ -51,8 +51,7 @@ plan through the current-directory fallback.
 `--target <plan-id>` (`-Target <plan-id>`) explicitly attests that named plan. Both
 forms override `PLAN_ID` and honor `PWF_PLAN_ROOT`; without a project pin, paths are
 relative to the current directory. Neither form changes `.planning/.active_plan`.
-Empty, invalid or unresolved targets fail without falling back to another plan, and
-`root` is refused inside a named plan directory, whose hooks read `.attestation`.
+Empty, invalid or unresolved targets fail without falling back to another plan.
 Named targets retain the shared resolver's containment and linked-directory
 checks, and explicit targets reject linked plan files. `--target` is a write-only
 form and cannot be combined with `--show` or `--clear`; extra arguments are
