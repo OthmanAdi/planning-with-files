@@ -60,7 +60,7 @@ If a task finishes in under 5 tool calls, skip the skill; the structure only pay
 2. **UserPromptSubmit hook** fires after compaction (or on the next turn) and re-injects the current `task_plan.md` between `===BEGIN PLAN DATA===` / `===END PLAN DATA===` markers.
 3. The plan, findings, and progress live on disk in `task_plan.md`, `findings.md`, `progress.md` (or under `.planning/<slug>/` in slug mode). Compaction never touches these files.
 
-**Just continue the same conversation.** The next model turn will see the re-injected plan and resume from the phase status recorded in `task_plan.md`. No "continue from task_plan.md" prompt is required—the hook does it mechanically.
+**Just continue the same conversation.** The next model turn will see the re-injected plan and resume from the phase status recorded in `task_plan.md`. No "continue from task_plan.md" prompt is required; the hook does it mechanically.
 
 If you *do* start a fresh session (new window, new terminal, or after `/clear`), the `SessionStart` hook (or `/pwf --resume` on the standalone route) will re-read the planning files and inject them, so you resume from the same phase.
 
