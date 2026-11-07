@@ -99,7 +99,7 @@ class InitSessionSlugTests(unittest.TestCase):
             self.assertTrue(re.match(rf"^{today}-untitled-[a-z0-9]+$", dirs[0].name))
 
     def test_help_flags_print_usage_without_mutating_planning_state(self) -> None:
-        for flag in ("-h", "--help"):
+        for flag in ("-h", "--help", "-Help"):
             with self.subTest(flag=flag), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 result = self.run_init(root, flag)
@@ -108,7 +108,7 @@ class InitSessionSlugTests(unittest.TestCase):
                 self.assertEqual([], list(root.iterdir()))
 
     def test_unknown_dash_option_exits_without_creating_files(self) -> None:
-        for flag in ("--autonomus", "-Help"):
+        for flag in ("--autonomus",):
             with self.subTest(flag=flag), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 result = self.run_init(root, flag)
