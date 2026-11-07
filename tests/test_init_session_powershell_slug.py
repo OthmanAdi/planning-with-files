@@ -90,7 +90,9 @@ class InitSessionPowerShellSlugTests(unittest.TestCase):
             )
 
     def test_help_switches_print_usage_without_creating_files(self) -> None:
-        for flag in ("-Help", "-h"):
+        # -? matters on its own: a native Windows PowerShell 5.1 -File call used
+        # to exit 0 with no output when the script was an advanced one (#357).
+        for flag in ("-Help", "-h", "-?"):
             with self.subTest(flag=flag), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 result = self.run_init(root, flag)
