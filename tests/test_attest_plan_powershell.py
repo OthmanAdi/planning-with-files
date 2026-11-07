@@ -373,7 +373,7 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
                     result = self._run(root, {"PWF_PLAN_ROOT": pin})
                     self.assertEqual(1, result.returncode, result.stderr)
                     self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
-                    self.assertIn(f"PWF_PLAN_ROOT={pin} did not resolve", result.stderr)
+                    self.assertIn(f"PWF_PLAN_ROOT={pin} must be an absolute local path", result.stderr)
                     self.assertFalse((root / ".plan-attestation").exists())
 
     def test_root_target_on_a_missing_drive_reports_the_binding_refusal(self) -> None:
@@ -389,7 +389,8 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
             self.assertIn("-Target root did not resolve", result.stderr)
 
-    def test_root_target_refuses_a_slug_plan_directory(self) -> None:
+    def test_root_target_from_a_plan_directory_writes_the_root_filename(self) -> None:
+        """Hooks running from this directory read .plan-attestation, so it stays allowed."""
         with tempfile.TemporaryDirectory() as tmp:
             plan_dir = Path(tmp) / ".planning" / "alpha"
             plan_dir.mkdir(parents=True)
@@ -397,9 +398,22 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
 
             result = self._run(plan_dir, None, "-Target", "root")
 
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((plan_dir / ".plan-attestation").is_file())
+
+    def test_refusal_is_visible_when_the_caller_captures_only_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wrapper = root / "wrapper.ps1"
+            wrapper.write_text(
+                f"$captured = & '{ATTEST}' -Target nope\nexit $LASTEXITCODE\n",
+                encoding="utf-8",
+            )
+
+            result = self._run(root, None, script=wrapper)
+
             self.assertEqual(1, result.returncode, result.stderr)
-            self.assertIn("-Target root did not resolve", result.stderr)
-            self.assertFalse((plan_dir / ".plan-attestation").exists())
+            self.assertIn("-Target nope did not resolve", " ".join(result.stderr.split()))
 
     def test_target_traversal_and_alias_spellings_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

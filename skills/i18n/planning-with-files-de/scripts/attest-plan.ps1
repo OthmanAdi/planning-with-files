@@ -42,12 +42,13 @@ $ErrorActionPreference = "Stop"
 # Refusals are one plain line. Write-Error would add the script path and the
 # source snippet and repeat the marker. [Console]::Error bypasses the 2>&1
 # capture of a script calling this one in-process (init-session.ps1 reports
-# the reason), so a nested call hands the line to its caller's pipeline.
+# the reason), so a nested call uses the error stream, which 2>&1 captures and
+# which still reaches the console when the caller captures only its output.
 $script:CalledFromScript = [bool]$MyInvocation.PSCommandPath
 
 function Write-AttestationRefusal {
     param([string] $Message)
-    if ($script:CalledFromScript) { Write-Output $Message }
+    if ($script:CalledFromScript) { Write-Error -Message $Message -ErrorAction Continue }
     else { [Console]::Error.WriteLine($Message) }
 }
 
@@ -259,7 +260,7 @@ if ($script:IsWindowsHost) {
         # local path is the only accepted shape, as in resolve-plan-dir.ps1.
         $isUnc = $pin.StartsWith('\\') -or $pin.StartsWith('//')
         if ($isUnc -or ($pin -notmatch '^[A-Za-z]:[\\/]')) {
-            Write-PinRefusal
+            Write-AttestationRefusal "[plan-attest] PWF_PLAN_ROOT=$(Format-Selector $env:PWF_PLAN_ROOT) must be an absolute local path. An explicit pin is a binding: nothing was attested and no other plan was substituted."
             exit 1
         }
         $securityRootPath = $pin
@@ -449,10 +450,8 @@ function Resolve-PlanFile {
 
     if ($Target) {
         if ($Target -ceq "root") {
-            # A missing pin has no frozen root. A slug plan directory is not a
-            # root project: its hooks read .attestation, so .plan-attestation
-            # would report a lock that nothing enforces.
-            if (-not $script:SecurityRootFinalPath -or (Test-SlugPlanDirectory $securityRootPath)) {
+            # A missing pin has no frozen root to read a plan from.
+            if (-not $script:SecurityRootFinalPath) {
                 $script:PlanResolutionFailure = "Target"
                 return $null
             }

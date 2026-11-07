@@ -37,7 +37,12 @@ slug_is_valid() {
 # An echoed selector must not forge output: a newline or an escape sequence
 # in PLAN_ID could otherwise print a fake status line.
 printable() {
-    printf '%s' "$1" | LC_ALL=C tr '\000-\037\177' '?'
+    # The sed step covers C1 controls, which are two bytes in UTF-8.
+    c1_lead="$(printf '\302')"
+    c1_low="$(printf '\200')"
+    c1_high="$(printf '\237')"
+    printf '%s' "$1" | LC_ALL=C tr '\000-\037\177' '?' \
+        | LC_ALL=C sed "s/${c1_lead}[${c1_low}-${c1_high}]/?/g"
 }
 
 pwf_plan_root_is_accepted() {
@@ -69,15 +74,6 @@ resolve_plan_file() {
                 pwf_plan_root_is_accepted || return 1
                 target_root="$(cd "${PWF_PLAN_ROOT}" 2>/dev/null && pwd -P)" || return 1
             fi
-            # A slug plan directory is not a root project: its hooks read
-            # .attestation, so .plan-attestation would report a lock that
-            # nothing enforces.
-            target_root_abs="$(cd "${target_root}" 2>/dev/null && pwd -P)" || return 1
-            case "${target_root_abs%/*}" in
-                */.planning)
-                    if slug_is_valid "${target_root_abs##*/}"; then return 1; fi
-                    ;;
-            esac
             [ ! -L "${target_root}/task_plan.md" ] || return 1
             [ -f "${target_root}/task_plan.md" ] || return 1
             printf "%s\n" "${target_root}/task_plan.md"
@@ -148,7 +144,9 @@ attestation_path_for() {
 compute_hash() {
     target="$1"
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "${target}" | awk '{print $1}'
+        # GNU sha256sum prefixes the hash with a backslash when the path holds
+        # one, which a native Windows PWF_PLAN_ROOT does.
+        sha256sum "${target}" | awk '{ sub(/^\\/, "", $1); print $1 }'
     elif command -v shasum >/dev/null 2>&1; then
         shasum -a 256 "${target}" | awk '{print $1}'
     else

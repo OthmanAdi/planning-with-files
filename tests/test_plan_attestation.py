@@ -437,16 +437,37 @@ class PlanAttestationTests(unittest.TestCase):
                 self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
                 self.assertNotIn("\x1b", result.stderr)
 
-    def test_root_target_refuses_a_slug_plan_directory(self) -> None:
+    def test_echoed_selectors_drop_c1_controls(self) -> None:
+        result = self._run(env={"PLAN_ID": "x\u009b2K\u00e4"})
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertNotIn("\u009b", result.stderr)
+        self.assertIn("PLAN_ID=x?2K\u00e4 names no plan", result.stderr)
+
+    def test_root_target_from_a_plan_directory_writes_the_root_filename(self) -> None:
+        """Hooks running from this directory read .plan-attestation, so it stays allowed."""
         plan_dir = self.tmp / ".planning" / "alpha"
         plan_dir.mkdir(parents=True)
         (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
 
         result = self._run("--target", "root", cwd=plan_dir)
 
-        self.assertEqual(1, result.returncode, result.stderr)
-        self.assertIn("--target root did not resolve", result.stderr)
-        self.assertFalse((plan_dir / ".plan-attestation").exists())
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue((plan_dir / ".plan-attestation").is_file())
+
+    def test_native_pin_stores_a_bare_hash(self) -> None:
+        """sha256sum marks a path holding a backslash by prefixing its hash with one."""
+        project = self.tmp / "project"
+        plan_dir = project / ".planning" / "alpha"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+
+        result = self._run(cwd=elsewhere, env={"PWF_PLAN_ROOT": str(project), "PLAN_ID": "alpha"})
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        stored = (plan_dir / ".attestation").read_text(encoding="utf-8").strip()
+        self.assertRegex(stored, r"\A[0-9a-f]{64}\Z")
 
     def test_rejected_selectors_name_the_refused_binding(self) -> None:
         active = self.tmp / ".planning" / "active"
