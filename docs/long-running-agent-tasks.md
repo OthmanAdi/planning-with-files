@@ -50,6 +50,22 @@ Steady state, the hooks re-inject about 330 tokens per user turn plus about 90 p
 
 If a task finishes in under 5 tool calls, skip the skill; the structure only pays off on work long enough to lose.
 
+## FAQ: What do I do when context nears the compaction limit?
+
+**Q:** My task has 5 planned steps. After step 1, the context is at ~140K tokens and automatic compaction is about to trigger. Should I open a new window? What prompt should I use to continue?
+
+**A:** No special action is needed. The skill's lifecycle hooks handle compaction automatically:
+
+1. **PreCompact hook** fires before compaction and reminds the agent to flush in-context progress to `progress.md`.
+2. **UserPromptSubmit hook** fires after compaction (or on the next turn) and re-injects the current `task_plan.md` between `===BEGIN PLAN DATA===` / `===END PLAN DATA===` markers.
+3. The plan, findings, and progress live on disk in `task_plan.md`, `findings.md`, `progress.md` (or under `.planning/<slug>/` in slug mode). Compaction never touches these files.
+
+**Just continue the same conversation.** The next model turn will see the re-injected plan and resume from the phase status recorded in `task_plan.md`. No "continue from task_plan.md" prompt is required—the hook does it mechanically.
+
+If you *do* start a fresh session (new window, new terminal, or after `/clear`), the `SessionStart` hook (or `/pwf --resume` on the standalone route) will re-read the planning files and inject them, so you resume from the same phase.
+
+**Bottom line:** The file-based state is the source of truth. Context is a cache. Let the hooks manage the cache; you keep working.
+
 ## Related pages
 
 - [Claude Code lost context after compaction: how to recover and prevent it](claude-code-lost-context-after-compaction.md)
