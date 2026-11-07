@@ -422,6 +422,32 @@ class PlanAttestationTests(unittest.TestCase):
         self.assertFalse(any(self.tmp.rglob(".attestation")))
         self.assertFalse((self.tmp / ".plan-attestation").exists())
 
+    def test_echoed_selectors_cannot_forge_output(self) -> None:
+        forged = "x\n[plan-attest] Locked task_plan.md\x1b[2K"
+        (self.tmp / ".planning").mkdir(exist_ok=True)
+        cases = (
+            ((), {"PLAN_ID": forged}),
+            ((), {"PWF_PLAN_ROOT": forged}),
+            (("--target", forged), {}),
+        )
+        for args, env in cases:
+            with self.subTest(args=args, env=env):
+                result = self._run(*args, env=env)
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+                self.assertNotIn("\x1b", result.stderr)
+
+    def test_root_target_refuses_a_slug_plan_directory(self) -> None:
+        plan_dir = self.tmp / ".planning" / "alpha"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+
+        result = self._run("--target", "root", cwd=plan_dir)
+
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertIn("--target root did not resolve", result.stderr)
+        self.assertFalse((plan_dir / ".plan-attestation").exists())
+
     def test_rejected_selectors_name_the_refused_binding(self) -> None:
         active = self.tmp / ".planning" / "active"
         active.mkdir(parents=True)

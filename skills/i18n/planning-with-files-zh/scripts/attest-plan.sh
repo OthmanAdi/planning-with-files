@@ -34,6 +34,12 @@ slug_is_valid() {
     return 1
 }
 
+# An echoed selector must not forge output: a newline or an escape sequence
+# in PLAN_ID could otherwise print a fake status line.
+printable() {
+    printf '%s' "$1" | LC_ALL=C tr '\000-\037\177' '?'
+}
+
 pwf_plan_root_is_accepted() {
     case "${PWF_PLAN_ROOT:-}" in
         \\\\*|//*|[A-Za-z]:[!\\/]*) return 1 ;;
@@ -63,6 +69,15 @@ resolve_plan_file() {
                 pwf_plan_root_is_accepted || return 1
                 target_root="$(cd "${PWF_PLAN_ROOT}" 2>/dev/null && pwd -P)" || return 1
             fi
+            # A slug plan directory is not a root project: its hooks read
+            # .attestation, so .plan-attestation would report a lock that
+            # nothing enforces.
+            target_root_abs="$(cd "${target_root}" 2>/dev/null && pwd -P)" || return 1
+            case "${target_root_abs%/*}" in
+                */.planning)
+                    if slug_is_valid "${target_root_abs##*/}"; then return 1; fi
+                    ;;
+            esac
             [ ! -L "${target_root}/task_plan.md" ] || return 1
             [ -f "${target_root}/task_plan.md" ] || return 1
             printf "%s\n" "${target_root}/task_plan.md"
@@ -171,13 +186,13 @@ if [ "${resolve_status}" -ne 0 ]; then
     if [ "${resolve_status}" -eq 2 ]; then
         printf "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.\n" >&2
     elif [ -n "${target:-}" ]; then
-        printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "${target}" >&2
+        printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${target}")" >&2
     elif [ -n "${PWF_PLAN_ROOT:-}" ] && ! pwf_plan_root_is_accepted; then
-        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "${PWF_PLAN_ROOT}" >&2
+        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PWF_PLAN_ROOT}")" >&2
     elif [ -n "${PLAN_ID:-}" ]; then
-        printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "${PLAN_ID}" >&2
+        printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PLAN_ID}")" >&2
     elif [ -n "${PWF_PLAN_ROOT:-}" ]; then
-        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "${PWF_PLAN_ROOT}" >&2
+        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PWF_PLAN_ROOT}")" >&2
     else
         printf "[plan-attest] No task_plan.md found. Create a plan first.\n" >&2
     fi
