@@ -34,6 +34,26 @@ slug_is_valid() {
     return 1
 }
 
+# An echoed selector must not forge output: a newline or an escape sequence
+# in PLAN_ID could otherwise print a fake status line.
+printable() {
+    # The sed step covers C1 controls, which are two bytes in UTF-8.
+    c1_lead="$(printf '\302')"
+    c1_low="$(printf '\200')"
+    c1_high="$(printf '\237')"
+    printf '%s' "$1" | LC_ALL=C tr '\000-\037\177' '?' \
+        | LC_ALL=C sed "s/${c1_lead}[${c1_low}-${c1_high}]/?/g"
+}
+
+pwf_plan_root_is_accepted() {
+    case "${PWF_PLAN_ROOT:-}" in
+        \\\\*|//*|[A-Za-z]:[!\\/]*) return 1 ;;
+        /*|[A-Za-z]:[\\/]*) ;;
+        *) return 1 ;;
+    esac
+    [ -d "${PWF_PLAN_ROOT}" ]
+}
+
 resolve_from_slug_cwd() {
     slug_cwd="$(pwd -P 2>/dev/null)" || return 1
     planning_dir="${slug_cwd%/*}"
@@ -51,11 +71,7 @@ resolve_plan_file() {
             if [ -n "${PWF_PLAN_ROOT:-}" ]; then
                 # Match the shared resolver's supported absolute local pins.
                 # A valid project-root junction is intentional, so resolve it.
-                case "${PWF_PLAN_ROOT}" in
-                    \\\\*|//*|[A-Za-z]:[!\\/]*) return 1 ;;
-                    /*|[A-Za-z]:[\\/]*) ;;
-                    *) return 1 ;;
-                esac
+                pwf_plan_root_is_accepted || return 1
                 target_root="$(cd "${PWF_PLAN_ROOT}" 2>/dev/null && pwd -P)" || return 1
             fi
             [ ! -L "${target_root}/task_plan.md" ] || return 1
@@ -82,11 +98,7 @@ resolve_plan_file() {
     if [ -f "${RESOLVER}" ]; then
         plan_dir="$(sh "${RESOLVER}" 2>/dev/null)"
         if [ -z "$plan_dir" ] && [ "$(sh "${RESOLVER}" --check-ambiguity 2>/dev/null)" = "PWF_PLAN_AMBIGUOUS_V1" ]; then
-            # Do not print here: resolve_plan_file runs under command substitution,
-            # so a message printed inside the function cannot stop the caller's
-            # failure handler from also printing. Signal ambiguity by returning 1
-            # and let the entry point name the cause once.
-            return 1
+            return 2
         fi
     fi
     if [ -n "${plan_dir}" ] && [ -f "${plan_dir}/task_plan.md" ]; then
@@ -132,7 +144,9 @@ attestation_path_for() {
 compute_hash() {
     target="$1"
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "${target}" | awk '{print $1}'
+        # GNU sha256sum prefixes the hash with a backslash when the path holds
+        # one, which a native Windows PWF_PLAN_ROOT does.
+        sha256sum "${target}" | awk '{ sub(/^\\/, "", $1); print $1 }'
     elif command -v shasum >/dev/null 2>&1; then
         shasum -a 256 "${target}" | awk '{print $1}'
     else
@@ -159,30 +173,29 @@ case "${1:-}" in
     *) usage_error ;;
 esac
 
-plan_file="$(resolve_plan_file)" || {
-    # Name the actual cause once. Ambiguity must be checked here (not only
-    # inside resolve_plan_file): the function runs under $(), so any message it
-    # printed would still leave this handler free to append a second line.
-    if [ -z "${target:-}" ] && [ -z "${PLAN_ID:-}" ] && [ -z "${PWF_PLAN_ROOT:-}" ] \
-        && [ -f "${RESOLVER}" ] \
-        && [ "$(sh "${RESOLVER}" --check-ambiguity 2>/dev/null)" = "PWF_PLAN_AMBIGUOUS_V1" ]; then
+plan_file="$(resolve_plan_file)"
+resolve_status=$?
+if [ "${resolve_status}" -ne 0 ]; then
+    # Name the actual cause. "No task_plan.md found" is true but misleading
+    # when the plan exists and an explicit selector was rejected: before #237
+    # a mistyped PLAN_ID attested a DIFFERENT plan at rc=0, and an operator
+    # who now sees a generic not-found is likely to go looking for the wrong
+    # problem. The selectors are bindings, so say which one refused.
+    if [ "${resolve_status}" -eq 2 ]; then
         printf "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.\n" >&2
     elif [ -n "${target:-}" ]; then
-        # Name the actual cause. "No task_plan.md found" is true but misleading
-        # when the plan exists and an explicit selector was rejected: before #237
-        # a mistyped PLAN_ID attested a DIFFERENT plan at rc=0, and an operator
-        # who now sees a generic not-found is likely to go looking for the wrong
-        # problem. The selectors are bindings, so say which one refused.
-        printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "${target}" >&2
+        printf "[plan-attest] --target %s did not resolve to a plan. An explicit target is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${target}")" >&2
+    elif [ -n "${PWF_PLAN_ROOT:-}" ] && ! pwf_plan_root_is_accepted; then
+        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PWF_PLAN_ROOT}")" >&2
     elif [ -n "${PLAN_ID:-}" ]; then
-        printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "${PLAN_ID}" >&2
+        printf "[plan-attest] PLAN_ID=%s names no plan directory under .planning. An explicit selector is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PLAN_ID}")" >&2
     elif [ -n "${PWF_PLAN_ROOT:-}" ]; then
-        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "${PWF_PLAN_ROOT}" >&2
+        printf "[plan-attest] PWF_PLAN_ROOT=%s did not resolve to a project root holding a plan. An explicit pin is a binding: nothing was attested and no other plan was substituted.\n" "$(printable "${PWF_PLAN_ROOT}")" >&2
     else
         printf "[plan-attest] No task_plan.md found. Create a plan first.\n" >&2
     fi
     exit 1
-}
+fi
 
 attestation_file="$(attestation_path_for "${plan_file}")"
 

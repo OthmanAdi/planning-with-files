@@ -46,16 +46,20 @@ file. It does not create the legacy `.plan-attestation` file beside a slug plan.
 does not resolve, the helper exits with an error instead of attesting a different
 plan through the current-directory fallback.
 
-The shell helper's `--target root` explicitly attests the project's root
+`--target root` (PowerShell: `-Target root`) explicitly attests the project's root
 `task_plan.md` and writes `.plan-attestation`, even while a named plan is active.
-`--target <plan-id>` explicitly attests that named plan. Both forms override
-`PLAN_ID` and honor `PWF_PLAN_ROOT`; without a project pin, paths are relative to
-the current directory. Neither form changes `.planning/.active_plan`.
+`--target <plan-id>` (`-Target <plan-id>`) explicitly attests that named plan. Both
+forms override `PLAN_ID` and honor `PWF_PLAN_ROOT`; without a project pin, paths are
+relative to the current directory. Neither form changes `.planning/.active_plan`.
 Empty, invalid or unresolved targets fail without falling back to another plan.
 Named targets retain the shared resolver's containment and linked-directory
 checks, and explicit targets reject linked plan files. `--target` is a write-only
 form and cannot be combined with `--show` or `--clear`; extra arguments are
 rejected. Every attestation write prints its plan and attestation paths first.
+
+A refusal is one line on stderr that names the selector it rejected. Control
+characters in an echoed selector print as `?`, so a selector cannot forge a status
+line.
 
 The atomic rename is the correctness guarantee. It prevents readers from seeing
 a partially written attestation file. The `flock` call is only a cooperative

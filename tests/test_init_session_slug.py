@@ -107,6 +107,15 @@ class InitSessionSlugTests(unittest.TestCase):
                 self.assertIn("Usage:", result.stdout)
                 self.assertEqual([], list(root.iterdir()))
 
+    def test_unknown_dash_option_exits_without_creating_files(self) -> None:
+        for flag in ("--autonomus", "-Help"):
+            with self.subTest(flag=flag), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                result = self.run_init(root, flag)
+                self.assertNotEqual(0, result.returncode, result.stdout)
+                self.assertIn("Unknown option:", result.stderr)
+                self.assertEqual([], list(root.iterdir()))
+
     def test_template_flag_still_works_in_legacy_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

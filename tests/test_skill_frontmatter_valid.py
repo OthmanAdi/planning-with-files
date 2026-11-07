@@ -8,25 +8,82 @@ and did not catch it, so this validates the frontmatter as actual YAML.
 
 Discovery includes hidden adapter directories, which glob.glob skips.
 
-clawhub-upload/SKILL.md is gitignored and may be absent on a fresh clone; rglob
-simply does not find it then, which is fine.
+clawhub-upload/SKILL.md is gitignored publish staging: absent on a fresh clone is
+fine, but when present it must still be validated (tracked inventory + walk).
 """
+import contextlib
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+_EXCLUDED_PARTS = {".git", "node_modules", "__pycache__", ".planning"}
+
+
+@contextlib.contextmanager
+def ignored_scratch_dir():
+    """Unique directory under the gitignored .planning/; removes only what it made."""
+    planning = REPO_ROOT / ".planning"
+    created_planning = not planning.exists()
+    planning.mkdir(exist_ok=True)
+    scratch = Path(tempfile.mkdtemp(prefix="_pwf352_", dir=planning))
+    try:
+        yield scratch
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+        if created_planning:
+            try:
+                planning.rmdir()
+            except OSError:
+                pass
+
+
 def _skill_md_files(root=None):
+    """Discover SKILL.md files for validation.
+
+    Prefer the tracked inventory when ``root`` is the repository (so an ignored
+    scratch tree under ``.planning/`` cannot fail shipped validation, #352).
+    Fall back to a filtered walk for source archives without Git metadata, and
+    always walk when ``root`` is a fixture tree (hidden-adapter discovery).
+    """
     if root is None:
         root = REPO_ROOT
     else:
         root = Path(root).resolve()
     out = []
+    if root.resolve() == REPO_ROOT.resolve():
+        try:
+            proc = subprocess.run(
+                ["git", "-c", "core.quotepath=off", "ls-files", "-z", "--", "*SKILL.md"],
+                cwd=str(REPO_ROOT),
+                capture_output=True,
+                check=False,
+            )
+        except OSError:
+            proc = None
+        if proc is not None and proc.returncode == 0 and proc.stdout:
+            for rel in proc.stdout.decode("utf-8").split(chr(0)):
+                if not rel:
+                    continue
+                path = REPO_ROOT / rel
+                if path.is_file() and path.name == "SKILL.md":
+                    out.append(path)
+            # Optional gitignored publish staging: validate when present.
+            clawhub = REPO_ROOT / "clawhub-upload" / "SKILL.md"
+            if clawhub.is_file() and clawhub not in out:
+                out.append(clawhub)
+            if out:
+                return sorted(out)
     for p in root.rglob("SKILL.md"):
-        parts = p.parts
-        if ".git" in parts or "node_modules" in parts:
+        try:
+            relative_parts = p.relative_to(root).parts
+        except ValueError:
+            relative_parts = p.parts
+        if _EXCLUDED_PARTS.intersection(relative_parts):
             continue
         out.append(p)
     return sorted(out)
@@ -97,6 +154,16 @@ class SkillFrontmatterTests(unittest.TestCase):
                 _description_line(fm), f"{f} frontmatter has no description:"
             )
 
+    def test_ignored_scratch_skill_does_not_join_shipped_inventory(self):
+        with ignored_scratch_dir() as scratch:
+            bad = scratch / "SKILL.md"
+            bad.write_text("name: scratch\n", encoding="utf-8")
+            discovered = {p.resolve() for p in _skill_md_files()}
+            self.assertNotIn(bad.resolve(), discovered)
+            for f in discovered:
+                fm = _frontmatter(f.read_text(encoding="utf-8"))
+                self.assertIsNotNone(fm, f"{f} has no '---' frontmatter block")
+
     def test_unquoted_description_has_no_colon_space(self):
         # Dependency-free guard for the exact v3.1.2 break.
         for f in _skill_md_files():
@@ -140,8 +207,6 @@ class SkillFrontmatterTests(unittest.TestCase):
             )
 
     def test_temporary_fixture_hidden_skill_discovery_and_validation(self):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_root = Path(tmpdir).resolve()
 
@@ -217,6 +282,77 @@ class SkillFrontmatterTests(unittest.TestCase):
             bad_yaml_fm = _frontmatter(hidden_malformed_yaml.read_text(encoding="utf-8"))
             with self.assertRaises(yaml.YAMLError):
                 yaml.safe_load(bad_yaml_fm)
+
+    def test_no_git_fallback_keeps_hidden_adapters_excludes_scratch_keeps_clawhub(self):
+        """Source-archive walk: hidden adapters + optional clawhub; skip .planning scratch."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            hidden = root / ".agents" / "skills" / "planning-with-files" / "SKILL.md"
+            hidden.parent.mkdir(parents=True)
+            hidden.write_text(
+                "---\nname: hidden\ndescription: \"ok\"\n---\n",
+                encoding="utf-8",
+            )
+            scratch = root / ".planning" / "_scratch" / "SKILL.md"
+            scratch.parent.mkdir(parents=True)
+            scratch.write_text("name: scratch\n", encoding="utf-8")
+            clawhub = root / "clawhub-upload" / "SKILL.md"
+            clawhub.parent.mkdir(parents=True)
+            clawhub.write_text(
+                "---\nname: claw\ndescription: \"staging\"\n---\n",
+                encoding="utf-8",
+            )
+            git_noise = root / ".git" / "skills" / "SKILL.md"
+            git_noise.parent.mkdir(parents=True)
+            git_noise.write_text("---\nname: g\ndescription: g\n---\n", encoding="utf-8")
+
+            discovered = _skill_md_files(root=root)
+            self.assertIn(hidden, discovered)
+            self.assertIn(clawhub, discovered)
+            self.assertNotIn(scratch, discovered)
+            self.assertNotIn(git_noise, discovered)
+
+    def test_repo_root_failed_git_listing_falls_back_to_the_walk(self):
+        """A source archive has git but no repository: rc 128 must not empty the list."""
+        from unittest import mock
+
+        not_a_repo = subprocess.CompletedProcess([], 128, stdout=b"", stderr=b"not a repository")
+        with mock.patch("subprocess.run", return_value=not_a_repo):
+            discovered = {p.resolve() for p in _skill_md_files()}
+        found_dirs = {
+            part
+            for f in discovered
+            for part in f.relative_to(REPO_ROOT).parts
+            if part.startswith(".")
+        }
+        self.assertLessEqual({".agents", ".codex", ".cursor", ".hermes", ".pi"}, found_dirs)
+
+    def test_repo_root_no_git_fallback_retains_adapters_and_excludes_scratch(self):
+        """When Git metadata is unavailable, REPO_ROOT discovery falls back to the walk."""
+        from unittest import mock
+
+        with ignored_scratch_dir() as scratch:
+            bad = scratch / "SKILL.md"
+            bad.write_text("name: scratch\n", encoding="utf-8")
+            with mock.patch("subprocess.run", side_effect=OSError("no git")):
+                discovered = {p.resolve() for p in _skill_md_files()}
+            self.assertNotIn(bad.resolve(), discovered)
+            adapter_dirs = {".agents", ".codex", ".cursor", ".hermes", ".pi"}
+            found_dirs = {
+                part
+                for f in discovered
+                for part in f.relative_to(REPO_ROOT).parts
+                if part.startswith(".")
+            }
+            self.assertTrue(
+                adapter_dirs.issubset(found_dirs),
+                f"missing adapters in no-Git fallback: {adapter_dirs - found_dirs}",
+            )
+            clawhub = REPO_ROOT / "clawhub-upload" / "SKILL.md"
+            if clawhub.is_file():
+                self.assertIn(clawhub.resolve(), discovered)
 
 
 if __name__ == "__main__":

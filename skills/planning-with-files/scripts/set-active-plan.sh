@@ -94,25 +94,33 @@ trusted_python() {
 
 # Portable path canonicalizer. realpath first (Linux, modern coreutils),
 # then readlink -f (older GNU), then an explicitly trusted Python interpreter.
-# Prints the canonical absolute path on success; prints nothing and returns 1
-# on a full miss so containment fails closed. No Python spawn on the happy
+# Sets CANON_OUT to the canonical absolute path on success; returns 1 on a
+# full miss so containment fails closed. No Python spawn on the happy
 # path: realpath/readlink cover Linux, WSL, Git-Bash, and modern macOS.
-canonicalize() {
+# Setting a variable instead of printing keeps hot callers out of a subshell,
+# which costs a process on Windows.
+canonicalize_into() {
     target="$1"
+    CANON_OUT=""
     if command -v realpath >/dev/null 2>&1; then
         out="$(realpath "${target}" 2>/dev/null)" && [ -n "${out}" ] && {
-            printf "%s\n" "${out}"; return 0; }
+            CANON_OUT="${out}"; return 0; }
     fi
     if command -v readlink >/dev/null 2>&1; then
         out="$(readlink -f "${target}" 2>/dev/null)" && [ -n "${out}" ] && {
-            printf "%s\n" "${out}"; return 0; }
+            CANON_OUT="${out}"; return 0; }
     fi
     _canonical_python="$(trusted_python)" || _canonical_python=""
     if [ -n "${_canonical_python}" ]; then
         out="$("${_canonical_python}" -I -c "import os,sys;print(os.path.realpath(sys.argv[1]))" "${target}" 2>/dev/null)" \
-            && [ -n "${out}" ] && { printf "%s\n" "${out}"; return 0; }
+            && [ -n "${out}" ] && { CANON_OUT="${out}"; return 0; }
     fi
     return 1
+}
+
+canonicalize() {
+    canonicalize_into "$1" || return 1
+    printf "%s\n" "${CANON_OUT}"
 }
 
 # Containment guard (security A1.3): a resolved plan dir must canonicalize to a
@@ -141,7 +149,7 @@ ROOT_REAL_SET=0
 is_within_root() {
     candidate="$1"
     if [ "${ROOT_REAL_SET}" = "0" ]; then
-        ROOT_REAL="$(canonicalize "${PWF_ROOT_PIN:-.}")" || ROOT_REAL=""
+        if canonicalize_into "${PWF_ROOT_PIN:-.}"; then ROOT_REAL="${CANON_OUT}"; else ROOT_REAL=""; fi
         norm_slashes "${ROOT_REAL}"
         ROOT_REAL="${NORM_OUT}"
         ROOT_REAL_SET=1
@@ -164,7 +172,7 @@ is_within_root() {
             *) check_target="${candidate}" ;;
         esac
     fi
-    cand_real="$(canonicalize "${check_target}")" || cand_real=""
+    if canonicalize_into "${check_target}"; then cand_real="${CANON_OUT}"; else cand_real=""; fi
     norm_slashes "${cand_real}"
     cand_real="${NORM_OUT}"
     if [ -z "${ROOT_REAL}" ] || [ -z "${cand_real}" ]; then
@@ -485,62 +493,93 @@ can_open() { { true < "$1"; } 2>/dev/null; }
 
 # JSON is an explicit read-only listing mode. Keep all of its work outside the
 # existing text/selection paths, including interpreter and resolver discovery.
+# The helpers below set a variable instead of printing, so a candidate costs
+# no subshell of its own: each one is a process on Git Bash (#356).
+json_quote() {
+    case "$1" in
+        *[\"\\[:cntrl:]]*)
+            JSON_QUOTED=$(printf '%s' "$1" | LC_ALL=C awk '
+                BEGIN { printf "\""; for (i=1; i<32; i++) escape[sprintf("%c",i)] = sprintf("\\u%04x",i) }
+                { if (NR>1) printf "\\n"; for (i=1; i<=length($0); i++) {
+                    c=substr($0,i,1)
+                    if (c=="\\") printf "\\\\"
+                    else if (c=="\"") printf "\\\""
+                    else if (c in escape) printf "%s",escape[c]
+                    else printf "%s",c
+                }} END { printf "\"" }
+            ') ;;
+        *) JSON_QUOTED="\"$1\"" ;;
+    esac
+}
+
 json_string() {
-    printf '%s' "$1" | LC_ALL=C awk '
-        BEGIN { printf "\""; for (i=1; i<32; i++) escape[sprintf("%c",i)] = sprintf("\\u%04x",i) }
-        { if (NR>1) printf "\\n"; for (i=1; i<=length($0); i++) {
-            c=substr($0,i,1)
-            if (c=="\\") printf "\\\\"
-            else if (c=="\"") printf "\\\""
-            else if (c in escape) printf "%s",escape[c]
-            else printf "%s",c
-        }} END { printf "\"" }
-    '
+    json_quote "$1"
+    printf '%s' "$JSON_QUOTED"
+}
+
+# One stat call for modification time and size. The flavor that worked first
+# is kept, so BSD stat does not pay for a failed GNU attempt on every file.
+file_stat() {
+    _fs_out=''
+    if [ "${STAT_FLAVOR:-gnu}" = gnu ]; then
+        _fs_out=$(stat -c '%Y %s' "$1" 2>/dev/null) && STAT_FLAVOR=gnu || _fs_out=''
+    fi
+    if [ -z "$_fs_out" ] && [ "${STAT_FLAVOR:-bsd}" = bsd ]; then
+        _fs_out=$(stat -f '%m %z' "$1" 2>/dev/null) && STAT_FLAVOR=bsd || _fs_out=''
+    fi
+    FILE_MTIME=${_fs_out%% *}; FILE_BYTES=${_fs_out#* }
+    [ -n "$_fs_out" ] || FILE_BYTES=''
 }
 
 file_metadata() {
-    _jf_path="$1"; _jf_display="$2"; _jf_state=missing; _jf_mtime=null
+    _jf_path="$1"; _jf_display="$2"; _jf_state=missing; _jf_mtime=null; _jf_bytes=''
     if [ -L "$_jf_path" ]; then _jf_state=excluded
     elif [ -e "$_jf_path" ]; then
         if [ ! -f "$_jf_path" ] || ! is_within_root "$_jf_path"; then _jf_state=excluded
         elif ! can_open "$_jf_path"; then _jf_state=unreadable
         else
             _jf_state=readable
-            _jf_mtime=$(stat -c %Y "$_jf_path" 2>/dev/null || stat -f %m "$_jf_path" 2>/dev/null) || _jf_mtime=null
+            file_stat "$_jf_path"; _jf_mtime=$FILE_MTIME; _jf_bytes=$FILE_BYTES
             case "$_jf_mtime" in ''|*[!0-9]*) _jf_mtime=null ;; esac
         fi
     fi
-    printf '{"path":%s,"status":"%s","modified_at":%s}' "$(json_string "$_jf_display")" "$_jf_state" "$_jf_mtime"
+    json_quote "$_jf_display"
+    FILE_META="{\"path\":${JSON_QUOTED},\"status\":\"${_jf_state}\",\"modified_at\":${_jf_mtime}}"
 }
 
 JSON_PHASES_UNAVAILABLE='{"status":"unavailable","total":0,"complete":0,"in_progress":0,"pending":0}'
+# $2 is the size already read for this file, if any.
 json_phases() {
-    _jp_file="$1"
+    _jp_file="$1"; JSON_PHASES=$JSON_PHASES_UNAVAILABLE
     if [ -L "$_jp_file" ] || [ ! -f "$_jp_file" ] || ! can_open "$_jp_file" || ! is_within_root "$_jp_file"; then
-        printf '%s' "$JSON_PHASES_UNAVAILABLE"; return
+        return
     fi
-    _jp_bytes=$(stat -c %s "$_jp_file" 2>/dev/null || stat -f %z "$_jp_file" 2>/dev/null) || _jp_bytes=''
+    _jp_bytes=${2:-}
+    if [ -z "$_jp_bytes" ]; then file_stat "$_jp_file"; _jp_bytes=$FILE_BYTES; fi
     case "$_jp_bytes" in ''|*[!0-9]*) _jp_bytes=262145 ;; esac
     if [ "$_jp_bytes" -gt 262144 ]; then
-        printf '{"status":"too_large","total":0,"complete":0,"in_progress":0,"pending":0}'; return
+        JSON_PHASES='{"status":"too_large","total":0,"complete":0,"in_progress":0,"pending":0}'; return
     fi
     # The file can still lock or vanish between the open test and the parse;
     # a failed or empty parse must not leave a hole in the document.
     _jp_out=$(phase_status "$_jp_file" json 2>/dev/null) || _jp_out=''
-    case "$_jp_out" in '{"status":"'*'}') printf '%s' "$_jp_out" ;; *) printf '%s' "$JSON_PHASES_UNAVAILABLE" ;; esac
+    case "$_jp_out" in '{"status":"'*'}') JSON_PHASES=$_jp_out ;; esac
 }
 
 json_candidate() {
     _jc_dir="$1"; _jc_display="$2"; _jc_id="$3"; _jc_kind="$4"
-    if [ "$_jc_kind" = root ]; then _jc_id_json=null; else _jc_id_json=$(json_string "$_jc_id"); fi
-    printf '{"kind":"%s","plan_id":%s,"ownership":"unknown","files":{' "$_jc_kind" "$_jc_id_json"
-    _jc_comma=''
+    if [ "$_jc_kind" = root ]; then _jc_id_json=null; else json_quote "$_jc_id"; _jc_id_json=$JSON_QUOTED; fi
+    JSON_CANDIDATE="{\"kind\":\"${_jc_kind}\",\"plan_id\":${_jc_id_json},\"ownership\":\"unknown\",\"files\":{"
+    _jc_comma=''; _jc_plan_bytes=''
     for _jc_pair in task_plan:task_plan.md findings:findings.md progress:progress.md; do
         _jc_key=${_jc_pair%%:*}; _jc_name=${_jc_pair#*:}
-        printf '%s"%s":%s' "$_jc_comma" "$_jc_key" "$(file_metadata "$_jc_dir/$_jc_name" "$_jc_display/$_jc_name")"
+        file_metadata "$_jc_dir/$_jc_name" "$_jc_display/$_jc_name"
+        [ "$_jc_key" != task_plan ] || _jc_plan_bytes=$_jf_bytes
+        JSON_CANDIDATE="${JSON_CANDIDATE}${_jc_comma}\"${_jc_key}\":${FILE_META}"
         _jc_comma=,
     done
-    printf '},"phases":%s}' "$(json_phases "$_jc_dir/task_plan.md")"
+    json_phases "$_jc_dir/task_plan.md" "$_jc_plan_bytes"
+    JSON_CANDIDATE="${JSON_CANDIDATE}},\"phases\":${JSON_PHASES}}"
 }
 
 json_selection() {
@@ -584,8 +623,9 @@ json_selection() {
 json_add_candidate() {
     if [ "$JSON_INDEX" -lt "$JSON_OFFSET" ]; then JSON_INDEX=$((JSON_INDEX + 1)); return 0; fi
     if [ "$JSON_RETURNED" -ge "$JSON_LIMIT" ]; then JSON_TRUNCATED=true; JSON_NEXT=$JSON_INDEX; return 1; fi
-    _ja_row=$(json_candidate "$1" "$2" "$3" "$4")
-    _ja_size=$(printf '%s' "$_ja_row" | LC_ALL=C wc -c)
+    json_candidate "$1" "$2" "$3" "$4"; _ja_row=$JSON_CANDIDATE
+    # list_plans_json runs under LC_ALL=C, so the length is in bytes.
+    _ja_size=${#_ja_row}
     if [ $((JSON_USED + _ja_size + 1)) -gt "$JSON_BUDGET" ]; then
         JSON_TRUNCATED=true; JSON_NEXT=$JSON_INDEX
         if [ "$JSON_RETURNED" -eq 0 ]; then

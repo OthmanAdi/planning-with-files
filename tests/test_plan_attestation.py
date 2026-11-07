@@ -218,53 +218,6 @@ class PlanAttestationTests(unittest.TestCase):
         )
         self.assertFalse((active / ".attestation").exists())
 
-
-    def test_ambiguous_named_plans_refuse_once_without_attesting(self) -> None:
-        alpha = self.tmp / ".planning" / "alpha"
-        beta = self.tmp / ".planning" / "beta"
-        alpha.mkdir(parents=True)
-        beta.mkdir(parents=True)
-        (alpha / "task_plan.md").write_text("alpha\n", encoding="utf-8")
-        (beta / "task_plan.md").write_text("beta\n", encoding="utf-8")
-
-        result = self._run("--show")
-
-        self.assertNotEqual(0, result.returncode)
-        refusal = "[plan-attest] Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested."
-        self.assertIn(refusal, result.stderr)
-        self.assertEqual(1, result.stderr.count("[plan-attest]"))
-        self.assertNotIn("No task_plan.md found", result.stderr)
-        self.assertFalse((alpha / ".attestation").exists())
-        self.assertFalse((beta / ".attestation").exists())
-        self.assertFalse((self.tmp / ".plan-attestation").exists())
-
-    def test_rejected_plan_id_names_selector(self) -> None:
-        decoy = self.tmp / ".planning" / "decoy"
-        decoy.mkdir(parents=True)
-        (decoy / "task_plan.md").write_text("decoy\n", encoding="utf-8")
-        (self.tmp / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
-
-        result = self._run(env={"PLAN_ID": "missing-slug"})
-
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn("PLAN_ID=missing-slug", result.stderr)
-        self.assertIn("explicit selector is a binding", result.stderr)
-        self.assertNotIn("No task_plan.md found", result.stderr)
-        self.assertFalse((decoy / ".attestation").exists())
-        self.assertFalse((self.tmp / ".plan-attestation").exists())
-
-    def test_rejected_pwf_plan_root_names_selector(self) -> None:
-        missing = self.tmp / "no-such-root"
-        (self.tmp / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
-
-        result = self._run(env={"PWF_PLAN_ROOT": str(missing)})
-
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn(f"PWF_PLAN_ROOT={missing}", result.stderr)
-        self.assertIn("explicit pin is a binding", result.stderr)
-        self.assertNotIn("No task_plan.md found", result.stderr)
-        self.assertFalse((self.tmp / ".plan-attestation").exists())
-
     def test_unresolvable_target_fails_without_fallback_or_write(self) -> None:
         root_plan = self.tmp / "task_plan.md"
         root_plan.write_text("root decoy\n", encoding="utf-8")
@@ -449,6 +402,110 @@ class PlanAttestationTests(unittest.TestCase):
     def test_no_plan_exits_nonzero(self) -> None:
         result = self._run()
         self.assertNotEqual(0, result.returncode)
+
+    def test_ambiguous_plans_report_one_actionable_refusal(self) -> None:
+        for name in ("alpha", "beta"):
+            plan_dir = self.tmp / ".planning" / name
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text(name, encoding="utf-8")
+
+        result = self._run("--show")
+
+        self.assertEqual(1, result.returncode)
+        self.assertEqual(
+            [
+                "[plan-attest] Multiple plans are available. "
+                "Set PLAN_ID=<slug>; nothing was attested."
+            ],
+            result.stderr.splitlines(),
+        )
+        self.assertFalse(any(self.tmp.rglob(".attestation")))
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+
+    def test_echoed_selectors_cannot_forge_output(self) -> None:
+        forged = "x\n[plan-attest] Locked task_plan.md\x1b[2K"
+        (self.tmp / ".planning").mkdir(exist_ok=True)
+        cases = (
+            ((), {"PLAN_ID": forged}),
+            ((), {"PWF_PLAN_ROOT": forged}),
+            (("--target", forged), {}),
+        )
+        for args, env in cases:
+            with self.subTest(args=args, env=env):
+                result = self._run(*args, env=env)
+                self.assertEqual(1, result.returncode, result.stderr)
+                self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+                self.assertNotIn("\x1b", result.stderr)
+
+    def test_echoed_selectors_drop_c1_controls(self) -> None:
+        result = self._run(env={"PLAN_ID": "x\u009b2K\u00e4"})
+        self.assertEqual(1, result.returncode, result.stderr)
+        self.assertNotIn("\u009b", result.stderr)
+        self.assertIn("PLAN_ID=x?2K\u00e4 names no plan", result.stderr)
+
+    def test_root_target_from_a_plan_directory_writes_the_root_filename(self) -> None:
+        """Hooks running from this directory read .plan-attestation, so it stays allowed."""
+        plan_dir = self.tmp / ".planning" / "alpha"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+
+        result = self._run("--target", "root", cwd=plan_dir)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue((plan_dir / ".plan-attestation").is_file())
+
+    def test_native_pin_stores_a_bare_hash(self) -> None:
+        """sha256sum marks a path holding a backslash by prefixing its hash with one."""
+        project = self.tmp / "project"
+        plan_dir = project / ".planning" / "alpha"
+        plan_dir.mkdir(parents=True)
+        (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+
+        result = self._run(cwd=elsewhere, env={"PWF_PLAN_ROOT": str(project), "PLAN_ID": "alpha"})
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        stored = (plan_dir / ".attestation").read_text(encoding="utf-8").strip()
+        self.assertRegex(stored, r"\A[0-9a-f]{64}\Z")
+
+    def test_rejected_selectors_name_the_refused_binding(self) -> None:
+        active = self.tmp / ".planning" / "active"
+        active.mkdir(parents=True)
+        (active / "task_plan.md").write_text("active decoy", encoding="utf-8")
+        (self.tmp / "task_plan.md").write_text("root decoy", encoding="utf-8")
+        missing_root = self.tmp / "missing-project"
+        accepted_root = self.tmp / "accepted-project"
+        accepted_root.mkdir()
+        cases = (
+            (("--target", "missing"), {}, "--target missing"),
+            ((), {"PLAN_ID": "missing"}, "PLAN_ID=missing"),
+            ((), {"PWF_PLAN_ROOT": str(missing_root)}, f"PWF_PLAN_ROOT={missing_root}"),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": str(missing_root)},
+                f"PWF_PLAN_ROOT={missing_root}",
+            ),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": str(accepted_root)},
+                "PLAN_ID=missing",
+            ),
+            (
+                (),
+                {"PLAN_ID": "missing", "PWF_PLAN_ROOT": accepted_root.name},
+                f"PWF_PLAN_ROOT={accepted_root.name}",
+            ),
+        )
+
+        for args, env, refusal in cases:
+            with self.subTest(refusal=refusal):
+                result = self._run(*args, env=env)
+                self.assertEqual(1, result.returncode)
+                self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+                self.assertNotIn("No task_plan.md found", result.stderr)
+                self.assertFalse((active / ".attestation").exists())
+                self.assertFalse((self.tmp / ".plan-attestation").exists())
 
     def test_concurrent_attest_writes_do_not_corrupt_file(self) -> None:
         # v2.40 regression: parallel legacy-mode attestations used to race

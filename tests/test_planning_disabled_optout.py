@@ -8,6 +8,7 @@ attachment path the issue reports) with and without the env var.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -94,6 +95,70 @@ def run_powershell(
         encoding="utf-8",
         errors="replace",
         timeout=60,
+    )
+
+
+
+# Scratch trees under the gitignored .planning/ are not shipped (#352).
+_EXCLUDED_PARTS = {".planning", ".git", "node_modules", "__pycache__"}
+
+
+@contextlib.contextmanager
+def ignored_scratch_dir():
+    """Unique directory under the gitignored .planning/; removes only what it made."""
+    planning = REPO / ".planning"
+    created_planning = not planning.exists()
+    planning.mkdir(exist_ok=True)
+    scratch = Path(tempfile.mkdtemp(prefix="_pwf352_", dir=planning))
+    try:
+        yield scratch
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+        if created_planning:
+            try:
+                planning.rmdir()
+            except OSError:
+                pass
+
+
+def shipped_check_complete_copies() -> list[Path]:
+    """Tracked check-complete helpers; filtered walk only without git metadata.
+
+    A stale foreign copy under ignored `.planning/` must not fail validation
+    of the shipped inventory (#352), matching the session-catchup approach (#274).
+    A tracked helper is always shipped, wherever it lives, so the exclusions apply
+    to the walk only.
+    """
+    names = {"check-complete.sh", "check-complete.ps1"}
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-c",
+                "core.quotepath=off",
+                "ls-files",
+                "--",
+                "*check-complete.sh",
+                "*check-complete.ps1",
+            ],
+            cwd=str(REPO),
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        proc = None
+    if proc is not None and proc.returncode == 0 and proc.stdout.strip():
+        candidates = [REPO / line for line in proc.stdout.splitlines() if line]
+        # Optional gitignored publish staging stays validated when present.
+        candidates += list((REPO / "clawhub-upload" / "scripts").glob("check-complete.*"))
+        return sorted(path for path in candidates if path.is_file() and path.name in names)
+    return sorted(
+        path
+        for name in names
+        for path in REPO.rglob(name)
+        if path.is_file() and not _EXCLUDED_PARTS.intersection(path.relative_to(REPO).parts)
     )
 
 
@@ -252,19 +317,99 @@ class PlanningDisabledOptOutTests(unittest.TestCase):
     # --- Every distributed copy carries the guard ---
 
     def test_all_check_complete_copies_carry_the_guard(self) -> None:
-        copies = list(REPO.glob("**/check-complete.sh")) + list(
-            REPO.glob("**/check-complete.ps1")
-        )
+        copies = shipped_check_complete_copies()
         self.assertGreater(len(copies), 10)
         for copy in copies:
-            if "node_modules" in copy.parts:
-                continue
             text = copy.read_text(encoding="utf-8", errors="replace")
             self.assertIn(
                 "PLANNING_DISABLED",
                 text,
                 f"missing opt-out guard: {copy.relative_to(REPO)}",
             )
+
+    def test_optional_clawhub_staging_stays_in_the_inventory(self) -> None:
+        """Staged copies are validated on the tracked route and the no-Git walk (#352)."""
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            tracked = root / "skills" / "demo" / "scripts" / "check-complete.sh"
+            staged = root / "clawhub-upload" / "scripts" / "check-complete.sh"
+            scratch = root / ".planning" / "old" / "check-complete.sh"
+            for path in (tracked, staged, scratch):
+                path.parent.mkdir(parents=True)
+                path.write_text("#!/bin/sh\n", encoding="utf-8")
+            listing = subprocess.CompletedProcess(
+                [], 0, stdout="skills/demo/scripts/check-complete.sh\n", stderr=""
+            )
+            with mock.patch(f"{__name__}.REPO", root):
+                with mock.patch("subprocess.run", return_value=listing):
+                    self.assertEqual(shipped_check_complete_copies(), sorted([tracked, staged]))
+                with mock.patch("subprocess.run", side_effect=OSError("no git")):
+                    self.assertEqual(shipped_check_complete_copies(), sorted([tracked, staged]))
+
+    def test_tracked_helper_under_planning_stays_in_the_inventory(self) -> None:
+        """Only ignored scratch is excluded; a force-tracked helper is still shipped."""
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            kept = root / ".planning" / "kept" / "check-complete.sh"
+            kept.parent.mkdir(parents=True)
+            kept.write_text("#!/bin/sh\n", encoding="utf-8")
+            listing = subprocess.CompletedProcess(
+                [], 0, stdout=".planning/kept/check-complete.sh\n", stderr=""
+            )
+            with mock.patch(f"{__name__}.REPO", root), mock.patch(
+                "subprocess.run", return_value=listing
+            ):
+                self.assertEqual(shipped_check_complete_copies(), [kept])
+
+    def test_failed_git_listing_falls_back_to_the_filtered_walk(self) -> None:
+        """A source archive has git but no repository: rc 128 must not empty the list."""
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            shipped = root / ".agents" / "scripts" / "check-complete.sh"
+            scratch = root / ".planning" / "old" / "check-complete.sh"
+            for path in (shipped, scratch):
+                path.parent.mkdir(parents=True)
+                path.write_text("#!/bin/sh\n", encoding="utf-8")
+            not_a_repo = subprocess.CompletedProcess([], 128, stdout="", stderr="not a repository")
+            with mock.patch(f"{__name__}.REPO", root), mock.patch(
+                "subprocess.run", return_value=not_a_repo
+            ):
+                self.assertEqual(shipped_check_complete_copies(), [shipped])
+
+    def test_ignored_scratch_check_complete_does_not_join_shipped_inventory(self) -> None:
+        with ignored_scratch_dir() as scratch:
+            bad = scratch / "check-complete.sh"
+            bad.write_text("#!/bin/sh\necho no guard\n", encoding="utf-8")
+            copies = shipped_check_complete_copies()
+            self.assertNotIn(bad.resolve(), {c.resolve() for c in copies})
+            for copy in copies:
+                text = copy.read_text(encoding="utf-8", errors="replace")
+                self.assertIn("PLANNING_DISABLED", text)
+
+    def test_no_git_fallback_keeps_adapters_and_excludes_scratch(self) -> None:
+        """Without Git metadata, the walk still validates adapters and skips scratch."""
+        from unittest import mock
+
+        with ignored_scratch_dir() as scratch:
+            bad = scratch / "check-complete.sh"
+            bad.write_text("#!/bin/sh\necho no guard\n", encoding="utf-8")
+            with mock.patch("subprocess.run", side_effect=OSError("no git")):
+                copies = shipped_check_complete_copies()
+            resolved = {c.resolve() for c in copies}
+            self.assertNotIn(bad.resolve(), resolved)
+            self.assertGreater(len(copies), 10)
+            rel_roots = {c.relative_to(REPO).parts[0] for c in copies}
+            # Hidden adapter trees must remain discoverable.
+            self.assertLessEqual({".agents", ".codex", ".cursor"}, rel_roots)
+            for copy in copies:
+                text = copy.read_text(encoding="utf-8", errors="replace")
+                self.assertIn("PLANNING_DISABLED", text)
 
 
 @unittest.skipUnless(POWERSHELL, "PowerShell is not available")

@@ -12,7 +12,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ATTEST = REPO_ROOT / "skills" / "planning-with-files" / "scripts" / "attest-plan.ps1"
 RESOLVER = REPO_ROOT / "skills" / "planning-with-files" / "scripts" / "resolve-plan-dir.ps1"
+INIT_SESSION = REPO_ROOT / "skills" / "planning-with-files" / "scripts" / "init-session.ps1"
 SHELL = shutil.which("pwsh") or shutil.which("powershell")
+WINDOWS_POWERSHELL = shutil.which("powershell")
 
 
 class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
@@ -30,51 +32,6 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
         self.assertNotIn("[IO.File]::Open($item.FullName", source)
         self.assertNotIn("[IO.File]::WriteAllBytes($Path", source)
         self.assertNotIn("Remove-Item -LiteralPath $Path -Force", source)
-
-    def test_resolve_failure_messages_name_ambiguity_and_selectors(self) -> None:
-        source = ATTEST.read_text(encoding="utf-8")
-        self.assertIn("[string] $Target", source)
-        self.assertIn('ResolveFailureCause = "ambiguous"', source)
-        self.assertIn(
-            "Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.",
-            source,
-        )
-        self.assertIn(
-            "PLAN_ID={0} names no plan directory under .planning.",
-            source,
-        )
-        self.assertIn(
-            "PWF_PLAN_ROOT={0} did not resolve to a project root holding a plan.",
-            source,
-        )
-        self.assertIn(
-            "-Target {0} did not resolve to a plan.",
-            source,
-        )
-
-    def test_get_attestation_path_has_explicit_root_target_branch(self) -> None:
-        source = ATTEST.read_text(encoding="utf-8")
-        start = source.index("function Get-AttestationPath")
-        end = source.index("$planFile = Resolve-PlanFile", start)
-        body = source[start:end]
-        self.assertIn('$Target -eq "root"', body)
-        self.assertLess(body.index('$Target -eq "root"'), body.index(".plan-attestation"))
-        self.assertIn(
-            "PWF_PLAN_ROOT pins a project whose planDir differs from cwd",
-            body,
-        )
-
-    def test_nonexistent_pwf_plan_root_skips_opendirectory(self) -> None:
-        source = ATTEST.read_text(encoding="utf-8")
-        start = source.index("if ($script:IsWindowsHost)")
-        end = source.index("function Test-FinalPathWithinSecurityRoot")
-        body = source[start:end]
-        self.assertIn("Test-Path -LiteralPath $pin -PathType Container", body)
-        self.assertIn("$pinMissing", body)
-        self.assertLess(
-            body.index("Test-Path -LiteralPath $pin -PathType Container"),
-            body.index("OpenDirectory($securityRootPath)"),
-        )
 
     def test_directory_identity_is_frozen_before_each_target_open(self) -> None:
         source = ATTEST.read_text(encoding="utf-8")
@@ -95,6 +52,38 @@ class PowerShellAttestationStaticSecurityTests(unittest.TestCase):
                 self.assertIn(
                     "-ExpectedDirectoryIdentity $directory.Identity", body
                 )
+
+    def test_resolution_failures_have_specific_command_boundary_messages(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertIn("[string] $Target", source)
+        for expected in (
+            "Multiple plans are available. Set PLAN_ID=<slug>",
+            "PLAN_ID=$(Format-Selector $env:PLAN_ID) names no plan directory",
+            "PWF_PLAN_ROOT=$(Format-Selector $env:PWF_PLAN_ROOT) did not resolve",
+            "-Target $(Format-Selector $Target) did not resolve",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, source)
+
+    def test_resolution_failures_use_single_line_stderr_and_fail_closed(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertNotIn('Write-Error "[plan-attest]', source)
+        self.assertIn('[Console]::Error.WriteLine(', source)
+        self.assertIn('$script:PlanResolutionFailure = "ResolvedPlan"', source)
+
+    def test_missing_frozen_security_root_fails_closed_before_matching(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        start = source.index("function Test-FinalPathWithinSecurityRoot")
+        end = source.index("\nfunction Open-TrustedDirectory", start)
+        body = source[start:end]
+        guard = "if (-not $script:SecurityRootFinalPath) { return $false }"
+        self.assertIn(guard, body)
+        self.assertLess(body.index(guard), body.index("$candidate ="))
+
+    def test_root_target_comparisons_are_case_sensitive(self) -> None:
+        source = ATTEST.read_text(encoding="utf-8")
+        self.assertEqual(2, source.count('$Target -ceq "root"'))
+        self.assertNotIn('$Target -eq "root"', source)
 
 
 @unittest.skipUnless(SHELL and os.name != "nt", "Unix PowerShell is unavailable")
@@ -127,6 +116,8 @@ class UnixPowerShellAttestationFailClosedTests(unittest.TestCase):
 
 @unittest.skipUnless(SHELL and os.name == "nt", "Windows PowerShell is unavailable")
 class PowerShellAttestationContainmentTests(unittest.TestCase):
+    host = SHELL
+
     def _run(
         self,
         root: Path,
@@ -141,7 +132,7 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             env.update(env_extra)
         return subprocess.run(
             [
-                SHELL,
+                self.host,
                 "-NoProfile",
                 "-ExecutionPolicy",
                 "Bypass",
@@ -231,6 +222,316 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             cleared = self._run(root, {"PLAN_ID": "safe-plan"}, "-Clear")
             self.assertEqual(0, cleared.returncode, cleared.stderr)
             self.assertFalse((plan_dir / ".attestation").exists())
+
+    def test_ambiguous_plans_report_one_actionable_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in ("alpha", "beta"):
+                plan_dir = root / ".planning" / name
+                plan_dir.mkdir(parents=True)
+                (plan_dir / "task_plan.md").write_text(name, encoding="utf-8")
+
+            result = self._run(root, None, "-Show")
+
+            self.assertEqual(1, result.returncode, result.stderr)
+            refusal = "Multiple plans are available. Set PLAN_ID=<slug>"
+            self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+            self.assertNotIn("No task_plan.md found", result.stderr)
+            self.assertFalse(any(root.rglob(".attestation")))
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_unreadable_selected_plan_does_not_attest_legacy_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selected = root / ".planning" / "selected"
+            selected.mkdir(parents=True)
+            selected_plan = selected / "task_plan.md"
+            selected_plan.write_text("selected", encoding="utf-8")
+            (root / "task_plan.md").write_text("legacy decoy", encoding="utf-8")
+
+            locker = subprocess.Popen(
+                [
+                    SHELL,
+                    "-NoProfile",
+                    "-Command",
+                    (
+                        "& { param($path) $stream = [IO.File]::Open($path, "
+                        "[IO.FileMode]::Open, [IO.FileAccess]::Read, "
+                        "[IO.FileShare]::None); try { 'READY'; "
+                        "[Console]::In.ReadLine() | Out-Null } finally { "
+                        "$stream.Dispose() } }"
+                    ),
+                    str(selected_plan),
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+            )
+            try:
+                self.assertEqual("READY", locker.stdout.readline().strip())
+                result = self._run(root)
+            finally:
+                locker.communicate("\n", timeout=30)
+
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertIn("selected plan could not be read safely", result.stderr)
+            self.assertFalse((selected / ".attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_rejected_selectors_name_the_refused_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            active = root / ".planning" / "active"
+            active.mkdir(parents=True)
+            (active / "task_plan.md").write_text("active decoy", encoding="utf-8")
+            (root / "task_plan.md").write_text("root decoy", encoding="utf-8")
+            missing_root = root / "missing-project"
+            missing_root.mkdir()
+            cases = (
+                ({"PLAN_ID": "missing"}, (), "PLAN_ID=missing"),
+                (
+                    {"PWF_PLAN_ROOT": str(missing_root)},
+                    (),
+                    f"PWF_PLAN_ROOT={missing_root}",
+                ),
+                (
+                    {"PWF_PLAN_ROOT": str(missing_root), "PLAN_ID": "missing"},
+                    (),
+                    "PLAN_ID=missing",
+                ),
+                (None, ("-Target", "missing"), "-Target missing"),
+            )
+
+            for env, args, refusal in cases:
+                with self.subTest(refusal=refusal):
+                    result = self._run(root, env, *args)
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+                    self.assertNotIn("No task_plan.md found", result.stderr)
+                    self.assertFalse((active / ".attestation").exists())
+                    self.assertFalse((root / ".plan-attestation").exists())
+                    self.assertFalse((missing_root / ".plan-attestation").exists())
+
+    def test_nested_call_returns_the_refusal_to_the_calling_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for slug in ("alpha", "beta"):
+                plan_dir = root / ".planning" / slug
+                plan_dir.mkdir(parents=True)
+                (plan_dir / "task_plan.md").write_text(slug, encoding="utf-8")
+
+            result = self._run(root, None, "-Autonomous", script=INIT_SESSION)
+
+            self.assertIn(
+                "NOT attested: [plan-attest] Multiple plans are available",
+                result.stdout,
+                result.stdout + result.stderr,
+            )
+            self.assertNotIn("[plan-attest]", result.stderr)
+
+    def test_selected_directory_without_a_plan_names_the_cause(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".planning" / "alpha").mkdir(parents=True)
+
+            pinned = self._run(root, {"PLAN_ID": "alpha"})
+            self.assertEqual(1, pinned.returncode, pinned.stderr)
+            self.assertIn("PLAN_ID=alpha names no plan directory", pinned.stderr)
+            self.assertNotIn("could not be read safely", pinned.stderr)
+
+            (root / ".planning" / ".active_plan").write_text("alpha\n", encoding="utf-8")
+            active = self._run(root)
+            self.assertEqual(1, active.returncode, active.stderr)
+            self.assertIn("No task_plan.md found", active.stderr)
+            self.assertNotIn("could not be read safely", active.stderr)
+
+    def test_echoed_selectors_cannot_forge_output(self) -> None:
+        forged = "x\n[plan-attest] Locked task_plan.md\x1b[2K"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".planning").mkdir()
+            cases = (
+                ({"PLAN_ID": forged}, ()),
+                ({"PWF_PLAN_ROOT": forged}, ()),
+                (None, ("-Target", forged)),
+            )
+            for env, args in cases:
+                with self.subTest(env=env, args=args):
+                    result = self._run(root, env, *args)
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+                    self.assertNotIn("\x1b", result.stderr)
+
+    def test_unaccepted_pin_shapes_report_the_binding_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_text("root decoy", encoding="utf-8")
+            for pin in ("relative", "C:relative", r"\\server\share"):
+                with self.subTest(pin=pin):
+                    result = self._run(root, {"PWF_PLAN_ROOT": pin})
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+                    self.assertIn(f"PWF_PLAN_ROOT={pin} must be an absolute local path", result.stderr)
+                    self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_root_target_on_a_missing_drive_reports_the_binding_refusal(self) -> None:
+        letters = [c for c in "QXYZWV" if not os.path.exists(f"{c}:\\")]
+        if not letters:
+            self.skipTest("no unused drive letter on this host")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self._run(
+                root, {"PWF_PLAN_ROOT": f"{letters[0]}:\\nope"}, "-Target", "root"
+            )
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+            self.assertIn("-Target root did not resolve", result.stderr)
+
+    def test_root_target_from_a_plan_directory_writes_the_root_filename(self) -> None:
+        """Hooks running from this directory read .plan-attestation, so it stays allowed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            plan_dir = Path(tmp) / ".planning" / "alpha"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+
+            result = self._run(plan_dir, None, "-Target", "root")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((plan_dir / ".plan-attestation").is_file())
+
+    def test_refusal_is_visible_when_the_caller_captures_only_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wrapper = root / "wrapper.ps1"
+            wrapper.write_text(
+                f"$captured = & '{ATTEST}' -Target nope\nexit $LASTEXITCODE\n",
+                encoding="utf-8",
+            )
+
+            result = self._run(root, None, script=wrapper)
+
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertIn("-Target nope did not resolve", " ".join(result.stderr.split()))
+
+    def test_target_traversal_and_alias_spellings_are_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan_dir = root / ".planning" / "alpha"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text("alpha", encoding="utf-8")
+            for target in ("..\\alpha", "../alpha", ".planning/alpha", "alpha.", "alpha\n"):
+                with self.subTest(target=target):
+                    result = self._run(root, None, "-Target", target)
+                    self.assertEqual(1, result.returncode, result.stderr)
+                    self.assertEqual(1, len(result.stderr.strip().splitlines()), result.stderr)
+                    self.assertIn("did not resolve to a plan", result.stderr)
+                    self.assertFalse((plan_dir / ".attestation").exists())
+
+    def test_target_root_with_pinned_root_writes_plan_attestation(self) -> None:
+        """From another cwd, -Target root + PWF_PLAN_ROOT must write .plan-attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp)
+            pinned = outer / "pinned"
+            pinned.mkdir()
+            plan = pinned / "task_plan.md"
+            plan.write_text("# Root plan\n", encoding="utf-8")
+            cwd = outer / "other"
+            cwd.mkdir()
+
+            result = self._run(
+                cwd,
+                {"PWF_PLAN_ROOT": str(pinned)},
+                "-Target",
+                "root",
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((pinned / ".plan-attestation").is_file())
+            self.assertFalse((pinned / ".attestation").exists())
+            self.assertFalse((cwd / ".plan-attestation").exists())
+            self.assertFalse((cwd / ".attestation").exists())
+
+    def test_slug_cwd_invocation_keeps_slug_attestation_name(self) -> None:
+        """Attesting while cwd is the slug plan dir still uses .attestation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan_dir = root / ".planning" / "safe-plan"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "task_plan.md").write_text("# Slug\n", encoding="utf-8")
+            (root / ".planning" / ".active_plan").write_text(
+                "safe-plan\n", encoding="utf-8"
+            )
+
+            result = self._run(plan_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((plan_dir / ".attestation").is_file())
+            self.assertFalse((plan_dir / ".plan-attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_target_junction_escape_is_refused_when_supported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            root = Path(tmp)
+            outside = Path(outside_tmp)
+            (root / ".planning").mkdir()
+            (outside / "task_plan.md").write_text("# Outside\n", encoding="utf-8")
+            junction = root / ".planning" / "escape"
+            if not self._make_link("Junction", junction, outside):
+                self.skipTest("junction creation is unavailable on this host")
+            result = self._run(root, None, "-Target", "escape")
+            self.assertEqual(1, result.returncode, result.stderr)
+            self.assertFalse((outside / ".attestation").exists())
+
+    def test_nonexistent_pwf_plan_root_reports_binding_refusal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            missing_root = root / "missing-project"
+            (root / "task_plan.md").write_text("root decoy", encoding="utf-8")
+
+            result = self._run(root, {"PWF_PLAN_ROOT": str(missing_root)})
+
+            self.assertEqual(1, result.returncode, result.stderr)
+            refusal = f"PWF_PLAN_ROOT={missing_root} did not resolve"
+            self.assertEqual(1, result.stderr.count(refusal), result.stderr)
+            self.assertFalse((root / ".plan-attestation").exists())
+
+    def test_target_root_and_named_plan_attest_exact_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root_plan = root / "task_plan.md"
+            root_plan.write_text("root plan", encoding="utf-8")
+            selected = root / ".planning" / "selected"
+            active = root / ".planning" / "active"
+            selected.mkdir(parents=True)
+            active.mkdir(parents=True)
+            (selected / "task_plan.md").write_text("selected plan", encoding="utf-8")
+            (active / "task_plan.md").write_text("active decoy", encoding="utf-8")
+
+            root_result = self._run(root, {"PLAN_ID": "active"}, "-Target", "root")
+            named_result = self._run(root, {"PLAN_ID": "active"}, "-Target", "selected")
+
+            self.assertEqual(0, root_result.returncode, root_result.stderr)
+            self.assertEqual(0, named_result.returncode, named_result.stderr)
+            self.assertTrue((root / ".plan-attestation").is_file())
+            self.assertTrue((selected / ".attestation").is_file())
+            self.assertFalse((active / ".attestation").exists())
+
+    def test_root_target_keyword_is_case_sensitive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_text("root plan", encoding="utf-8")
+            named = root / ".planning" / "Root"
+            named.mkdir(parents=True)
+            (named / "task_plan.md").write_text("named plan", encoding="utf-8")
+
+            result = self._run(root, None, "-Target", "Root")
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue((named / ".attestation").is_file())
+            self.assertFalse((named / ".plan-attestation").exists())
+            self.assertFalse((root / ".plan-attestation").exists())
 
     def test_attest_from_inside_plan_dir_uses_slug_attestation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -507,123 +808,14 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             self.assertFalse((root / ".plan-attestation").exists())
 
 
-    def test_ambiguous_named_plans_refuse_once_without_attesting(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            alpha = root / ".planning" / "alpha"
-            beta = root / ".planning" / "beta"
-            alpha.mkdir(parents=True)
-            beta.mkdir(parents=True)
-            (alpha / "task_plan.md").write_text("alpha\n", encoding="utf-8")
-            (beta / "task_plan.md").write_text("beta\n", encoding="utf-8")
+@unittest.skipUnless(
+    os.name == "nt" and SHELL and WINDOWS_POWERSHELL and SHELL != WINDOWS_POWERSHELL,
+    "Windows PowerShell 5.1 is already the default host or is unavailable",
+)
+class WindowsPowerShell51AttestationTests(PowerShellAttestationContainmentTests):
+    """pwsh is preferred above, so run the same contract on the 5.1 host users have."""
 
-            result = self._run(root, None, "-Show")
-
-            self.assertNotEqual(0, result.returncode)
-            combined = (result.stderr or "") + (result.stdout or "")
-            self.assertIn(
-                "Multiple plans are available. Set PLAN_ID=<slug>; nothing was attested.",
-                combined,
-            )
-            self.assertEqual(1, combined.count("[plan-attest]"))
-            self.assertNotIn("No task_plan.md found", combined)
-            self.assertFalse((alpha / ".attestation").exists())
-            self.assertFalse((beta / ".attestation").exists())
-
-    def test_rejected_plan_id_names_selector(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            decoy = root / ".planning" / "decoy"
-            decoy.mkdir(parents=True)
-            (decoy / "task_plan.md").write_text("decoy\n", encoding="utf-8")
-            (root / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
-
-            result = self._run(root, {"PLAN_ID": "missing-slug"})
-
-            self.assertNotEqual(0, result.returncode)
-            combined = (result.stderr or "") + (result.stdout or "")
-            self.assertIn("PLAN_ID=missing-slug", combined)
-            self.assertIn("explicit selector is a binding", combined)
-            self.assertNotIn("No task_plan.md found", combined)
-            self.assertFalse((decoy / ".attestation").exists())
-
-    def test_rejected_target_names_selector(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            decoy = root / ".planning" / "decoy"
-            decoy.mkdir(parents=True)
-            (decoy / "task_plan.md").write_text("decoy\n", encoding="utf-8")
-            (root / "task_plan.md").write_text("root decoy\n", encoding="utf-8")
-
-            result = self._run(root, None, "-Target", "missing-slug")
-
-            self.assertNotEqual(0, result.returncode)
-            combined = (result.stderr or "") + (result.stdout or "")
-            self.assertIn("-Target missing-slug", combined)
-            self.assertIn("explicit target is a binding", combined)
-            self.assertNotIn("No task_plan.md found", combined)
-            self.assertFalse((decoy / ".attestation").exists())
-            self.assertFalse((root / ".plan-attestation").exists())
-
-    def test_target_root_with_pinned_root_writes_plan_attestation(self) -> None:
-        """From another cwd, -Target root + PWF_PLAN_ROOT must write .plan-attestation."""
-        with tempfile.TemporaryDirectory() as tmp:
-            outer = Path(tmp)
-            pinned = outer / "pinned"
-            pinned.mkdir()
-            plan = pinned / "task_plan.md"
-            plan.write_text("# Root plan\n", encoding="utf-8")
-            cwd = outer / "other"
-            cwd.mkdir()
-
-            result = self._run(
-                cwd,
-                {"PWF_PLAN_ROOT": str(pinned)},
-                "-Target",
-                "root",
-            )
-
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertTrue((pinned / ".plan-attestation").is_file())
-            self.assertFalse((pinned / ".attestation").exists())
-            self.assertFalse((cwd / ".plan-attestation").exists())
-            self.assertFalse((cwd / ".attestation").exists())
-
-    def test_slug_cwd_invocation_keeps_slug_attestation_name(self) -> None:
-        """Attesting while cwd is the slug plan dir still uses .attestation."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            plan_dir = root / ".planning" / "safe-plan"
-            plan_dir.mkdir(parents=True)
-            (plan_dir / "task_plan.md").write_text("# Slug\n", encoding="utf-8")
-            (root / ".planning" / ".active_plan").write_text(
-                "safe-plan\n", encoding="utf-8"
-            )
-
-            result = self._run(plan_dir)
-
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertTrue((plan_dir / ".attestation").is_file())
-            self.assertFalse((plan_dir / ".plan-attestation").exists())
-            self.assertFalse((root / ".plan-attestation").exists())
-
-    def test_nonexistent_pwf_plan_root_uses_selector_refusal(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "task_plan.md").write_text("# Decoy\n", encoding="utf-8")
-            missing = root / "missing-project"
-
-            result = self._run(root, {"PWF_PLAN_ROOT": str(missing)})
-
-            self.assertNotEqual(0, result.returncode)
-            combined = (result.stderr or "") + (result.stdout or "")
-            self.assertIn(f"PWF_PLAN_ROOT={missing}", combined)
-            self.assertIn("explicit pin is a binding", combined)
-            self.assertNotIn("Win32Exception", combined)
-            self.assertFalse((root / ".plan-attestation").exists())
-            self.assertFalse((root / ".attestation").exists())
-
-
+    host = WINDOWS_POWERSHELL
 
 
 if __name__ == "__main__":
