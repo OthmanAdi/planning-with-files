@@ -4,6 +4,8 @@ A disposable task for the current project-file-only recovery protocol. Clone the
 
 `grade.py` uses the Python standard library only. It reads `counts.py` and, on the file-only and replay arms, `task_plan.md`. It does not open host session stores.
 
+Each Bash block below is followed by a native PowerShell equivalent for Windows PowerShell 5.1 and PowerShell 7. Use `python` there, or `py -3` if `python` is not on `PATH`.
+
 ## Files
 
 | Path | Role |
@@ -27,6 +29,11 @@ From this directory:
 
 ```bash
 python3 grade.py --self-check
+```
+
+```powershell
+python grade.py --self-check
+"self-check exit status: $LASTEXITCODE"
 ```
 
 `checkpoint/` is not done: the objective fails, and Phase 3 plus that next step are present. `complete/` passes: the functions match `TASK.md`, Phase 3 is complete, and the current phase has moved on.
@@ -56,7 +63,20 @@ cp checkpoint/task_plan.md checkpoint/findings.md checkpoint/progress.md checkpo
 cp receipt.template.md "$RUN/receipt-file-only.md"
 ```
 
-Do not copy `grade.py`, this README, or `receipt.template.md` into `$WORKDIR`.
+```powershell
+$Fixture = (Get-Location).ProviderPath
+$Run = Join-Path ([System.IO.Path]::GetTempPath()) ("pwf-recovery-" + [guid]::NewGuid().ToString("N"))
+$WorkDir = Join-Path $Run "file-only"
+New-Item -ItemType Directory -Path $WorkDir | Out-Null
+foreach ($File in "TASK.md", "checkpoint/task_plan.md", "checkpoint/findings.md", "checkpoint/progress.md", "checkpoint/counts.py") {
+    Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $WorkDir
+}
+Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-file-only.md")
+```
+
+`$Fixture` makes every source path absolute. Windows PowerShell 5.1 mangles a relative `-LiteralPath` when the current directory contains `[` or `]`. `New-Item` stops with an error instead of reusing a directory that already exists, and the GUID makes `$Run` new for every trial.
+
+Do not copy `grade.py`, this README, or `receipt.template.md` into `$WORKDIR` (`$WorkDir` in PowerShell).
 
 Start a fresh session with that directory as the project. The only user prompt is:
 
@@ -68,7 +88,7 @@ Do not pass `--metadata` or `--replay`. Do not point the session at local sessio
 
 ## Baseline setup
 
-Use the same shell as the file-only setup so `$RUN` is set.
+Use the same shell as the file-only setup so `$RUN` (or `$Run` and `$Fixture`) is set.
 
 ```bash
 BASE="$RUN/baseline"
@@ -76,6 +96,15 @@ mkdir -p "$BASE"
 cp TASK.md "$BASE/"
 cp checkpoint/counts.py "$BASE/"
 cp receipt.template.md "$RUN/receipt-baseline.md"
+```
+
+```powershell
+$Base = Join-Path $Run "baseline"
+New-Item -ItemType Directory -Path $Base | Out-Null
+foreach ($File in "TASK.md", "checkpoint/counts.py") {
+    Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $Base
+}
+Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-baseline.md")
 ```
 
 `$BASE` has no `task_plan.md`, `findings.md`, or `progress.md`. Use the same prompt. Grade it with `--arm baseline`.
@@ -107,6 +136,15 @@ python3 grade.py "$WORKDIR" --receipt "$RUN/receipt-file-only.md"
 python3 grade.py "$BASE" --arm baseline --receipt "$RUN/receipt-baseline.md"
 ```
 
+```powershell
+python grade.py $WorkDir --receipt (Join-Path $Run "receipt-file-only.md")
+"file-only exit status: $LASTEXITCODE"
+python grade.py $Base --arm baseline --receipt (Join-Path $Run "receipt-baseline.md")
+"baseline exit status: $LASTEXITCODE"
+```
+
+In PowerShell, `$LASTEXITCODE` holds the exit status of the last native command, so read it straight after each `grade.py` run.
+
 Fill the receipt before or after grading. `grade.py` prints `pass`, `fail`, or `inconclusive` on the first line. Exit status is 0, 1, or 2 for those three words.
 
 `file_only_tally: yes` means the trial is a file-only pass or fail. Baseline, replay, and inconclusive trials print `file_only_tally: no` and still appear in the output.
@@ -137,6 +175,12 @@ Use the file-only work directory. The fresh session may be given an explicit `se
 ```bash
 cp receipt.template.md "$RUN/receipt-replay.md"
 python3 grade.py "$WORKDIR" --arm replay --receipt "$RUN/receipt-replay.md"
+```
+
+```powershell
+Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-replay.md")
+python grade.py $WorkDir --arm replay --receipt (Join-Path $Run "receipt-replay.md")
+"replay exit status: $LASTEXITCODE"
 ```
 
 `grade.py` still does not open session stores. Do not add replay trials to the file-only tally.
