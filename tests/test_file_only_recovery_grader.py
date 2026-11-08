@@ -31,4 +31,4 @@ def test_grader_self_check_passes(tmp_path: Path) -> None:
         f"--- stdout ---\n{result.stdout}\n"
         f"--- stderr ---\n{result.stderr}"
     )
-    assert result.stdout.rstrip().endswith("self-check: pass"), result.stdout
+    assert result.stdout.splitlines()[-1:] == ["self-check: pass"], result.stdout
