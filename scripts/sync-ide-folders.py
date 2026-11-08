@@ -189,7 +189,8 @@ IDE_MANIFESTS = {
     # canonical scripts, missing inject-plan.sh itself, which meant the npm
     # channel carried a skill that could not inject a plan at all. Everything
     # language-neutral is synced here for that reason.
-    # package.json and README.md stay npm-specific and are not synced.
+    # package.json and README.md stay npm-specific and are not synced;
+    # scripts/build-npm-readme.py builds that README from the root README.md.
     ".pi": _build_manifest(
         ".pi/skills/planning-with-files",
         ref_style="flat",
