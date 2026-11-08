@@ -164,5 +164,5 @@ def test_npm_pack_ships_the_generated_readme(builder) -> None:
         with tarfile.open(tarballs[0]) as archive:
             packed = archive.extractfile("package/README.md")
             assert packed is not None
-            shipped = packed.read().decode("utf-8")
-    assert shipped == (PACKAGE_ROOT / "README.md").read_text(encoding="utf-8")
+            shipped = packed.read()
+    assert shipped == (PACKAGE_ROOT / "README.md").read_bytes()
