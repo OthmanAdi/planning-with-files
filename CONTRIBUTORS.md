@@ -127,6 +127,7 @@ These amazing people have contributed code, documentation, or significant improv
   - Corrected startup and post-tool context output for the current Copilot harness, with schema, Unicode and disabled-hook regression coverage.
 
 - **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345), [PR #363](https://github.com/OthmanAdi/planning-with-files/pull/363)
+  - Added deterministic release-specific npm README generation and archive verification ([PR #374](https://github.com/OthmanAdi/planning-with-files/pull/374)).
   - Added the recovery grader self-check to pytest ([PR #373](https://github.com/OthmanAdi/planning-with-files/pull/373)) and native PowerShell fixture instructions ([PR #375](https://github.com/OthmanAdi/planning-with-files/pull/375)).
   - Reduced the processes `set-active-plan.sh --list --json` starts per plan.
   - Reworked Cursor workspace installation and documented preserving existing hook registrations during Unix and Windows setup.

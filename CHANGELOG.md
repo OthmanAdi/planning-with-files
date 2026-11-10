@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - PowerShell recovery fixture setup stops on an existing directory before copying over a previous trial. Replay grading preserves filled receipts, including aborted and inconclusive outcomes (PR #375, #370).
 
 ### Added
+- A deterministic npm README builder pins current repository links to the packaged release while preserving historical and external links. Its read-only check and npm archive test run in pytest; version-independent fixtures cover future release bumps (PR #374, #372).
 - The normal pytest suite runs the existing file-only recovery grader self-check from an unrelated temporary directory, so grading regressions fail the repository checks (PR #373, #369).
 - Native PowerShell setup and grading instructions for the recovery fixture, including exit-status inspection (PR #375, #370).
 - A compaction FAQ describing the plugin and standalone recovery routes, selected-plan refusals, and the need to save progress before compaction. The linked guide and shipped skill instructions describe the current PreCompact summary-instruction behavior without promising a file write (PR #366, #19).
@@ -22,7 +23,7 @@ All notable changes to this project will be documented in this file.
 ### Thanks
 - Ankit Kumar Jha (@ankitjha1405), for shell help handling and the compaction FAQ (PRs #365, #366).
 - @Eapp1e, for native PowerShell `-?` help output (PR #368).
-- Parman Mohammadalizadeh (@MannXo), for the recovery grader test and native PowerShell fixture instructions (PRs #373, #375).
+- Parman Mohammadalizadeh (@MannXo), for the recovery grader test, npm README builder and native PowerShell fixture instructions (PRs #373, #374, #375).
 
 ## [3.28.1] - 2026-11-07
 
