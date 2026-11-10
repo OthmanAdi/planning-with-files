@@ -107,6 +107,9 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[Eapp1e](https://github.com/Eapp1e)** — [PR #368](https://github.com/OthmanAdi/planning-with-files/pull/368)
+  - Made `init-session.ps1 -?` print usage on native Windows PowerShell 5.1 and PowerShell 7 while preserving unknown-switch refusal.
+
 - **[BingEdward](https://github.com/7487)** — [PR #362](https://github.com/OthmanAdi/planning-with-files/pull/362)
   - Made attestation refusals name their actual cause once on both routes and added `-Target` to the PowerShell route.
 
@@ -115,6 +118,7 @@ These amazing people have contributed code, documentation, or significant improv
 
 - **[Ankit Kumar Jha](https://github.com/ankitjha1405)** — [PR #364](https://github.com/OthmanAdi/planning-with-files/pull/364)
   - Aligned the localized `/plan` commands with plan selection and the initializer.
+  - Added shell `-Help` handling ([PR #365](https://github.com/OthmanAdi/planning-with-files/pull/365)) and a FAQ for tasks nearing compaction ([PR #366](https://github.com/OthmanAdi/planning-with-files/pull/366)).
 
 - **[Dylan Duan](https://github.com/Kiddo4993)** — [PR #351](https://github.com/OthmanAdi/planning-with-files/pull/351)
   - Aligned Claude plugin commands with selected-plan, initialization and validation contracts, with focused command checks.
@@ -123,6 +127,8 @@ These amazing people have contributed code, documentation, or significant improv
   - Corrected startup and post-tool context output for the current Copilot harness, with schema, Unicode and disabled-hook regression coverage.
 
 - **[Parman Mohammadalizadeh](https://github.com/MannXo)**, [PR #341](https://github.com/OthmanAdi/planning-with-files/pull/341), [PR #345](https://github.com/OthmanAdi/planning-with-files/pull/345), [PR #363](https://github.com/OthmanAdi/planning-with-files/pull/363)
+  - Added deterministic release-specific npm README generation and archive verification ([PR #374](https://github.com/OthmanAdi/planning-with-files/pull/374)).
+  - Added the recovery grader self-check to pytest ([PR #373](https://github.com/OthmanAdi/planning-with-files/pull/373)) and native PowerShell fixture instructions ([PR #375](https://github.com/OthmanAdi/planning-with-files/pull/375)).
   - Reduced the processes `set-active-plan.sh --list --json` starts per plan.
   - Reworked Cursor workspace installation and documented preserving existing hook registrations during Unix and Windows setup.
   - Corrected Codex setup for existing hooks directories and documented merging existing hook registrations.
@@ -525,6 +531,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 114 (113 community contributors plus the maintainer)
+**Total Contributors:** 115 (114 community contributors plus the maintainer)
 
-*Last updated: 2026-11-07*
+*Last updated: 2026-11-10*

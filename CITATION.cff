@@ -7,7 +7,7 @@ authors:
   - family-names: Adi
     given-names: Ahmad Othman Ammar
     alias: OthmanAdi
-version: "3.28.1"
+version: "3.28.2"
 date-released: "2026-10-24"
 license: MIT
 url: "https://github.com/OthmanAdi/planning-with-files"

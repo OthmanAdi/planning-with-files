@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.28.2] - 2026-11-10
+
+### Fixed
+- `init-session.sh -Help` prints usage without creating planning files (PR #365, #357).
+- `init-session.ps1 -?` prints the same usage as `-Help` and `-h` under native Windows PowerShell 5.1 and PowerShell 7. Unknown switches still fail before creating files (PR #368, #357).
+- PowerShell recovery fixture setup stops on an existing directory before copying over a previous trial. Replay grading preserves filled receipts, including aborted and inconclusive outcomes (PR #375, #370).
+
+### Added
+- A deterministic npm README builder pins current repository links to the packaged release while preserving historical and external links. Its read-only check and npm archive test run in pytest; version-independent fixtures cover future release bumps (PR #374, #372).
+- The normal pytest suite runs the existing file-only recovery grader self-check from an unrelated temporary directory, so grading regressions fail the repository checks (PR #373, #369).
+- Native PowerShell setup and grading instructions for the recovery fixture, including exit-status inspection (PR #375, #370).
+- A compaction FAQ describing the plugin and standalone recovery routes, selected-plan refusals, and the need to save progress before compaction. The linked guide and shipped skill instructions describe the current PreCompact summary-instruction behavior without promising a file write (PR #366, #19).
+
+### Changed
+- PowerShell initializer help now uses the script's own usage text. Common parameters such as `-Verbose` are refused, and `Get-Help` shows syntax without the former prose description (PR #368).
+
+### Thanks
+- Ankit Kumar Jha (@ankitjha1405), for shell help handling and the compaction FAQ (PRs #365, #366).
+- @Eapp1e, for native PowerShell `-?` help output (PR #368).
+- Parman Mohammadalizadeh (@MannXo), for the recovery grader test, npm README builder and native PowerShell fixture instructions (PRs #373, #374, #375).
+
 ## [3.28.1] - 2026-11-07
 
 ### Security
