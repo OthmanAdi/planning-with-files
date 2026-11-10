@@ -311,9 +311,9 @@ Both slash commands also carry `disable-model-invocation: true`, which means the
 
 ### PreCompact hook (auto)
 
-Both supported routes register a `PreCompact` hook with matcher `"*"`. It fires for manual and automatic compaction after the relevant hook route is active. With a selected plan, it prints a diagnostic reminder and the recorded `Plan-SHA256` when present. It stays silent without a plan and never blocks compaction.
+Both supported routes register a `PreCompact` hook with matcher `"*"`. It fires for manual and automatic compaction after the relevant hook route is active. With a selected plan, it prints a progress reminder and the recorded `Plan-SHA256` when present. It stays silent without a plan and never blocks compaction.
 
-Claude Code does not support `additionalContext` for PreCompact. Successful stdout from this event is diagnostic output, so the hook cannot make the model flush progress before compaction. Keep progress current during the task and recover from the selected files on the next prompt. The recorded digest can be compared with the plan bytes; it does not establish human approval.
+The current [Claude Code hook reference](https://code.claude.com/docs/en/hooks#precompact-output) describes successful PreCompact stdout as instructions for the compaction summary. This hook does not write planning files or start a separate tool-writing turn, so its reminder does not guarantee that unsaved progress reaches disk. Keep progress current during the task and recover from the selected files after compaction. The recorded digest can be compared with the plan bytes; it does not establish human approval.
 
 ### `/plan-goal` slash command
 
