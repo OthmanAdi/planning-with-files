@@ -64,17 +64,19 @@ cp receipt.template.md "$RUN/receipt-file-only.md"
 ```
 
 ```powershell
-$Fixture = (Get-Location).ProviderPath
-$Run = Join-Path ([System.IO.Path]::GetTempPath()) ("pwf-recovery-" + [guid]::NewGuid().ToString("N"))
-$WorkDir = Join-Path $Run "file-only"
-New-Item -ItemType Directory -Path $WorkDir | Out-Null
-foreach ($File in "TASK.md", "checkpoint/task_plan.md", "checkpoint/findings.md", "checkpoint/progress.md", "checkpoint/counts.py") {
-    Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $WorkDir
+. {
+    $Fixture = (Get-Location).ProviderPath
+    $Run = Join-Path ([System.IO.Path]::GetTempPath()) ("pwf-recovery-" + [guid]::NewGuid().ToString("N"))
+    $WorkDir = Join-Path $Run "file-only"
+    New-Item -ItemType Directory -Path $WorkDir -ErrorAction Stop | Out-Null
+    foreach ($File in "TASK.md", "checkpoint/task_plan.md", "checkpoint/findings.md", "checkpoint/progress.md", "checkpoint/counts.py") {
+        Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $WorkDir -ErrorAction Stop
+    }
+    Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-file-only.md") -ErrorAction Stop
 }
-Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-file-only.md")
 ```
 
-`$Fixture` makes every source path absolute. Windows PowerShell 5.1 mangles a relative `-LiteralPath` when the current directory contains `[` or `]`. `New-Item` stops with an error instead of reusing a directory that already exists, and the GUID makes `$Run` new for every trial.
+`$Fixture` makes every source path absolute. Windows PowerShell 5.1 mangles a relative `-LiteralPath` when the current directory contains `[` or `]`. Run the whole `. { ... }` block: `-ErrorAction Stop` stops the block when directory creation or a copy reports an error, and dot-sourcing keeps the variables available for grading. An existing directory stops setup before any copies, and the GUID makes `$Run` new for every file-only trial.
 
 Do not copy `grade.py`, this README, or `receipt.template.md` into `$WORKDIR` (`$WorkDir` in PowerShell).
 
@@ -99,12 +101,14 @@ cp receipt.template.md "$RUN/receipt-baseline.md"
 ```
 
 ```powershell
-$Base = Join-Path $Run "baseline"
-New-Item -ItemType Directory -Path $Base | Out-Null
-foreach ($File in "TASK.md", "checkpoint/counts.py") {
-    Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $Base
+. {
+    $Base = Join-Path $Run "baseline"
+    New-Item -ItemType Directory -Path $Base -ErrorAction Stop | Out-Null
+    foreach ($File in "TASK.md", "checkpoint/counts.py") {
+        Copy-Item -LiteralPath (Join-Path $Fixture $File) -Destination $Base -ErrorAction Stop
+    }
+    Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-baseline.md") -ErrorAction Stop
 }
-Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-baseline.md")
 ```
 
 `$BASE` has no `task_plan.md`, `findings.md`, or `progress.md`. Use the same prompt. Grade it with `--arm baseline`.
@@ -170,15 +174,29 @@ Redact secrets, home-directory paths, and transcript text. Keep failed, aborted,
 
 ## Replay arm
 
-Use the file-only work directory. The fresh session may be given an explicit `session-catchup.py --replay` for that project. Set the receipt Arm to `replay` and put `--replay` in Flags. Grade without `--arm file-only`:
+Use the file-only work directory. The fresh session may be given an explicit `session-catchup.py --replay` for that project. Initialize the receipt once per new trial, before filling it. These commands refuse to overwrite an existing receipt:
 
 ```bash
-cp receipt.template.md "$RUN/receipt-replay.md"
+(set -C; cat receipt.template.md > "$RUN/receipt-replay.md")
+```
+
+```powershell
+. {
+    $ReplayReceipt = Join-Path $Run "receipt-replay.md"
+    if (Test-Path -LiteralPath $ReplayReceipt) {
+        throw "Replay receipt already exists. Keep it and use a new trial."
+    }
+    Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination $ReplayReceipt -ErrorAction Stop
+}
+```
+
+Set the receipt Arm to `replay` and put `--replay` in Flags. Record the outcome, including `aborted` or `inconclusive`, without recopying the template. Then grade without `--arm file-only`:
+
+```bash
 python3 grade.py "$WORKDIR" --arm replay --receipt "$RUN/receipt-replay.md"
 ```
 
 ```powershell
-Copy-Item -LiteralPath (Join-Path $Fixture "receipt.template.md") -Destination (Join-Path $Run "receipt-replay.md")
 python grade.py $WorkDir --arm replay --receipt (Join-Path $Run "receipt-replay.md")
 "replay exit status: $LASTEXITCODE"
 ```

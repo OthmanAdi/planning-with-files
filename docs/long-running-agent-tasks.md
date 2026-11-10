@@ -54,17 +54,21 @@ If a task finishes in under 5 tool calls, skip the skill; the structure only pay
 
 **Q:** My task has 5 planned steps. After step 1, the context is at ~140K tokens and automatic compaction is about to trigger. Should I open a new window? What prompt should I use to continue?
 
-**A:** No special action is needed. The skill's lifecycle hooks handle compaction automatically:
+You can continue the same conversation. Keep the planning files current as you work, including phase status, findings, and test results. Compaction leaves those files on disk, but cannot recover details that were never saved.
 
-1. **PreCompact hook** fires before compaction and reminds the agent to flush in-context progress to `progress.md`.
-2. **UserPromptSubmit hook** fires after compaction (or on the next turn) and re-injects the current `task_plan.md` between `===BEGIN PLAN DATA===` / `===END PLAN DATA===` markers.
-3. The plan, findings, and progress live on disk in `task_plan.md`, `findings.md`, `progress.md` (or under `.planning/<slug>/` in slug mode). Compaction never touches these files.
+1. `PreCompact` prints a reminder before compaction. [Claude Code can use its stdout as compaction-summary instructions](https://code.claude.com/docs/en/hooks#precompact-output), but the hook itself does not write planning files or start a separate agent turn to save unsaved progress.
+2. The Claude Code plugin's `SessionStart` hook re-reads selected planning state on `startup`, `resume`, `clear`, and `compact`.
+3. With an active hook route, `UserPromptSubmit` injects a bounded excerpt of the selected plan when you submit the next prompt. It does not fire merely because compaction completed.
 
-**Just continue the same conversation.** The next model turn will see the re-injected plan and resume from the phase status recorded in `task_plan.md`. No "continue from task_plan.md" prompt is required; the hook does it mechanically.
+Automatic injection requires a resolvable selected plan and passing attestation checks where required. Selection errors or missing or mismatched attestation can prevent injection. Resolve the selection, review intentional plan edits, and explicitly re-attest them as described in [attestation locking](attestation-locking.md). Read the full files if the injected excerpt does not include the current phase.
 
-If you *do* start a fresh session (new window, new terminal, or after `/clear`), the `SessionStart` hook (or `/pwf --resume` on the standalone route) will re-read the planning files and inject them, so you resume from the same phase.
+For a standalone skill install, invoke the installed planning-with-files skill again in a fresh session, including after `/clear`. Its hooks are activation-scoped and it has no `SessionStart` hook. Read the selected `task_plan.md`, `findings.md`, and `progress.md`, in the project root or under `.planning/<slug>/`.
 
-**Bottom line:** The file-based state is the source of truth. Context is a cache. Let the hooks manage the cache; you keep working.
+If recovery is incomplete, use this prompt:
+
+```text
+Read the selected task_plan.md, findings.md, and progress.md, check the current code changes, and continue from the recorded phase.
+```
 
 ## Related pages
 

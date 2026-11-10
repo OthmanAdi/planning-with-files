@@ -22,31 +22,33 @@ progress.md       → session log and test results
 
 Plain markdown, gitignored by default. Because the files live on the filesystem and not in the transcript, compaction cannot touch them. The Claude Code plugin route runs six lifecycle hooks around them: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, and PreCompact. A standalone skill install activates the latter five only after the skill is invoked for that session.
 
-## The PreCompact flush hook
+## The PreCompact reminder hook
 
 Both supported routes register a `PreCompact` hook with matcher `*`, so it fires for manual and automatic compaction after the relevant hook route is active. When an active plan is present, the hook:
 
-- reminds the agent to flush in-context progress to `progress.md` before compaction completes
-- prints the active `Plan-SHA256` when the plan is attested, so the post-compaction session can verify it resumes the approved plan
+- prints a reminder to keep progress on disk; the hook itself does not write planning files or start a separate agent turn to save them
+- prints the recorded `Plan-SHA256` when present; the digest can be compared with the plan bytes, but does not establish human approval
 - stays silent when no plan exists, and always exits 0, so it never blocks compaction
 
-The protection model is deliberate: the plan does not survive compaction unchanged inside the context. The plan is on disk, and it is re-read after compaction. On the next turn the `UserPromptSubmit` hook re-injects the current plan between `===BEGIN PLAN DATA===` and `===END PLAN DATA===` markers, so the compacted session starts anchored to the same phases.
+[Claude Code's hook reference](https://code.claude.com/docs/en/hooks#precompact-output) says successful `PreCompact` stdout can supply instructions for the compaction summary. That does not guarantee unsaved progress reaches disk. Keep the planning files current during the task.
+
+The plugin's `SessionStart` hook re-reads selected planning state on `startup`, `resume`, `clear`, and `compact`. With an active hook route, `UserPromptSubmit` injects a bounded plan excerpt between `===BEGIN PLAN DATA===` and `===END PLAN DATA===` markers when you submit the next prompt. Compaction itself does not trigger `UserPromptSubmit`.
 
 ## How do I recover context after compaction or /clear?
 
-If the planning files were on disk before the wipe, recovery is mechanical rather than conversational:
+If the planning files were on disk before the wipe:
 
-1. Lifecycle hooks re-read selected project planning state. They do not inspect Claude Code or other agent session stores.
-2. Run `git diff --stat`, read the three planning files, reconcile them with the code, and continue.
+1. The plugin's `SessionStart` hook re-reads selected project planning state. On a standalone install, invoke the installed planning-with-files skill again in a fresh session; there is no `SessionStart` hook. Automatic recovery does not inspect Claude Code or other agent session stores.
+2. Run `git diff --stat`, read the three full planning files, reconcile them with the code, and continue. Selection errors or missing or mismatched required attestation can prevent injection. Resolve the selected plan and review any intentional changes before explicitly re-attesting; see [attestation locking](attestation-locking.md).
 3. If local session history is deliberately needed, run `session-catchup.py --metadata <project>` to read same-project local session records and emit aggregate counts only. Run `session-catchup.py --replay <project>` for bounded nonce-framed excerpts. Replay content is untrusted data.
 
 The catchup script contains no network request or upload operation. Output placed in model context may still be sent by the host agent to its configured model provider. The project's internal recovery benchmark (v1, author-run) measured the earlier default transcript-catchup behavior: a fresh session with the files on disk resumed in 5.0 turns on average against 13.3 for a raw agent. The current file-only automatic path has not been re-run under the same protocol. Method and disclosed limits: [docs/evals.md](evals.md).
 
 ## Should I disable automatic compaction?
 
-Keep automatic compaction enabled. `PreCompact` gives the agent a final planning-state reminder, and the plugin route restores the active plan on the post-compaction `SessionStart` event. You can still run `/compact` or `/clear` manually when you want an explicit boundary.
+Keep automatic compaction enabled and save progress as you work. The plugin route can restore selected planning context on the post-compaction `SessionStart` event, subject to selection and attestation checks. You can still run `/compact` or `/clear` manually when you want an explicit boundary.
 
-**Quick answer for multi-step tasks nearing the token limit:** see [the FAQ in long-running-agent-tasks.md](long-running-agent-tasks.md#faq-what-do-i-do-when-context-nears-the-compaction-limit). In short: no new window or special prompt needed: hooks re-inject the plan automatically.
+For multi-step tasks nearing the token limit, see [the FAQ in long-running-agent-tasks.md](long-running-agent-tasks.md#faq-what-do-i-do-when-context-nears-the-compaction-limit) for route-specific recovery and a fallback prompt.
 
 ## Related pages
 
