@@ -120,11 +120,16 @@ def test_version_only_change_is_reported_without_prose_drift(builder) -> None:
     assert len(problems) == 1 and "not pinned to v3.28.1" in problems[0]
 
 
-def test_check_mode_is_read_only_and_fails_when_stale(builder, tmp_path, monkeypatch, capsys) -> None:
+@pytest.mark.parametrize("fixture_version", ["0.1.2", "99.8.7"])
+def test_check_mode_is_read_only_and_fails_when_stale(
+    builder, tmp_path, monkeypatch, capsys, fixture_version
+) -> None:
     (tmp_path / "README.md").write_text(SOURCE_FIXTURE, encoding="utf-8")
     package_dir = tmp_path / "pkg"
     package_dir.mkdir()
-    (package_dir / "package.json").write_text('{"version": "3.28.1"}\n', encoding="utf-8")
+    (package_dir / "package.json").write_text(
+        json.dumps({"version": fixture_version}) + "\n", encoding="utf-8"
+    )
     target = package_dir / "README.md"
     stale = builder.render(SOURCE_FIXTURE, "3.24.3")
     target.write_text(stale, encoding="utf-8")
@@ -134,11 +139,11 @@ def test_check_mode_is_read_only_and_fails_when_stale(builder, tmp_path, monkeyp
     monkeypatch.setattr(builder, "PACKAGE_JSON", package_dir / "package.json")
 
     assert builder.main(["--check"]) == 1
-    assert "not pinned to v3.28.1" in capsys.readouterr().out
+    assert f"not pinned to v{fixture_version}" in capsys.readouterr().out
     assert target.read_text(encoding="utf-8") == stale
 
     assert builder.main([]) == 0
-    assert target.read_text(encoding="utf-8") == builder.render(SOURCE_FIXTURE, "3.28.1")
+    assert target.read_text(encoding="utf-8") == builder.render(SOURCE_FIXTURE, fixture_version)
     assert builder.main(["--check"]) == 0
     assert builder.main([]) == 0
     assert "already current" in capsys.readouterr().out
