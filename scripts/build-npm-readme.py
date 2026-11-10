@@ -132,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="report a stale README without writing")
     args = parser.parse_args(argv)
 
-    version = package_version()
+    version = package_version(PACKAGE_JSON)
     expected = render(_read(SOURCE), version)
     current = _read(TARGET) if TARGET.exists() else ""
     rel = TARGET.relative_to(REPO_ROOT).as_posix()
