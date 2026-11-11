@@ -23,6 +23,10 @@
 Connect the [Scrape.ly MCP server](https://scrape.ly/?utm_source=github&utm_medium=readme&utm_campaign=planning-with-files&utm_content=v2-text) to Claude Code, Cursor or any MCP client: your agent searches the Store, runs a scraper and reads structured results, without leaving the task.
 <!-- sponsor:evomi:end -->
 
+<!-- sponsor:swiftproxy:start -->
+<a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112" align="middle"></a> **Paid sponsor:** [Swiftproxy](https://www.swiftproxy.net/?ref=planningwithfiles) · Residential proxies for browser automation.
+<!-- sponsor:swiftproxy:end -->
+
 ---
 
 <!-- oss-support:coderabbit:start -->
