@@ -11,26 +11,24 @@
   Not a prompt it might follow. A hook that fires every turn, a plan on disk that survives <code>/clear</code>, and 3 out of 3 blind A/B wins to show it works.
 </p>
 
+### <a name="sponsor"></a>Sponsors & supporters
+
 <!-- sponsor:evomi:start -->
-### Sponsor
-
 <p align="center">
-  <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="520" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a>
+<a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
+<sub><strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong></sub>
 </p>
-
-**Your agent keeps the plan. Scrape.ly brings the web data.**
-
 <!-- sponsor:evomi:end -->
 
 <!-- sponsor:swiftproxy:start -->
-<a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112" align="middle"></a> **Sponsor:** [Swiftproxy](https://www.swiftproxy.net/?ref=planningwithfiles) · Residential proxies for browser automation.
+<p align="center">
+<a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112"></a><br>
+<sub><strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.</sub>
+</p>
 <!-- sponsor:swiftproxy:end -->
 
----
-
 <!-- oss-support:coderabbit:start -->
-**OSS code review support**<br>
-Provided through [CodeRabbit’s open-source program](https://www.coderabbit.ai/oss).
+<p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
 <!-- oss-support:coderabbit:end -->
 
 ---
