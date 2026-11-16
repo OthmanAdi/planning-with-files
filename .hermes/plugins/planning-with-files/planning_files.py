@@ -217,7 +217,7 @@ def init_plan(
 def phase_counts(task_plan: str) -> dict[str, int]:
     counts = {**gate_counts(task_plan), "failed": sum(states in (["failed"], ["blocked"]) for _, states in _plan_phases(task_plan))}
     if counts["total"] == 0:
-        for line in task_plan.splitlines():
+        for line in _unfenced_lines(task_plan):
             stripped = line.strip()
             if not (stripped.startswith("|") and stripped.endswith("|")):
                 continue
@@ -290,9 +290,7 @@ def extract_current_phase(task_plan: str) -> str:
     return "No phase found"
 
 
-def _plan_phases(task_plan: str) -> list[tuple[str, list[str]]]:
-    phases: list[tuple[str, list[str]]] = []
-    phase = None
+def _unfenced_lines(task_plan: str):
     fence = ""
     fence_length = 0
     for line in task_plan.splitlines():
@@ -301,14 +299,21 @@ def _plan_phases(task_plan: str) -> list[tuple[str, list[str]]]:
                 fence = ""
             continue
         marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
-        if marker:
+        if marker and (marker[1][0] != "`" or "`" not in line[marker.end():]):
             fence = marker[1][0]
             fence_length = len(marker[1])
             continue
+        yield line
+
+
+def _plan_phases(task_plan: str) -> list[tuple[str, list[str]]]:
+    phases: list[tuple[str, list[str]]] = []
+    phase = None
+    for line in _unfenced_lines(task_plan):
         if re.match(r"^### Phase(?:[ \t]|$)", line):
             phase = (line[4:], [])
             phases.append(phase)
-        elif re.match(r"^#{1,3}(?:[ \t]|$)", line):
+        elif re.match(r"^ {0,3}#{1,3}(?:[ \t]|$)", line):
             phase = None
         if phase is not None:
             for match in re.finditer(r"\*\*Status:\*\*[ \t]+(pending|in_progress|complete|failed|blocked)(?![A-Za-z0-9_])|\[(pending|in_progress|complete|failed|blocked)\]", line):

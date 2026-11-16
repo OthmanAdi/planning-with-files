@@ -502,11 +502,13 @@ function planPhases(text: string): { heading: string; statuses: string[] }[] {
       continue
     }
     const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)
-    if (marker) { fence = marker[1][0]; fenceLength = marker[1].length; continue }
+    if (marker && (marker[1][0] !== "`" || !line.slice(marker[0].length).includes("`"))) {
+      fence = marker[1][0]; fenceLength = marker[1].length; continue
+    }
     if (/^### Phase(?:[ \t]|$)/.test(line)) {
       phase = { heading: line.slice(4), statuses: [] }
       phases.push(phase)
-    } else if (/^#{1,3}(?:[ \t]|$)/.test(line)) phase = null
+    } else if (/^ {0,3}#{1,3}(?:[ \t]|$)/.test(line)) phase = null
     if (phase) {
       for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/g)) {
         phase.statuses.push(match[1] || match[2])

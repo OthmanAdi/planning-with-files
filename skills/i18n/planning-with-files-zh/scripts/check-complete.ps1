@@ -16,7 +16,7 @@ if ($Validate) {
 # sessions that share a cwd with a plan but never opted into it.
 if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
-if (-not (Test-Path $PlanFile)) {
+if (-not (Test-Path -LiteralPath $PlanFile)) {
     # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
     if ($Gate) { exit 0 }
     Write-Host '[planning-with-files] 未找到 task_plan.md — 没有进行中的规划会话。'
@@ -24,7 +24,7 @@ if (-not (Test-Path $PlanFile)) {
 }
 
 # 读取文件内容
-$content = Get-Content $PlanFile -Raw
+$content = Get-Content -LiteralPath $PlanFile -Raw
 
 # 计算阶段总数
 # Count native statuses inside real phases, excluding fenced examples (#377).
@@ -52,7 +52,8 @@ foreach ($line in ($content -split '\r?\n')) {
         if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
         continue
     }
-    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+    if ($line -match '^ {0,3}(`{3,}|~{3,})' -and
+        ($Matches[1][0] -eq '~' -or -not $line.Substring($Matches[0].Length).Contains('`'))) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
@@ -60,7 +61,7 @@ foreach ($line in ($content -split '\r?\n')) {
         Complete-阶段
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }
-    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+    } elseif ($line -match '^ {0,3}#{1,3}(?:[ \t]|$)') {
         Complete-阶段
     }
     if ($null -ne $phase) {

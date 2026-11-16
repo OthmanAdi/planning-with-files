@@ -106,7 +106,8 @@ foreach ($line in ($content -split '\r?\n')) {
         if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
         continue
     }
-    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+    if ($line -match '^ {0,3}(`{3,}|~{3,})' -and
+        ($Matches[1][0] -eq '~' -or -not $line.Substring($Matches[0].Length).Contains('`'))) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
@@ -114,7 +115,7 @@ foreach ($line in ($content -split '\r?\n')) {
         Complete-Phase
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }
-    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+    } elseif ($line -match '^ {0,3}#{1,3}(?:[ \t]|$)') {
         Complete-Phase
     }
     if ($null -ne $phase) {

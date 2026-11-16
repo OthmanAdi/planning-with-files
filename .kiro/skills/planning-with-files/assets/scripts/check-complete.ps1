@@ -15,12 +15,12 @@ if ($Validate) {
 # sessions that share a cwd with a plan but never opted into it.
 if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
-if (-not (Test-Path $PlanFile)) {
+if (-not (Test-Path -LiteralPath $PlanFile)) {
     Write-Host "[planning-with-files] No task plan at $PlanFile — run bootstrap or specify path."
     exit 0
 }
 
-$content = Get-Content $PlanFile -Raw
+$content = Get-Content -LiteralPath $PlanFile -Raw
 # Count native statuses inside real phases, excluding fenced examples (#377).
 $counts = @{ total = 0; complete = 0; in_progress = 0; pending = 0 }
 $phase = $null
@@ -46,7 +46,8 @@ foreach ($line in ($content -split '\r?\n')) {
         if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
         continue
     }
-    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+    if ($line -match '^ {0,3}(`{3,}|~{3,})' -and
+        ($Matches[1][0] -eq '~' -or -not $line.Substring($Matches[0].Length).Contains('`'))) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
@@ -54,7 +55,7 @@ foreach ($line in ($content -split '\r?\n')) {
         Complete-Phase
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }
-    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+    } elseif ($line -match '^ {0,3}#{1,3}(?:[ \t]|$)') {
         Complete-Phase
     }
     if ($null -ne $phase) {
