@@ -709,7 +709,8 @@ def smart_plan_extract(data):
             keep += line + b"\n"
         elif insec == b"dec" and line.startswith(b"|"):
             drows.append(line)
-    if not phases:
+    # Unrecognized status labels retain the raw-plan fallback.
+    if not phases or not any(p["statuses"] for p in phases):
         return None
     # Preserve the shell smart view's existing empty-zero display.
     done = sum(p["statuses"] == [b"complete"] for p in phases)
