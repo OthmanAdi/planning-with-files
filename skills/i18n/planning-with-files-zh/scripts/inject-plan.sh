@@ -1079,7 +1079,7 @@ smart_plan_extract() {
             if (total == 0) exit 9
             if (title != "") print title
             printf "%s", keep
-            printf "phases: %d/%d complete\n", counts["complete"], total
+            print "phases: " counts["complete"] "/" total " complete"
             if (act != "") { print ""; printf "%s", act }
             if (dhdr != "" && dn > 0) {
                 print ""; print "## Decisions Made (last 3)"; print dhdr
