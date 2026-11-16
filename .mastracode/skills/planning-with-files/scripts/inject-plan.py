@@ -667,6 +667,8 @@ def smart_plan_extract(data):
             line = line[:-1]
         line = line[:-1] if line.endswith(b"\r") else line
         marker = re.match(br"^ {0,3}(`{3,}|~{3,})", line)
+        if marker and marker.group(1)[:1] == b"`" and b"`" in line[marker.end():]:
+            marker = None
         quoted = bool(fence or marker)
         if fence:
             if re.match(br"^ {0,3}" + re.escape(fence) + br"{" + str(fence_length).encode() + br",}[ \t]*$", line):
@@ -683,7 +685,7 @@ def smart_plan_extract(data):
         if re.match(br"^### Phase(?:[ \t]|$)", line):
             phase = {"body": b"", "statuses": []}
             phases.append(phase)
-        elif re.match(br"^#{1,3}(?:[ \t]|$)", line):
+        elif re.match(br"^ {0,3}#{1,3}(?:[ \t]|$)", line):
             phase = None
         if phase is not None:
             phase["body"] += line + b"\n"

@@ -97,3 +97,32 @@ def test_hermes_preserves_failed_status_reporting(state):
     counts = hermes.phase_counts("### Phase 1: Repair\n**Status:** " + state + "\n")
     assert counts["total"] == counts["failed"] == 1
     assert counts["complete"] == 0
+
+
+@pytest.mark.skipif(not PWSH, reason="PowerShell unavailable")
+@pytest.mark.parametrize("route,phase_label,status_label", [
+    ("scripts/check-complete.ps1", "Phase", "Status:"),
+    (".kiro/skills/planning-with-files/assets/scripts/check-complete.ps1", "Phase", "Status:"),
+    *[(f"skills/i18n/planning-with-files-{lang}/scripts/check-complete.ps1", phase, status)
+      for lang, phase, status in [("ar", "المرحلة", "الحالة:"), ("de", "Phase", "Status:"),
+                                 ("es", "Phase", "Estado:"), ("zh", "阶段", "状态："), ("zht", "階段", "狀態：")]],
+])
+def test_powershell_selected_path_is_literal(route, phase_label, status_label, tmp_path):
+    selected = tmp_path / "plan[1].md"
+    decoy = tmp_path / "plan1.md"
+    selected.write_text(f"### {phase_label} 1: Real\n**{status_label}** pending\n"
+                        f"### {phase_label} 2: Verify\n**{status_label}** pending\n", encoding="utf-8-sig")
+    decoy.write_text(f"### {phase_label} 1: Wrong file\n**{status_label}** complete\n", encoding="utf-8-sig")
+    for flags in ([], ["-Validate"]):
+        result = subprocess.run([PWSH, "-NoProfile", "-File", str(ROOT / route), "-PlanFile", str(selected), *flags],
+                                cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
+        assert result.returncode == 0, result.stderr
+        assert ("valid (2 phases)" if flags else "0/2") in result.stdout
+    selected.write_text("# No native phases\n", encoding="utf-8-sig")
+    invalid = subprocess.run([PWSH, "-NoProfile", "-File", str(ROOT / route), "-PlanFile", str(selected), "-Validate"],
+                             cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
+    assert invalid.returncode == 1, invalid.stdout
+
+
+def test_hermes_keeps_unfenced_legacy_table_support():
+    assert hermes.phase_counts("| 1 | complete |\n")["complete"] == 1

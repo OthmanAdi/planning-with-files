@@ -1036,6 +1036,7 @@ smart_plan_extract() {
             if (line ~ /^ ? ? ?```/ || line ~ /^ ? ? ?~~~/) {
                 marker = substr(trimmed, 1, 1); run = 0
                 while (substr(trimmed, run + 1, 1) == marker) run++
+                if (fence == "" && marker == "`" && index(substr(trimmed, run + 1), "`")) return 0
                 if (fence == "") { fence = marker; fence_length = run }
                 else if (marker == fence && run >= fence_length && substr(trimmed, run + 1) ~ /^[ \t]*$/) fence = ""
                 return 1
@@ -1061,7 +1062,7 @@ smart_plan_extract() {
         /^### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0; curbuf = $0 "\n"; read_status($0); next
         }
-        /^#{1,3}([ \t]|$)/ { finish_phase() }
+        /^ ? ? ?(###|##|#)([ \t]|$)/ { finish_phase() }
         /^## / { insec = "" }
         /^## Goal/ || /^## Next Step/ || /^## Current Phase/ { insec = "keep" }
         /^## Phases/ { insec = "phases"; next }

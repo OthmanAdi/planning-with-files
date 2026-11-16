@@ -70,5 +70,50 @@
     "in_progress": 0,
     "pending": 0,
     "valid": false
+  },
+  {
+    "name": "invalid_backtick_opener",
+    "plan": "### Phase 1: Real\n**Status:** complete\n```example```\n### Phase 2: Still real\n**Status:** pending\n",
+    "total": 2,
+    "complete": 1,
+    "in_progress": 0,
+    "pending": 1,
+    "valid": true
+  },
+  {
+    "name": "indented_boundary",
+    "plan": "### Phase 1: Real\n**Status:** complete\n  ## Notes\n**Status:** pending\n",
+    "total": 1,
+    "complete": 1,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": true
+  },
+  {
+    "name": "indented_false_status",
+    "plan": "### Phase 1: Unmarked\n ## Notes\n**Status:** complete\n",
+    "total": 1,
+    "complete": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": false
+  },
+  {
+    "name": "fenced_legacy_table",
+    "plan": "```markdown\n### Phase 1: Example\n| 1 | complete |\n```\n",
+    "total": 0,
+    "complete": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": false
+  },
+  {
+    "name": "tilde_fence_with_backtick_info",
+    "plan": "~~~`example`\n### Phase 9: Quoted\n**Status:** complete\n~~~\n### Phase 1: Real\n**Status:** in_progress\n",
+    "total": 1,
+    "complete": 0,
+    "in_progress": 1,
+    "pending": 0,
+    "valid": true
   }
 ]

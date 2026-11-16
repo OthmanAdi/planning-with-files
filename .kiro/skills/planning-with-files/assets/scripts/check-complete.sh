@@ -45,6 +45,7 @@ PLAN_COUNTS=$(awk '
             if (line ~ /^ ? ? ?```/ || line ~ /^ ? ? ?~~~/) {
                 marker = substr(trimmed, 1, 1); run = 0
                 while (substr(trimmed, run + 1, 1) == marker) run++
+                if (fence == "" && marker == "`" && index(substr(trimmed, run + 1), "`")) return 0
                 if (fence == "") { fence = marker; fence_length = run }
                 else if (marker == fence && run >= fence_length && substr(trimmed, run + 1) ~ /^[ \t]*$/) fence = ""
                 return 1
@@ -66,7 +67,7 @@ PLAN_COUNTS=$(awk '
         /^### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0
         }
-        !/^### Phase([ \t]|$)/ && /^#{1,3}([ \t]|$)/ { finish_phase() }
+        !/^### Phase([ \t]|$)/ && /^ ? ? ?(###|##|#)([ \t]|$)/ { finish_phase() }
         in_phase { read_status($0) }
         END {
             finish_phase()
