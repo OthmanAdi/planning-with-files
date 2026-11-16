@@ -34,7 +34,7 @@ def test_python_consumers(case):
     assert {k: hermes.phase_counts(case["plan"])[k] for k in expected} == expected
     view = injector.smart_plan_extract(case["plan"].encode())
     if case["total"]:
-        assert f"phases: {case['complete']}/{case['total']} complete".encode() in view
+        assert f"phases: {case['complete'] or ''}/{case['total']} complete".encode() in view
     else:
         assert view is None
 
@@ -88,7 +88,7 @@ def test_shell_smart_view(case, tmp_path):
     result = subprocess.run(["sh", "-c", function + '\nsmart_plan_extract "$1"', "sh", str(plan)],
                             capture_output=True, text=True, encoding="utf-8")
     assert result.returncode == 0, result.stderr
-    assert f"phases: {case['complete']}/{case['total']} complete" in result.stdout
+    assert f"phases: {case['complete'] or ''}/{case['total']} complete" in result.stdout
     assert result.stdout.encode() == injector.smart_plan_extract(case["plan"].encode())
 
 

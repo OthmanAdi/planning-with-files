@@ -709,10 +709,11 @@ def smart_plan_extract(data):
             drows.append(line)
     if not phases:
         return None
+    # Preserve the shell smart view's existing empty-zero display.
     done = sum(p["statuses"] == [b"complete"] for p in phases)
     active = next((p["body"] for p in phases if p["statuses"] == [b"in_progress"]), b"")
     out = (title + b"\n" if title else b"") + keep
-    out += ("phases: %d/%d complete\n" % (done, len(phases))).encode("ascii")
+    out += ("phases: %s/%d complete\n" % (done if done else "", len(phases))).encode("ascii")
     if active:
         out += b"\n" + active
     if len(drows) > 2:
