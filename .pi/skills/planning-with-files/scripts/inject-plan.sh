@@ -1049,7 +1049,7 @@ smart_plan_extract() {
                 boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
                 sub(/^\*\*Status:\*\*[ \t]+|^\[/, "", token)
                 sub(/[^a-z_].*$/, "", token)
-                status_count++; phase_status = token
+                has_status = 1; status_count++; phase_status = token
                 line = substr(line, RSTART + RLENGTH - boundary)
             }
         }
@@ -1077,7 +1077,8 @@ smart_plan_extract() {
         }
         END {
             finish_phase()
-            if (total == 0) exit 9
+            # Unrecognized status labels retain the raw-plan fallback.
+            if (total == 0 || !has_status) exit 9
             if (title != "") print title
             printf "%s", keep
             print "phases: " counts["complete"] "/" total " complete"

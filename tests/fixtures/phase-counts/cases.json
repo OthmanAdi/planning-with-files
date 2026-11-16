@@ -96,7 +96,8 @@
     "complete": 0,
     "in_progress": 0,
     "pending": 0,
-    "valid": false
+    "valid": false,
+    "smart_fallback": true
   },
   {
     "name": "fenced_legacy_table",

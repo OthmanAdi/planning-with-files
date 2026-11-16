@@ -33,7 +33,7 @@ def test_python_consumers(case):
     assert hermes.gate_counts(case["plan"]) == expected
     assert {k: hermes.phase_counts(case["plan"])[k] for k in expected} == expected
     view = injector.smart_plan_extract(case["plan"].encode())
-    if case["total"]:
+    if case["total"] and not case.get("smart_fallback"):
         assert f"phases: {case['complete'] or ''}/{case['total']} complete".encode() in view
     else:
         assert view is None
@@ -126,3 +126,39 @@ def test_powershell_selected_path_is_literal(route, phase_label, status_label, t
 
 def test_hermes_keeps_unfenced_legacy_table_support():
     assert hermes.phase_counts("| 1 | complete |\n")["complete"] == 1
+
+
+@pytest.mark.parametrize("label", ["Estado:", "Unrecognized:"])
+def test_smart_view_preserves_raw_fallback_for_unrecognized_statuses(label, tmp_path):
+    plan = (f"### Phase 1: Done\n**{label}** complete\n"
+            f"### Phase 2: Active\n**{label}** in_progress\n").encode()
+    assert injector.smart_plan_extract(plan) is None
+    if not shutil.which("sh"):
+        pytest.skip("sh unavailable")
+    source = (ROOT / "scripts/inject-plan.sh").read_text(encoding="utf-8")
+    function = source[source.index("smart_plan_extract() {"):source.index("# emit_plan_head")]
+    selected = tmp_path / "task_plan.md"
+    selected.write_bytes(plan)
+    result = subprocess.run(["sh", "-c", function + '\nsmart_plan_extract "$1"', "sh", str(selected)],
+                            capture_output=True)
+    assert result.returncode == 9, result.stderr
+    assert result.stdout == b""
+    assert selected.read_bytes() == plan
+
+
+@pytest.mark.parametrize("runtime", ["python", "sh"])
+def test_localized_statuses_remain_visible_in_smart_injection(runtime, tmp_path):
+    if runtime == "sh" and not shutil.which("sh"):
+        pytest.skip("sh unavailable")
+    plan = "### Phase 1: Done\n**Estado:** complete\n### Phase 2: Active\n**Estado:** in_progress\n"
+    (tmp_path / "task_plan.md").write_text(plan, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k not in
+           {"PLAN_ID", "PWF_PLAN_ROOT", "PLANNING_DISABLED", "PWF_SESSION_ID"}}
+    env.update(PWF_INJECT="smart", XDG_CACHE_HOME=str(tmp_path / "cache"))
+    command = ([sys.executable, str(ROOT / "scripts/inject-plan.py")] if runtime == "python" else
+               ["sh", str(ROOT / "scripts/inject-plan.sh")])
+    result = subprocess.run([*command, "--context=userprompt"], cwd=tmp_path, env=env,
+                            capture_output=True, text=True, encoding="utf-8")
+    assert result.returncode == 0, result.stderr
+    assert plan in result.stdout
+    assert "phases:" not in result.stdout
