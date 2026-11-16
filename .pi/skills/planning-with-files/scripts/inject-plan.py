@@ -52,8 +52,6 @@ Windows runs the shell chain through Git Bash and nothing else:
     of a plan line ending in "\\r\\r\\n" loses both carriage returns.
   * Command substitution discards NUL bytes, so a NUL in .active_plan or in
     an attestation file is dropped rather than making the value invalid.
-  * awk prints an uninitialized counter as the empty string, so a smart view
-    of a plan with no completed phase reads "phases: /3 complete".
   * Cache keys are spelled with the launching shell's $PWD (handed over as
     PWF_SHELL_PWD, excluded from MSYS path conversion), so both routes share
     one turn-marker slot and one progress-guard slot per plan.
@@ -651,51 +649,50 @@ def secure_progress_marker(directory, key, now_x, now_c):
 # --------------------------------------------------------------------------
 
 def smart_plan_extract(data):
-    """Return the smart view bytes, or None where the awk exits 9."""
-    state = {
-        "inphase": False,
-        "curprog": False,
-        "curbuf": b"",
-        "act": b"",
-    }
-    total = 0
-    done_n = 0
+    """Return the smart view using the validated phase grammar (#377)."""
+    phases = []
+    phase = None
+    fence = b""
+    fence_length = 0
     title = b""
     keep = b""
     insec = b""
-    dhdr = b""
-    dsep = b""
     drows = []
-
-    def close_phase():
-        if state["inphase"] and state["curprog"] and state["act"] == b"":
-            state["act"] = state["curbuf"]
-        state["inphase"] = False
-        state["curprog"] = False
-        state["curbuf"] = b""
-
     records = data.split(b"\n")
-    ends_with_newline = bool(records) and records[-1] == b""
-    if ends_with_newline:
+    terminated = records[-1] == b""
+    if terminated:
         records.pop()
-    last_index = len(records) - 1
     for index, line in enumerate(records):
-        # Git for Windows' gawk reads in text mode: a CRLF-terminated record
-        # reaches the script with that carriage return already gone, and the
-        # script's own sub(/\r$/, "") then removes one more.
-        terminated = index < last_index or ends_with_newline
-        if os.name == "nt" and terminated and line.endswith(b"\r"):
+        if os.name == "nt" and (index < len(records) - 1 or terminated) and line.endswith(b"\r"):
             line = line[:-1]
-        if line.endswith(b"\r"):
-            line = line[:-1]
+        line = line[:-1] if line.endswith(b"\r") else line
+        marker = re.match(br"^ {0,3}(`{3,}|~{3,})", line)
+        quoted = bool(fence or marker)
+        if fence:
+            if re.match(br"^ {0,3}" + re.escape(fence) + br"{" + str(fence_length).encode() + br",}[ \t]*$", line):
+                fence = b""
+        elif marker:
+            fence = marker.group(1)[:1]
+            fence_length = len(marker.group(1))
+        if quoted:
+            if phase is not None:
+                phase["body"] += line + b"\n"
+            elif insec == b"keep":
+                keep += line + b"\n"
+            continue
+        if re.match(br"^### Phase(?:[ \t]|$)", line):
+            phase = {"body": b"", "statuses": []}
+            phases.append(phase)
+        elif re.match(br"^#{1,3}(?:[ \t]|$)", line):
+            phase = None
+        if phase is not None:
+            phase["body"] += line + b"\n"
+            for match in re.finditer(br"\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]", line):
+                phase["statuses"].append(match.group(1) or match.group(2))
+            continue
         if line.startswith(b"## "):
-            close_phase()
             insec = b""
-        if line.startswith(b"## Goal"):
-            insec = b"keep"
-        if line.startswith(b"## Next Step"):
-            insec = b"keep"
-        if line.startswith(b"## Current Phase"):
+        if line.startswith((b"## Goal", b"## Next Step", b"## Current Phase")):
             insec = b"keep"
         if line.startswith(b"## Phases"):
             insec = b"phases"
@@ -703,53 +700,24 @@ def smart_plan_extract(data):
         if line.startswith(b"## Decisions Made"):
             insec = b"dec"
             continue
-        if title == b"" and line.startswith(b"# "):
+        if not title and line.startswith(b"# "):
             title = line
             continue
         if insec == b"keep":
             keep += line + b"\n"
-            continue
-        if insec == b"phases" and line.startswith(b"### Phase"):
-            close_phase()
-            state["inphase"] = True
-            total += 1
-            state["curbuf"] = line + b"\n"
-            continue
-        if insec == b"phases" and state["inphase"]:
-            state["curbuf"] += line + b"\n"
-            if b"**Status:** in_progress" in line or b"[in_progress]" in line:
-                state["curprog"] = True
-            if b"**Status:** complete" in line or b"[complete]" in line:
-                done_n += 1
-            continue
-        if insec == b"dec" and line.startswith(b"|"):
-            if dhdr == b"":
-                dhdr = line
-                continue
-            if dsep == b"":
-                dsep = line
-                continue
+        elif insec == b"dec" and line.startswith(b"|"):
             drows.append(line)
-            continue
-
-    close_phase()
-    if total == 0:
+    if not phases:
         return None
-    out = bytearray()
-    if title != b"":
-        out += title + b"\n"
-    out += keep
-    # awk prints a counter that was never incremented as the empty string.
-    out += ("phases: %s/%d complete\n" % (done_n if done_n else "", total)).encode("ascii")
-    if state["act"] != b"":
-        out += b"\n" + state["act"]
-    if dhdr != b"" and drows:
-        out += b"\n## Decisions Made (last 3)\n" + dhdr + b"\n"
-        if dsep != b"":
-            out += dsep + b"\n"
-        for row in drows[-3:]:
-            out += row + b"\n"
-    return bytes(out)
+    done = sum(p["statuses"] == [b"complete"] for p in phases)
+    active = next((p["body"] for p in phases if p["statuses"] == [b"in_progress"]), b"")
+    out = (title + b"\n" if title else b"") + keep
+    out += ("phases: %d/%d complete\n" % (done, len(phases))).encode("ascii")
+    if active:
+        out += b"\n" + active
+    if len(drows) > 2:
+        out += b"\n## Decisions Made (last 3)\n" + b"\n".join(drows[:2] + drows[2:][-3:]) + b"\n"
+    return out
 
 
 # --------------------------------------------------------------------------

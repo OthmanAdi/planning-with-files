@@ -215,21 +215,7 @@ def init_plan(
 
 
 def phase_counts(task_plan: str) -> dict[str, int]:
-    counts = {"complete": 0, "in_progress": 0, "pending": 0, "failed": 0, "total": 0}
-    for line in task_plan.splitlines():
-        normalized = line.strip().lower()
-        if normalized.startswith("### phase"):
-            counts["total"] += 1
-        if "**status:**" not in normalized:
-            continue
-        if "complete" in normalized:
-            counts["complete"] += 1
-        elif "in_progress" in normalized:
-            counts["in_progress"] += 1
-        elif "failed" in normalized or "blocked" in normalized:
-            counts["failed"] += 1
-        elif "pending" in normalized:
-            counts["pending"] += 1
+    counts = {**gate_counts(task_plan), "failed": sum(states in (["failed"], ["blocked"]) for _, states in _plan_phases(task_plan))}
     if counts["total"] == 0:
         for line in task_plan.splitlines():
             stripped = line.strip()
@@ -242,10 +228,6 @@ def phase_counts(task_plan: str) -> dict[str, int]:
             if status in counts:
                 counts[status] += 1
                 counts["total"] += 1
-        if counts["total"] == 0:
-            for marker, key in (("[complete]", "complete"), ("[in_progress]", "in_progress"), ("[pending]", "pending")):
-                counts[key] = task_plan.count(marker)
-            counts["total"] = counts["complete"] + counts["in_progress"] + counts["pending"]
     return counts
 
 
@@ -308,33 +290,42 @@ def extract_current_phase(task_plan: str) -> str:
     return "No phase found"
 
 
-def first_in_progress_phase(task_plan: str) -> str:
-    """Heading of the first phase whose status is in_progress, '### ' stripped."""
-    heading = ""
+def _plan_phases(task_plan: str) -> list[tuple[str, list[str]]]:
+    phases: list[tuple[str, list[str]]] = []
+    phase = None
+    fence = ""
+    fence_length = 0
     for line in task_plan.splitlines():
-        if line.startswith("### "):
-            heading = line[4:]
+        if fence:
+            if re.match(r"^ {0,3}" + re.escape(fence) + r"{" + str(fence_length) + r",}[ \t]*$", line):
+                fence = ""
             continue
-        if "**Status:** in_progress" in line or "[in_progress]" in line:
-            return heading
-    return ""
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if marker:
+            fence = marker[1][0]
+            fence_length = len(marker[1])
+            continue
+        if re.match(r"^### Phase(?:[ \t]|$)", line):
+            phase = (line[4:], [])
+            phases.append(phase)
+        elif re.match(r"^#{1,3}(?:[ \t]|$)", line):
+            phase = None
+        if phase is not None:
+            for match in re.finditer(r"\*\*Status:\*\*[ \t]+(pending|in_progress|complete|failed|blocked)(?![A-Za-z0-9_])|\[(pending|in_progress|complete|failed|blocked)\]", line):
+                phase[1].append(match[1] or match[2])
+    return phases
+
+
+def first_in_progress_phase(task_plan: str) -> str:
+    return next((heading for heading, states in _plan_phases(task_plan) if states == ["in_progress"]), "")
 
 
 def gate_counts(task_plan: str) -> dict[str, int]:
-    """Phase counts the way check-complete.sh --gate counts them.
-
-    ``total`` is the number of lines containing ``### Phase``. Each status is
-    the per-field maximum of the primary ``**Status:** <state>`` form and the
-    inline ``[<state>]`` marker form, so a plan that mixes both formats can
-    never let an in_progress phase slip past the gate.
-    """
-    lines = task_plan.splitlines()
-    total = sum(1 for line in lines if "### Phase" in line)
-    counts: dict[str, int] = {"total": total}
+    """Count one native status per real phase, matching creation validation."""
+    phases = _plan_phases(task_plan)
+    counts = {"total": len(phases)}
     for state in ("complete", "in_progress", "pending"):
-        primary = sum(1 for line in lines if f"**Status:** {state}" in line)
-        inline = sum(1 for line in lines if f"[{state}]" in line)
-        counts[state] = max(primary, inline)
+        counts[state] = sum(states == [state] for _, states in phases)
     return counts
 
 

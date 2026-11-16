@@ -89,56 +89,62 @@ else
     PLAN_FILE="${PLAN_DIR}/task_plan.md"
 fi
 
-# --- Phase counts: identical grep patterns to check-complete.sh ---
 TOTAL=0
 COMPLETE=0
 IN_PROGRESS=0
 IN_PROGRESS_HEADING="none"
-if [ -f "${PLAN_FILE}" ]; then
-    TOTAL=$(grep -c "### Phase" "${PLAN_FILE}" 2>/dev/null || true)
-    COMPLETE=$(grep -cF "**Status:** complete" "${PLAN_FILE}" 2>/dev/null || true)
-    IN_PROGRESS=$(grep -cF "**Status:** in_progress" "${PLAN_FILE}" 2>/dev/null || true)
-
-    # Fallback to inline [status] format when **Status:** is absent.
-    if [ "${COMPLETE}" -eq 0 ] && [ "${IN_PROGRESS}" -eq 0 ]; then
-        c2=$(grep -c "\[complete\]" "${PLAN_FILE}" 2>/dev/null || true)
-        i2=$(grep -c "\[in_progress\]" "${PLAN_FILE}" 2>/dev/null || true)
-        : "${c2:=0}"
-        : "${i2:=0}"
-        if [ "${c2}" -gt 0 ] || [ "${i2}" -gt 0 ]; then
-            COMPLETE="${c2}"
-            IN_PROGRESS="${i2}"
-        fi
-    fi
-
-    # Heading of the FIRST phase whose status block is in_progress. We walk
-    # phase headings and look ahead for the status line so the summary names
-    # the active phase without leaking any plan body text beyond the heading.
-    heading=""
-    state=""
-    # shellcheck disable=SC2162
-    while IFS= read -r line; do
-        case "${line}" in
-            "### Phase"*)
-                heading="${line}"
-                ;;
-            *"**Status:** in_progress"*)
-                if [ -n "${heading}" ]; then
-                    IN_PROGRESS_HEADING="${heading}"
-                    break
-                fi
-                ;;
-            *"[in_progress]"*)
-                if [ -n "${heading}" ] && [ "${IN_PROGRESS_HEADING}" = "none" ]; then
-                    IN_PROGRESS_HEADING="${heading}"
-                fi
-                ;;
-        esac
-    done < "${PLAN_FILE}"
+if [ -f "$PLAN_FILE" ]; then
+# Count native statuses inside real phases, excluding fenced examples (#377).
+PLAN_COUNTS=$(awk '
+        function finish_phase() {
+            if (in_phase) {
+                if (status_count != 1) invalid = 1
+                else {
+                    counts[phase_status]++
+                    if (phase_status == "in_progress" && active_heading == "") active_heading = heading
+                }
+            }
+            in_phase = 0; status_count = 0; phase_status = ""
+        }
+        function fenced(line,    trimmed, marker, run) {
+            trimmed = line; sub(/^ ? ? ?/, "", trimmed)
+            if (line ~ /^ ? ? ?```/ || line ~ /^ ? ? ?~~~/) {
+                marker = substr(trimmed, 1, 1); run = 0
+                while (substr(trimmed, run + 1, 1) == marker) run++
+                if (fence == "") { fence = marker; fence_length = run }
+                else if (marker == fence && run >= fence_length && substr(trimmed, run + 1) ~ /^[ \t]*$/) fence = ""
+                return 1
+            }
+            return fence != ""
+        }
+        function read_status(line,    token, boundary) {
+            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)|\[(pending|in_progress|complete)\]/)) {
+                token = substr(line, RSTART, RLENGTH)
+                boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
+                sub(/^\*\*Status:\*\*[ \t]+|^\[/, "", token)
+                sub(/[^a-z_].*$/, "", token)
+                status_count++; phase_status = token
+                line = substr(line, RSTART + RLENGTH - boundary)
+            }
+        }
+        { sub(/\r$/, "") }
+        fenced($0) { next }
+        /^### Phase([ \t]|$)/ {
+            finish_phase(); total++; in_phase = 1; heading = $0
+        }
+        !/^### Phase([ \t]|$)/ && /^#{1,3}([ \t]|$)/ { finish_phase() }
+        in_phase { read_status($0) }
+        END {
+            finish_phase()
+            printf "%d %d %d %d %d\n%s\n", total, counts["complete"], counts["in_progress"], counts["pending"], invalid, active_heading
+        }
+    ' "$PLAN_FILE")
+read -r TOTAL COMPLETE IN_PROGRESS PENDING INVALID <<EOF
+$PLAN_COUNTS
+EOF
+    _active_heading=$(printf '%s\n' "$PLAN_COUNTS" | sed -n '2p')
+    [ -z "$_active_heading" ] || IN_PROGRESS_HEADING="$_active_heading"
 fi
-: "${TOTAL:=0}"
-: "${COMPLETE:=0}"
-: "${IN_PROGRESS:=0}"
 
 # --- Ledger stats: total entries + last event type per agent ---
 TOTAL_ENTRIES=0

@@ -1019,47 +1019,73 @@ fi
 
 smart_plan_extract() {
     awk '
-        function close_phase() {
-            if (inphase && curprog && act == "") act = curbuf
-            inphase = 0; curprog = 0; curbuf = ""
+        function finish_phase() {
+            if (in_phase) {
+                if (status_count != 1) invalid = 1
+                else {
+                    counts[phase_status]++
+                    if (phase_status == "in_progress" && act == "") act = curbuf
+                    if (phase_status == "in_progress" && active_heading == "") active_heading = heading
+                }
+            }
+            curbuf = ""
+            in_phase = 0; status_count = 0; phase_status = ""
+        }
+        function fenced(line,    trimmed, marker, run) {
+            trimmed = line; sub(/^ ? ? ?/, "", trimmed)
+            if (line ~ /^ ? ? ?```/ || line ~ /^ ? ? ?~~~/) {
+                marker = substr(trimmed, 1, 1); run = 0
+                while (substr(trimmed, run + 1, 1) == marker) run++
+                if (fence == "") { fence = marker; fence_length = run }
+                else if (marker == fence && run >= fence_length && substr(trimmed, run + 1) ~ /^[ \t]*$/) fence = ""
+                return 1
+            }
+            return fence != ""
+        }
+        function read_status(line,    token, boundary) {
+            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)|\[(pending|in_progress|complete)\]/)) {
+                token = substr(line, RSTART, RLENGTH)
+                boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
+                sub(/^\*\*Status:\*\*[ \t]+|^\[/, "", token)
+                sub(/[^a-z_].*$/, "", token)
+                status_count++; phase_status = token
+                line = substr(line, RSTART + RLENGTH - boundary)
+            }
         }
         { sub(/\r$/, "") }
-        /^## / { close_phase(); insec = "" }
-        /^## Goal/ { insec = "keep" }
-        /^## Next Step/ { insec = "keep" }
-        /^## Current Phase/ { insec = "keep" }
+        fenced($0) {
+            if (in_phase) curbuf = curbuf $0 "\n"
+            else if (insec == "keep") keep = keep $0 "\n"
+            next
+        }
+        /^### Phase([ \t]|$)/ {
+            finish_phase(); total++; in_phase = 1; heading = $0; curbuf = $0 "\n"; read_status($0); next
+        }
+        /^#{1,3}([ \t]|$)/ { finish_phase() }
+        /^## / { insec = "" }
+        /^## Goal/ || /^## Next Step/ || /^## Current Phase/ { insec = "keep" }
         /^## Phases/ { insec = "phases"; next }
         /^## Decisions Made/ { insec = "dec"; next }
         title == "" && /^# / { title = $0; next }
+        in_phase { curbuf = curbuf $0 "\n"; read_status($0); next }
         insec == "keep" { keep = keep $0 "\n"; next }
-        insec == "phases" && /^### Phase/ {
-            close_phase(); inphase = 1; total++; curbuf = $0 "\n"; next
-        }
-        insec == "phases" && inphase {
-            curbuf = curbuf $0 "\n"
-            if ($0 ~ /\*\*Status:\*\* in_progress/ || $0 ~ /\[in_progress\]/) curprog = 1
-            if ($0 ~ /\*\*Status:\*\* complete/ || $0 ~ /\[complete\]/) done++
-            next
-        }
         insec == "dec" && /^\|/ {
             if (dhdr == "") { dhdr = $0; next }
             if (dsep == "") { dsep = $0; next }
-            dn++; drow[dn] = $0; next
+            dn++; drow[dn] = $0
         }
         END {
-            close_phase()
+            finish_phase()
             if (total == 0) exit 9
             if (title != "") print title
             printf "%s", keep
-            print "phases: " done "/" total " complete"
+            printf "phases: %d/%d complete\n", counts["complete"], total
             if (act != "") { print ""; printf "%s", act }
             if (dhdr != "" && dn > 0) {
-                print ""
-                print "## Decisions Made (last 3)"
-                print dhdr
+                print ""; print "## Decisions Made (last 3)"; print dhdr
                 if (dsep != "") print dsep
-                s = dn - 2; if (s < 1) s = 1
-                for (i = s; i <= dn; i++) print drow[i]
+                first = dn - 2; if (first < 1) first = 1
+                for (i = first; i <= dn; i++) print drow[i]
             }
         }
     ' "$1" 2>/dev/null

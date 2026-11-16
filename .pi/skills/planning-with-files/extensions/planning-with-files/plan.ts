@@ -268,6 +268,31 @@ export function resolvePlanPaths(sessionCwd: string): PlanPaths {
 	return makeNone();
 }
 
+function planPhases(text: string): { heading: string; statuses: string[] }[] {
+  const phases: { heading: string; statuses: string[] }[] = []
+  let phase: (typeof phases)[number] | null = null
+  let fence = ""
+  let fenceLength = 0
+  for (const line of text.split(/\r?\n/)) {
+    if (fence) {
+      if (new RegExp(`^ {0,3}${fence}{${fenceLength},}[ \\t]*$`).test(line)) fence = ""
+      continue
+    }
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)
+    if (marker) { fence = marker[1][0]; fenceLength = marker[1].length; continue }
+    if (/^### Phase(?:[ \t]|$)/.test(line)) {
+      phase = { heading: line.slice(4), statuses: [] }
+      phases.push(phase)
+    } else if (/^#{1,3}(?:[ \t]|$)/.test(line)) phase = null
+    if (phase) {
+      for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/g)) {
+        phase.statuses.push(match[1] || match[2])
+      }
+    }
+  }
+  return phases
+}
+
 export function readPlanStatus(cwd: string): PlanStatus {
 	const paths = resolvePlanPaths(cwd);
 	if (!paths.planPath) {
@@ -298,28 +323,12 @@ export function readPlanStatus(cwd: string): PlanStatus {
 	const closed = /<!--\s*pwf:\s*closed\s*-->/i.test(planContent);
 	const lines = planContent.split("\n");
 
-	const phaseRegex = /^###\s+Phase\b/i;
-	const statusComplete = /\*\*Status:\*\*\s*complete\b/i;
-	const statusInProgress = /\*\*Status:\*\*\s*in_progress\b/i;
-	const statusPending = /\*\*Status:\*\*\s*pending\b/i;
-
-	let total = 0;
-	let complete = 0;
-	let inProgress = 0;
-	let pending = 0;
-
-	for (const line of lines) {
-		if (phaseRegex.test(line)) total += 1;
-		if (statusComplete.test(line)) complete += 1;
-		else if (statusInProgress.test(line)) inProgress += 1;
-		else if (statusPending.test(line)) pending += 1;
-	}
-
-	if (complete + inProgress + pending === 0) {
-		complete = (planContent.match(/\[complete\]/gi) || []).length;
-		inProgress = (planContent.match(/\[in_progress\]/gi) || []).length;
-		pending = (planContent.match(/\[pending\]/gi) || []).length;
-	}
+	const phases = planPhases(planContent);
+	const total = phases.length;
+	const count = (state: string) => phases.filter((p) => p.statuses.length === 1 && p.statuses[0] === state).length;
+	const complete = count("complete");
+	const inProgress = count("in_progress");
+	const pending = count("pending");
 
 	let progressTail20 = "";
 	if (paths.progressPath && existsSync(paths.progressPath)) {
