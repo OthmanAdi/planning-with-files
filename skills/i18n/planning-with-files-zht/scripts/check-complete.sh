@@ -17,47 +17,12 @@ if [ "$VALIDATE" -eq 1 ]; then
     [ -f "$PLAN_FILE" ] || { echo "[planning-with-files] Plan format invalid: task_plan.md was not found." >&2; exit 1; }
 fi
 
-# Creation validation is deliberately separate from advisory/gated completion.
-# Keep one native status per phase, including the existing inline form. This
-# never repairs or writes the plan, changes attestation, or weakens Stop guards.
-if [ "$VALIDATE" -eq 1 ]; then
-    awk '
-        function finish_phase() {
-            if (in_phase && statuses != 1) invalid = 1
-        }
-        /^### 階段([ \t]|$)/ {
-            finish_phase()
-            phases++
-            in_phase = 1
-            statuses = 0
-        }
-        !/^### 階段([ \t]|$)/ && /^#[ \t]|^##[ \t]|^###[ \t]/ {
-            finish_phase()
-            in_phase = 0
-        }
-        in_phase {
-            line = $0
-            statuses += gsub(/\*\*狀態：\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)/, "&", line)
-            line = $0
-            statuses += gsub(/\[(pending|in_progress|complete)\]/, "&", line)
-        }
-        END {
-            finish_phase()
-            if (!phases || invalid) {
-                print "[planning-with-files] Plan format invalid: use ### 階段 headings with exactly one native status per phase."
-                exit 1
-            }
-            printf "[planning-with-files] Plan format valid (%d phases).\n", phases
-        }
-    ' "$PLAN_FILE"
-    exit "$?"
-fi
-
 # issue #195: per-invocation opt-out (PLANNING_DISABLED=1) for one-shot/CI
 # sessions that share a cwd with a plan but never opted into it.
-[ "${PLANNING_DISABLED:-}" = "1" ] && exit 0
+[ "${PLANNING_DISABLED:-}" = "1" ] && [ "$VALIDATE" -eq 0 ] && exit 0
 
 PLAN_FILE="${1:-task_plan.md}"
+[ "$VALIDATE" -eq 0 ] || PLAN_FILE="${VALIDATION_PLAN:-task_plan.md}"
 
 if [ ! -f "$PLAN_FILE" ]; then
     # Automatic gate checks have nothing to report without a plan (header:
@@ -67,28 +32,64 @@ if [ ! -f "$PLAN_FILE" ]; then
     exit 0
 fi
 
-# 計算階段總數
-TOTAL=$(grep -c "### 階段" "$PLAN_FILE" || true)
+# Count native statuses inside real phases, excluding fenced examples (#377).
+PLAN_COUNTS=$(awk '
+        function finish_phase() {
+            if (in_phase) {
+                if (status_count != 1) invalid = 1
+                else {
+                    counts[phase_status]++
+                    if (phase_status == "in_progress" && active_heading == "") active_heading = heading
+                }
+            }
+            in_phase = 0; status_count = 0; phase_status = ""
+        }
+        function fenced(line,    trimmed, marker, run) {
+            trimmed = line; sub(/^ ? ? ?/, "", trimmed)
+            if (line ~ /^ ? ? ?```/ || line ~ /^ ? ? ?~~~/) {
+                marker = substr(trimmed, 1, 1); run = 0
+                while (substr(trimmed, run + 1, 1) == marker) run++
+                if (fence == "") { fence = marker; fence_length = run }
+                else if (marker == fence && run >= fence_length && substr(trimmed, run + 1) ~ /^[ \t]*$/) fence = ""
+                return 1
+            }
+            return fence != ""
+        }
+        function read_status(line,    token, boundary) {
+            while (match(line, /\*\*狀態：\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)|\[(pending|in_progress|complete)\]/)) {
+                token = substr(line, RSTART, RLENGTH)
+                boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
+                sub(/^\*\*狀態：\*\*[ \t]+|^\[/, "", token)
+                sub(/[^a-z_].*$/, "", token)
+                status_count++; phase_status = token
+                line = substr(line, RSTART + RLENGTH - boundary)
+            }
+        }
+        { sub(/\r$/, "") }
+        fenced($0) { next }
+        /^### 階段([ \t]|$)/ {
+            finish_phase(); total++; in_phase = 1; heading = $0
+        }
+        !/^### 階段([ \t]|$)/ && /^#{1,3}([ \t]|$)/ { finish_phase() }
+        in_phase { read_status($0) }
+        END {
+            finish_phase()
+            printf "%d %d %d %d %d\n%s\n", total, counts["complete"], counts["in_progress"], counts["pending"], invalid, active_heading
+        }
+    ' "$PLAN_FILE")
+read -r TOTAL COMPLETE IN_PROGRESS PENDING INVALID <<EOF
+$PLAN_COUNTS
+EOF
 
-# 先檢查 **狀態：** 格式
-COMPLETE=$(grep -cF "**狀態：** complete" "$PLAN_FILE" || true)
-IN_PROGRESS=$(grep -cF "**狀態：** in_progress" "$PLAN_FILE" || true)
-PENDING=$(grep -cF "**狀態：** pending" "$PLAN_FILE" || true)
-
-# 備用：如果未找到 **狀態：** 則檢查 [complete] 行內格式
-if [ "$COMPLETE" -eq 0 ] && [ "$IN_PROGRESS" -eq 0 ] && [ "$PENDING" -eq 0 ]; then
-    COMPLETE=$(grep -c "\[complete\]" "$PLAN_FILE" || true)
-    IN_PROGRESS=$(grep -c "\[in_progress\]" "$PLAN_FILE" || true)
-    PENDING=$(grep -c "\[pending\]" "$PLAN_FILE" || true)
+if [ "$VALIDATE" -eq 1 ]; then
+    if [ "$TOTAL" -eq 0 ] || [ "$INVALID" -ne 0 ]; then
+        echo "[planning-with-files] Plan format invalid: use ### 階段 headings with exactly one native status per phase."
+        exit 1
+    fi
+    printf '[planning-with-files] Plan format valid (%d phases).\n' "$TOTAL"
+    exit 0
 fi
 
-# 預設為 0（如果為空）
-: "${TOTAL:=0}"
-: "${COMPLETE:=0}"
-: "${IN_PROGRESS:=0}"
-: "${PENDING:=0}"
-
-# 回報狀態（始終以退出碼 0 結束 — 未完成的任務是正常狀態）
 # issue #191: TOTAL=0 -> not phase-structured, stay silent
 if [ "$TOTAL" -eq 0 ]; then
     exit 0

@@ -75,39 +75,62 @@ if (-not $planDir) {
 }
 $planFile = Join-Path $planDir "task_plan.md"
 
-# --- Phase counts: same patterns as check-complete.ps1 ---
 $TOTAL = 0
 $COMPLETE = 0
 $IN_PROGRESS = 0
 $inProgressHeading = "none"
-
 if (Test-Path -LiteralPath $planFile) {
     $content = Get-Content -LiteralPath $planFile -Raw
-    $TOTAL = ([regex]::Matches($content, "### Phase")).Count
-    $COMPLETE = ([regex]::Matches($content, "\*\*Status:\*\* complete")).Count
-    $IN_PROGRESS = ([regex]::Matches($content, "\*\*Status:\*\* in_progress")).Count
-
-    if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0) {
-        $c2 = ([regex]::Matches($content, "\[complete\]")).Count
-        $i2 = ([regex]::Matches($content, "\[in_progress\]")).Count
-        if ($c2 -gt 0 -or $i2 -gt 0) {
-            $COMPLETE = $c2
-            $IN_PROGRESS = $i2
-        }
-    }
-
-    # Heading of the first phase block whose status is in_progress.
-    $heading = ""
-    foreach ($line in (Get-Content -LiteralPath $planFile)) {
-        if ($line -match "^### Phase") {
-            $heading = $line
-        } elseif ($line -match "\*\*Status:\*\* in_progress" -or $line -match "\[in_progress\]") {
-            if ($heading) {
-                $inProgressHeading = $heading
-                break
+# Count native statuses inside real phases, excluding fenced examples (#377).
+$counts = @{ total = 0; complete = 0; in_progress = 0; pending = 0 }
+$phase = $null
+$invalid = $false
+$activeHeading = ""
+$fence = ""
+$fenceLength = 0
+function Complete-Phase {
+    if ($null -ne $script:phase) {
+        if ($script:phase.Statuses.Count -ne 1) { $script:invalid = $true }
+        else {
+            $state = $script:phase.Statuses[0]
+            $script:counts[$state]++
+            if ($state -eq 'in_progress' -and -not $script:activeHeading) {
+                $script:activeHeading = $script:phase.Heading
             }
         }
     }
+    $script:phase = $null
+}
+foreach ($line in ($content -split '\r?\n')) {
+    if ($fence) {
+        if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
+        continue
+    }
+    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+        $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
+        continue
+    }
+    if ($line -cmatch '^### Phase(?:[ \t]|$)') {
+        Complete-Phase
+        $counts.total++
+        $phase = @{ Heading = $line; Statuses = @() }
+    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+        Complete-Phase
+    }
+    if ($null -ne $phase) {
+        foreach ($match in [regex]::Matches($line, '\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![\p{L}\p{N}_])|\[(pending|in_progress|complete)\]')) {
+            $state = $match.Groups[1].Value
+            if (-not $state) { $state = $match.Groups[2].Value }
+            $phase.Statuses += $state
+        }
+    }
+}
+Complete-Phase
+$TOTAL = $counts.total
+$COMPLETE = $counts.complete
+$IN_PROGRESS = $counts.in_progress
+$PENDING = $counts.pending
+    if ($activeHeading) { $inProgressHeading = $activeHeading }
 }
 
 # --- Ledger stats ---

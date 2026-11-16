@@ -491,28 +491,39 @@ export function compactionNote(root: string, planDir: string): string {
 // gate (parity with check-complete.sh --gate)
 // ---------------------------------------------------------------------------
 
-export function gateCounts(text: string): { total: number; complete: number; in_progress: number; pending: number } {
-  const lines = text.split(/\r?\n/)
-  const count = (needle: string) => lines.filter((line) => line.includes(needle)).length
-  const field = (state: string) => Math.max(count(`**Status:** ${state}`), count(`[${state}]`))
-  return {
-    total: count("### Phase"),
-    complete: field("complete"),
-    in_progress: field("in_progress"),
-    pending: field("pending"),
+function planPhases(text: string): { heading: string; statuses: string[] }[] {
+  const phases: { heading: string; statuses: string[] }[] = []
+  let phase: (typeof phases)[number] | null = null
+  let fence = ""
+  let fenceLength = 0
+  for (const line of text.split(/\r?\n/)) {
+    if (fence) {
+      if (new RegExp(`^ {0,3}${fence}{${fenceLength},}[ \\t]*$`).test(line)) fence = ""
+      continue
+    }
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/)
+    if (marker) { fence = marker[1][0]; fenceLength = marker[1].length; continue }
+    if (/^### Phase(?:[ \t]|$)/.test(line)) {
+      phase = { heading: line.slice(4), statuses: [] }
+      phases.push(phase)
+    } else if (/^#{1,3}(?:[ \t]|$)/.test(line)) phase = null
+    if (phase) {
+      for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/g)) {
+        phase.statuses.push(match[1] || match[2])
+      }
+    }
   }
+  return phases
+}
+
+export function gateCounts(text: string): { total: number; complete: number; in_progress: number; pending: number } {
+  const phases = planPhases(text)
+  const count = (state: string) => phases.filter((p) => p.statuses.length === 1 && p.statuses[0] === state).length
+  return { total: phases.length, complete: count("complete"), in_progress: count("in_progress"), pending: count("pending") }
 }
 
 export function firstInProgressPhase(text: string): string {
-  let heading = ""
-  for (const line of text.split(/\r?\n/)) {
-    if (line.startsWith("### ")) {
-      heading = line.slice(4)
-      continue
-    }
-    if (line.includes("**Status:** in_progress") || line.includes("[in_progress]")) return heading
-  }
-  return ""
+  return planPhases(text).find((p) => p.statuses.length === 1 && p.statuses[0] === "in_progress")?.heading ?? ""
 }
 
 function readCounter(target: string): number {

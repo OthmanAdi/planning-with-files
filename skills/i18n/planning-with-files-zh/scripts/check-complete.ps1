@@ -12,39 +12,9 @@ if ($Validate) {
     $content = Get-Content -LiteralPath $PlanFile -Raw
 }
 
-# Explicit creation validation never mutates a plan or changes Stop behavior.
-if ($Validate) {
-    $phases = 0
-    $statuses = 0
-    $inPhase = $false
-    $invalid = $false
-    foreach ($line in ($content -split '\r?\n')) {
-        if ($line -cmatch '^### 阶段(?:[ \t]|$)') {
-            if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-            $phases++
-            $inPhase = $true
-            $statuses = 0
-        } elseif ($line -match '^#{1,3}[ \t]') {
-            if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-            $inPhase = $false
-        }
-        if ($inPhase) {
-            $statuses += ([regex]::Matches($line, '\*\*状态：\*\*[ \t]+(?:pending|in_progress|complete)(?:[^\p{L}\p{N}_]|$)')).Count
-            $statuses += ([regex]::Matches($line, '\[(?:pending|in_progress|complete)\]')).Count
-        }
-    }
-    if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-    if ($phases -eq 0 -or $invalid) {
-        Write-Output '[planning-with-files] Plan format invalid: use ### 阶段 headings with exactly one native status per phase.'
-        exit 1
-    }
-    Write-Output ('[planning-with-files] Plan format valid (' + $phases + ' phases).')
-    exit 0
-}
-
 # issue #195: per-invocation opt-out (PLANNING_DISABLED=1) for one-shot/CI
 # sessions that share a cwd with a plan but never opted into it.
-if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
+if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
 if (-not (Test-Path $PlanFile)) {
     # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
@@ -57,21 +27,65 @@ if (-not (Test-Path $PlanFile)) {
 $content = Get-Content $PlanFile -Raw
 
 # 计算阶段总数
-$TOTAL = ([regex]::Matches($content, "### 阶段")).Count
+# Count native statuses inside real phases, excluding fenced examples (#377).
+$counts = @{ total = 0; complete = 0; in_progress = 0; pending = 0 }
+$phase = $null
+$invalid = $false
+$activeHeading = ""
+$fence = ""
+$fenceLength = 0
+function Complete-阶段 {
+    if ($null -ne $script:phase) {
+        if ($script:phase.Statuses.Count -ne 1) { $script:invalid = $true }
+        else {
+            $state = $script:phase.Statuses[0]
+            $script:counts[$state]++
+            if ($state -eq 'in_progress' -and -not $script:activeHeading) {
+                $script:activeHeading = $script:phase.Heading
+            }
+        }
+    }
+    $script:phase = $null
+}
+foreach ($line in ($content -split '\r?\n')) {
+    if ($fence) {
+        if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
+        continue
+    }
+    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+        $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
+        continue
+    }
+    if ($line -cmatch '^### 阶段(?:[ \t]|$)') {
+        Complete-阶段
+        $counts.total++
+        $phase = @{ Heading = $line; Statuses = @() }
+    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+        Complete-阶段
+    }
+    if ($null -ne $phase) {
+        foreach ($match in [regex]::Matches($line, '\*\*状态：\*\*[ \t]+(pending|in_progress|complete)(?![\p{L}\p{N}_])|\[(pending|in_progress|complete)\]')) {
+            $state = $match.Groups[1].Value
+            if (-not $state) { $state = $match.Groups[2].Value }
+            $phase.Statuses += $state
+        }
+    }
+}
+Complete-阶段
+$TOTAL = $counts.total
+$COMPLETE = $counts.complete
+$IN_PROGRESS = $counts.in_progress
+$PENDING = $counts.pending
 
-# 先检查 **状态：** 格式
-$COMPLETE = ([regex]::Matches($content, "\*\*状态：\*\* complete")).Count
-$IN_PROGRESS = ([regex]::Matches($content, "\*\*状态：\*\* in_progress")).Count
-$PENDING = ([regex]::Matches($content, "\*\*状态：\*\* pending")).Count
-
-# 备用：如果未找到 **状态：** 则检查 [complete] 行内格式
-if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0 -and $PENDING -eq 0) {
-    $COMPLETE = ([regex]::Matches($content, "\[complete\]")).Count
-    $IN_PROGRESS = ([regex]::Matches($content, "\[in_progress\]")).Count
-    $PENDING = ([regex]::Matches($content, "\[pending\]")).Count
+if ($Validate) {
+    if ($TOTAL -eq 0 -or $invalid) {
+        Write-Output '[planning-with-files] Plan format invalid: use ### 阶段 headings with exactly one native status per phase.'
+        exit 1
+    }
+    Write-Output ('[planning-with-files] Plan format valid (' + $TOTAL + ' phases).')
+    exit 0
 }
 
-# 报告状态 — 始终以退出码 0 结束，未完成的任务是正常状态
 if ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
     Write-Host ('[planning-with-files] 所有阶段已完成（' + $COMPLETE + '/' + $TOTAL + '）。如果用户有额外工作，请在开始前于 task_plan.md 中新增阶段。')
 } else {

@@ -11,39 +11,9 @@ if ($Validate) {
     $content = Get-Content -LiteralPath $PlanFile -Raw
 }
 
-# Explicit creation validation never mutates a plan or changes Stop behavior.
-if ($Validate) {
-    $phases = 0
-    $statuses = 0
-    $inPhase = $false
-    $invalid = $false
-    foreach ($line in ($content -split '\r?\n')) {
-        if ($line -cmatch '^### Phase(?:[ \t]|$)') {
-            if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-            $phases++
-            $inPhase = $true
-            $statuses = 0
-        } elseif ($line -match '^#{1,3}[ \t]') {
-            if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-            $inPhase = $false
-        }
-        if ($inPhase) {
-            $statuses += ([regex]::Matches($line, '\*\*Status:\*\*[ \t]+(?:pending|in_progress|complete)(?:[^\p{L}\p{N}_]|$)')).Count
-            $statuses += ([regex]::Matches($line, '\[(?:pending|in_progress|complete)\]')).Count
-        }
-    }
-    if ($inPhase -and $statuses -ne 1) { $invalid = $true }
-    if ($phases -eq 0 -or $invalid) {
-        Write-Output '[planning-with-files] Plan format invalid: use ### Phase headings with exactly one native status per phase.'
-        exit 1
-    }
-    Write-Output ('[planning-with-files] Plan format valid (' + $phases + ' phases).')
-    exit 0
-}
-
 # issue #195: per-invocation opt-out (PLANNING_DISABLED=1) for one-shot/CI
 # sessions that share a cwd with a plan but never opted into it.
-if ($env:PLANNING_DISABLED -eq '1') { exit 0 }
+if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
 if (-not (Test-Path $PlanFile)) {
     Write-Host "[planning-with-files] No task plan at $PlanFile — run bootstrap or specify path."
@@ -51,15 +21,63 @@ if (-not (Test-Path $PlanFile)) {
 }
 
 $content = Get-Content $PlanFile -Raw
-$TOTAL = ([regex]::Matches($content, "### Phase")).Count
-$COMPLETE = ([regex]::Matches($content, "\*\*Status:\*\* complete")).Count
-$IN_PROGRESS = ([regex]::Matches($content, "\*\*Status:\*\* in_progress")).Count
-$PENDING = ([regex]::Matches($content, "\*\*Status:\*\* pending")).Count
+# Count native statuses inside real phases, excluding fenced examples (#377).
+$counts = @{ total = 0; complete = 0; in_progress = 0; pending = 0 }
+$phase = $null
+$invalid = $false
+$activeHeading = ""
+$fence = ""
+$fenceLength = 0
+function Complete-Phase {
+    if ($null -ne $script:phase) {
+        if ($script:phase.Statuses.Count -ne 1) { $script:invalid = $true }
+        else {
+            $state = $script:phase.Statuses[0]
+            $script:counts[$state]++
+            if ($state -eq 'in_progress' -and -not $script:activeHeading) {
+                $script:activeHeading = $script:phase.Heading
+            }
+        }
+    }
+    $script:phase = $null
+}
+foreach ($line in ($content -split '\r?\n')) {
+    if ($fence) {
+        if ($line -match ('^ {0,3}' + [regex]::Escape($fence) + '{' + $fenceLength + ',}[ \t]*$')) { $fence = "" }
+        continue
+    }
+    if ($line -match '^ {0,3}(`{3,}|~{3,})') {
+        $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
+        continue
+    }
+    if ($line -cmatch '^### Phase(?:[ \t]|$)') {
+        Complete-Phase
+        $counts.total++
+        $phase = @{ Heading = $line; Statuses = @() }
+    } elseif ($line -match '^#{1,3}(?:[ \t]|$)') {
+        Complete-Phase
+    }
+    if ($null -ne $phase) {
+        foreach ($match in [regex]::Matches($line, '\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![\p{L}\p{N}_])|\[(pending|in_progress|complete)\]')) {
+            $state = $match.Groups[1].Value
+            if (-not $state) { $state = $match.Groups[2].Value }
+            $phase.Statuses += $state
+        }
+    }
+}
+Complete-Phase
+$TOTAL = $counts.total
+$COMPLETE = $counts.complete
+$IN_PROGRESS = $counts.in_progress
+$PENDING = $counts.pending
 
-if ($COMPLETE -eq 0 -and $IN_PROGRESS -eq 0 -and $PENDING -eq 0) {
-    $COMPLETE = ([regex]::Matches($content, "\[complete\]")).Count
-    $IN_PROGRESS = ([regex]::Matches($content, "\[in_progress\]")).Count
-    $PENDING = ([regex]::Matches($content, "\[pending\]")).Count
+if ($Validate) {
+    if ($TOTAL -eq 0 -or $invalid) {
+        Write-Output '[planning-with-files] Plan format invalid: use ### Phase headings with exactly one native status per phase.'
+        exit 1
+    }
+    Write-Output ('[planning-with-files] Plan format valid (' + $TOTAL + ' phases).')
+    exit 0
 }
 
 if ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
