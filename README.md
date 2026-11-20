@@ -442,6 +442,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.29.0** | Counts statuses inside their own phases across reports and integrations, handles UTF-8 byte-order marks and indented headings, and adds explicit opt-in checkbox-only re-attestation to the shell helper (PRs #381, #367). |
 | **v3.28.2** | Completes shell and native PowerShell help handling; adds recovery grader and npm README checks to pytest; documents native PowerShell fixture use and preserves trial receipts; clarifies compaction and recovery behavior (PRs #365, #366, #368, #373, #374, #375). |
 | **v3.28.1** | `attest-plan` reports one refusal that names its cause on both routes and adds `-Target` on PowerShell; echoed selectors cannot forge output; `init-session` refuses mistyped switches; localized `/plan` commands follow plan selection; faster JSON listing on Git Bash (PR #353, #360, #362, #363, #364) |
 | **v3.28.0** | Adds opt-in archive and restore for finished named plans (`--archive` / `--restore`, preview first, nothing deleted), so hooks select the remaining plan again; the multiple-plans notice names the command; fixes inventory timestamps, locked files, long paths, hidden folders and PowerShell output on Windows (#355). |

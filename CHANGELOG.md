@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.29.0] - 2026-11-20
+
 ### Added
 - The shell attestation helper can explicitly enroll a plan for checkbox-only updates. It accepts leading task markers changing from unchecked to checked and verifies every other byte against the recorded digest (PR #367, #326).
 
