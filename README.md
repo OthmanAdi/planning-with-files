@@ -342,7 +342,7 @@ npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zh -g
 npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zht -g
 ```
 
-These are real translations, not an English body with a translated description: the SKILL.md prose, the templates, and the user-facing output of `check-complete`, `init-session` and `session-catchup` are all localized. The status tokens stay literal English (`**Status:** complete`) on purpose, because `check-complete.sh` matches them with `grep -F`, so translating them would disable the completion gate.
+These are real translations, not an English body with a translated description: the SKILL.md prose, the templates, and the user-facing output of `check-complete`, `init-session` and `session-catchup` are all localized. Use the phase headings and status fields in your chosen template. The completion checker reads statuses from those phase blocks and skips examples and notes outside them.
 
 Since v3.10.0 the variants also ship the full script surface: attestation, the Stop gate, the ledger, phase status and plan-doctor used to be canonical-only, which quietly made every non-English install a subset install. Full details, including what changed on the plugin route in v3.11.0, are in [docs/languages.md](docs/languages.md).
 
@@ -809,7 +809,7 @@ On the plugin route the model-invocable SKILL is `planning-with-files:planning-w
 The v3 line adds features aimed at long-running agentic runs. Each one is listed with the command or flag that turns it on. Without a mode marker, hooks retain the legacy content format. Since v3.24.0, Claude Code suppresses repeated unchanged PreToolUse views when session identity and private cache storage are available.
 
 - **Autonomous mode** (`/pwf --autonomous`, or `init-session.sh --autonomous`): drops the per-tool-call plan recitation, keeps the turn-start injection, and turns attestation on by default.
-- **Gated mode** (`--gated`): adds a Stop completion gate that blocks only when all completion conditions hold at once, so an incomplete plan alone never traps a session.
+- **Gated mode** (`--gated`): adds a Stop completion gate that blocks only when all completion conditions hold at once, so an incomplete plan alone never traps a session. Phase counts use `### Phase` blocks and skip fenced examples. Statuses quoted in later sections do not change the count.
 - **Auto-continue on Pi** (`agent_end` handler): re-prompts the agent up to a limit of 3 to keep an unfinished plan moving, plus an optional `/plan-goal` string appended to the prompt.
 - **Pi approval gate** (`/plan-execute`): Pi hooks stay passive with a status line until you approve the active plan for the current session.
 - **Session-catchup**: automatic recovery uses project planning files only. Explicit `--metadata` reads same-project local session records and emits aggregate counts only; explicit `--replay` may emit bounded nonce-framed excerpts.

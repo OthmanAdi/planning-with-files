@@ -131,7 +131,7 @@ An unbound conversation keeps the existing `PLAN_ID` and `PWF_PLAN_ROOT` behavio
 Hermes fires `pre_verify` once per turn when the agent changed files and is about to finish. The plugin answers with a continuation request when all of these hold, the same decision table `check-complete.sh --gate` applies on Claude Code:
 
 1. `<plan-dir>/.mode` contains the `gate` token (only `/pwf --gated` or `init-session.sh --gated` write it).
-2. An `in_progress` phase exists, counted as the per-field maximum of `**Status:** in_progress` lines and inline `[in_progress]` markers, exactly as the shell gate counts. An incomplete plan without an active phase never blocks.
+2. An `in_progress` status appears inside a phase block. Fenced examples and statuses quoted outside phase blocks do not activate the gate.
 3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20).
 4. The ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block; a stall releases the turn.
 
