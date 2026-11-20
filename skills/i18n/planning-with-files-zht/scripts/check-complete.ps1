@@ -64,12 +64,12 @@ foreach ($line in (($content -creplace '^\uFEFF', '') -split '\r?\n')) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
-    if ($line -cmatch '^### 階段(?:[0-9:]|-[0-9])') {
+    if ($line -cmatch '^ {0,3}### 階段(?:[0-9:]|-[0-9])') {
         Complete-Phase
         $malformedHeading = $true
         continue
     }
-    if ($line -cmatch '^### 階段(?:[ \t]|$)') {
+    if ($line -cmatch '^ {0,3}### 階段(?:[ \t]|$)') {
         Complete-Phase
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }

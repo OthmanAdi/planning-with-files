@@ -108,12 +108,12 @@ foreach ($line in (($content -creplace '^\uFEFF', '') -split '\r?\n')) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
-    if ($line -cmatch '^### Phase(?:[0-9:]|-[0-9])') {
+    if ($line -cmatch '^ {0,3}### Phase(?:[0-9:]|-[0-9])') {
         Complete-Phase
         $malformedHeading = $true
         continue
     }
-    if ($line -cmatch '^### Phase(?:[ \t]|$)') {
+    if ($line -cmatch '^ {0,3}### Phase(?:[ \t]|$)') {
         Complete-Phase
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }
@@ -280,7 +280,7 @@ if ($blocks -gt 0 -and $ledgerNow -eq $ledgerPrev) {
 # Get-FirstInProgressPhase: heading text of the first phase whose Status is
 # in_progress. Plain text only -- no plan body beyond the heading.
 function Get-FirstInProgressPhase {
-    return ($activeHeading -replace '^### ', '')
+    return ($activeHeading -replace '^ {0,3}### ', '')
 }
 
 $phaseName = Get-FirstInProgressPhase

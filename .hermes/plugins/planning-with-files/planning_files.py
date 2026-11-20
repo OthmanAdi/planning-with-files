@@ -314,7 +314,7 @@ def _unfenced_lines(task_plan: str) -> tuple[list[str], bool]:
             fence = marker[1][0]
             fence_length = len(marker[1])
             continue
-        if re.match(r"^### Phase(?:[0-9:]|-[0-9])", line, re.IGNORECASE):
+        if re.match(r"^ {0,3}### Phase(?:[0-9:]|-[0-9])", line, re.IGNORECASE):
             malformed_heading = True
         lines.append(line)
     return lines, bool(fence) or malformed_heading
@@ -325,8 +325,8 @@ def _plan_phases(lines: list[str], *, ignore_case: bool = False) -> list[tuple[s
     phases: list[tuple[str, list[str]]] = []
     phase = None
     for line in lines:
-        if re.match(r"^### Phase(?:[ \t]|$)", line, flags):
-            phase = (line[4:], [])
+        if re.match(r"^ {0,3}### Phase(?:[ \t]|$)", line, flags):
+            phase = (line.lstrip(" ")[4:], [])
             phases.append(phase)
         elif re.match(r"^ {0,3}#{1,3}(?:[ \t]|$)", line):
             phase = None

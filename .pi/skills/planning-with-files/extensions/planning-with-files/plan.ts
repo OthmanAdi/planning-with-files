@@ -284,10 +284,10 @@ function planPhases(text: string) {
     if (marker && (marker[1][0] !== "`" || !line.slice(marker[0].length).includes("`"))) {
       fence = marker[1][0]; fenceLength = marker[1].length; continue
     }
-    if (/^### Phase(?:[ \t]|$)/i.test(line)) {
-      phase = { heading: line.slice(4), statuses: [] }
+    if (/^ {0,3}### Phase(?:[ \t]|$)/i.test(line)) {
+      phase = { heading: line.trimStart().slice(4), statuses: [] }
       phases.push(phase)
-    } else if (/^### Phase(?:[0-9:]|-[0-9])/i.test(line)) {
+    } else if (/^ {0,3}### Phase(?:[0-9:]|-[0-9])/i.test(line)) {
       malformedHeading = true
       phase = null
     } else if (/^ {0,3}#{1,3}(?:[ \t]|$)/.test(line)) phase = null

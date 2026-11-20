@@ -685,10 +685,10 @@ def smart_plan_extract(data):
             elif insec == b"keep":
                 keep += line + b"\n"
             continue
-        if re.match(br"^### Phase(?:[ \t]|$)", line):
+        if re.match(br"^ {0,3}### Phase(?:[ \t]|$)", line):
             phase = {"body": b"", "statuses": []}
             phases.append(phase)
-        elif re.match(br"^### Phase(?:[0-9:]|-[0-9])", line):
+        elif re.match(br"^ {0,3}### Phase(?:[0-9:]|-[0-9])", line):
             malformed_heading = True
             phase = None
         elif re.match(br"^ {0,3}#{1,3}(?:[ \t]|$)", line):
