@@ -564,6 +564,22 @@ class PlanAttestationTests(unittest.TestCase):
 
 
     @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
+    def test_missing_atomic_link_support_refuses_before_writing(self):
+        plan = self.tmp / "task_plan.md"
+        plan.write_bytes(b"- [ ] ordinary task\n")
+        commands = self.tmp / "bin"
+        commands.mkdir()
+        unsupported = commands / "ln"
+        unsupported.write_text("#!/bin/sh\nexit 1\n", encoding="ascii")
+        unsupported.chmod(0o755)
+        result = self._run(env={"PATH": str(commands) + os.pathsep + os.environ["PATH"]})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cannot create the required atomic hard-link", result.stderr)
+        self.assertFalse((self.tmp / ".plan-attestation").exists())
+        self.assertFalse((self.tmp / ".plan-attestation.writer-lock").exists())
+        self.assertEqual(list(self.tmp.glob(".pwf-writer.*")), [])
+
+    @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
     def test_checkbox_only_enrollment_and_exact_bytes(self):
         plan = self.tmp / "task_plan.md"
         before = b"# Plan\r\n- [ ] one [ ]\r\n  * [ ] two\r\n"
@@ -629,6 +645,25 @@ class PlanAttestationTests(unittest.TestCase):
             plan.write_bytes(old.replace(b"[ ] " + word, b"[x] " + word))
             self.assertNotEqual(self._run("--checkbox-only").returncode, 0)
         plan.write_bytes(old.replace(b"[ ] actual", b"[x] actual"))
+        self.assertEqual(self._run("--checkbox-only").returncode, 0)
+
+    @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
+    def test_checkbox_only_fence_context_and_bom_offsets(self):
+        plan = self.tmp / "task_plan.md"
+        bom = bytes.fromhex("efbbbf")
+        fence = b"`" * 3
+        for prefix in (bom, b"    " + fence + b"\n", fence + b"lang`bad\n"):
+            with self.subTest(prefix=prefix):
+                before = prefix + fence + b"\n- [ ] example\n" + fence + b"\n- [ ] actual\n"
+                plan.write_bytes(before)
+                self.assertEqual(self._run("--enable-checkbox-only").returncode, 0)
+                plan.write_bytes(before.replace(b"[ ] example", b"[x] example"))
+                self.assertNotEqual(self._run("--checkbox-only").returncode, 0)
+                plan.write_bytes(before.replace(b"[ ] actual", b"[x] actual"))
+                self.assertEqual(self._run("--checkbox-only").returncode, 0)
+        plan.write_bytes(bom + b"- [ ] first\n")
+        self.assertEqual(self._run("--enable-checkbox-only").returncode, 0)
+        plan.write_bytes(bom + b"- [x] first\n")
         self.assertEqual(self._run("--checkbox-only").returncode, 0)
 
     @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
