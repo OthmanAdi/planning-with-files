@@ -491,12 +491,13 @@ export function compactionNote(root: string, planDir: string): string {
 // gate (parity with check-complete.sh --gate)
 // ---------------------------------------------------------------------------
 
-function planPhases(text: string): { heading: string; statuses: string[] }[] {
+function planPhases(text: string) {
   const phases: { heading: string; statuses: string[] }[] = []
   let phase: (typeof phases)[number] | null = null
   let fence = ""
   let fenceLength = 0
-  for (const line of text.split(/\r?\n/)) {
+  let malformedHeading = false
+  for (const line of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
     if (fence) {
       if (new RegExp(`^ {0,3}${fence}{${fenceLength},}[ \\t]*$`).test(line)) fence = ""
       continue
@@ -508,6 +509,9 @@ function planPhases(text: string): { heading: string; statuses: string[] }[] {
     if (/^### Phase(?:[ \t]|$)/.test(line)) {
       phase = { heading: line.slice(4), statuses: [] }
       phases.push(phase)
+    } else if (/^### Phase(?:[0-9:]|-[0-9])/.test(line)) {
+      malformedHeading = true
+      phase = null
     } else if (/^ {0,3}#{1,3}(?:[ \t]|$)/.test(line)) phase = null
     if (phase) {
       for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/g)) {
@@ -515,17 +519,23 @@ function planPhases(text: string): { heading: string; statuses: string[] }[] {
       }
     }
   }
-  return phases
+  return { phases, invalidStructure: fence !== "" || malformedHeading }
 }
 
-export function gateCounts(text: string): { total: number; complete: number; in_progress: number; pending: number } {
-  const phases = planPhases(text)
+export function gateCounts(text: string): { total: number; complete: number; in_progress: number; pending: number; invalid_structure?: true } {
+  const { phases, invalidStructure } = planPhases(text)
   const count = (state: string) => phases.filter((p) => p.statuses.length === 1 && p.statuses[0] === state).length
-  return { total: phases.length, complete: count("complete"), in_progress: count("in_progress"), pending: count("pending") }
+  return {
+    total: phases.length,
+    complete: count("complete"),
+    in_progress: phases.filter((p) => p.statuses.includes("in_progress")).length,
+    pending: count("pending"),
+    ...(invalidStructure ? { invalid_structure: true } : {}),
+  }
 }
 
 export function firstInProgressPhase(text: string): string {
-  return planPhases(text).find((p) => p.statuses.length === 1 && p.statuses[0] === "in_progress")?.heading ?? ""
+  return planPhases(text).phases.find((p) => p.statuses.includes("in_progress"))?.heading ?? ""
 }
 
 function readCounter(target: string): number {
@@ -870,11 +880,16 @@ export function checkComplete(root: string, env: Env): { complete: boolean; mess
         : "No task_plan.md found. Run pwf_init first.",
     }
   }
-  const text = readText(path.join(resolved.planDir, "task_plan.md")) ?? ""
+  const text = readText(path.join(resolved.planDir, "task_plan.md"))
+  if (text === null) {
+    return { complete: false, message: "[planning-with-files] Plan read error: phase completion unavailable." }
+  }
   const counts = gateCounts(text)
-  const complete = counts.total > 0 && counts.complete >= counts.total
+  const complete = !counts.invalid_structure && counts.total > 0 && counts.complete >= counts.total
   const message = complete
     ? `[planning-with-files] ALL PHASES COMPLETE (${counts.complete}/${counts.total}). If the user has additional work, add new phases to task_plan.md before starting.`
-    : `[planning-with-files] Plan incomplete: ${counts.complete}/${counts.total} phases complete, ${counts.in_progress} in_progress.`
+    : counts.invalid_structure
+      ? "[planning-with-files] Plan format error: phase completion unavailable."
+      : `[planning-with-files] Plan incomplete: ${counts.complete}/${counts.total} phases complete, ${counts.in_progress} in_progress.`
   return { complete, message, plan_id: planIdFor(root, resolved.planDir), counts }
 }

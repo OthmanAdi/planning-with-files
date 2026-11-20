@@ -30,10 +30,12 @@ hermes = importlib.import_module("pwf_phase_hermes.planning_files")
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c["name"])
 def test_python_consumers(case):
     expected = {k: case[k] for k in ("total", "complete", "in_progress", "pending")}
+    if case.get("invalid_structure"):
+        expected["invalid_structure"] = True
     assert hermes.gate_counts(case["plan"]) == expected
     assert {k: hermes.phase_counts(case["plan"])[k] for k in expected} == expected
     view = injector.smart_plan_extract(case["plan"].encode())
-    if case["total"] and not case.get("smart_fallback"):
+    if case["valid"]:
         assert f"phases: {case['complete'] or ''}/{case['total']} complete".encode() in view
     else:
         assert view is None
@@ -62,7 +64,10 @@ def test_script_consumers(case, runtime, tmp_path):
 
     result = run("check-complete", str(plan))
     assert result.returncode == 0
-    if case["total"]:
+    if case.get("invalid_structure"):
+        assert "ALL PHASES COMPLETE" not in result.stdout
+        assert "format" in result.stdout.lower()
+    elif case["total"]:
         assert f"{case['complete']}/{case['total']}" in result.stdout
         assert ("ALL PHASES COMPLETE" in result.stdout) == (case["complete"] == case["total"])
     else:
@@ -71,11 +76,14 @@ def test_script_consumers(case, runtime, tmp_path):
     assert (validated.returncode == 0) == case["valid"]
     ledger = run("ledger-summary")
     assert ledger.returncode == 0
-    assert f"phases: {case['complete']}/{case['total']} complete" in ledger.stdout
+    if case.get("invalid_structure"):
+        assert "phases: unavailable" in ledger.stdout
+    else:
+        assert f"phases: {case['complete']}/{case['total']} complete" in ledger.stdout
     assert plan.read_text(encoding="utf-8") == case["plan"]
 
 
-@pytest.mark.parametrize("case", [c for c in CASES if c["valid"]], ids=lambda c: c["name"])
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c["name"])
 def test_shell_smart_view(case, tmp_path):
     if not shutil.which("sh"):
         pytest.skip("sh unavailable")
@@ -87,6 +95,10 @@ def test_shell_smart_view(case, tmp_path):
     plan.write_text(case["plan"], encoding="utf-8")
     result = subprocess.run(["sh", "-c", function + '\nsmart_plan_extract "$1"', "sh", str(plan)],
                             capture_output=True, text=True, encoding="utf-8")
+    if not case["valid"]:
+        assert result.returncode == 9, result.stderr
+        assert result.stdout == ""
+        return
     assert result.returncode == 0, result.stderr
     assert f"phases: {case['complete'] or ''}/{case['total']} complete" in result.stdout
     assert result.stdout.encode() == injector.smart_plan_extract(case["plan"].encode())
@@ -162,3 +174,85 @@ def test_localized_statuses_remain_visible_in_smart_injection(runtime, tmp_path)
     assert result.returncode == 0, result.stderr
     assert plan in result.stdout
     assert "phases:" not in result.stdout
+
+
+@pytest.mark.parametrize("runtime", ["sh", "powershell"])
+def test_active_phase_with_pending_checklist_still_requests_continuation(runtime, tmp_path):
+    executable = shutil.which("sh") if runtime == "sh" else PWSH
+    if executable is None:
+        pytest.skip(f"{runtime} unavailable")
+    plan = tmp_path / "task_plan.md"
+    plan.write_text("### Phase 1: Build\n**Status:** in_progress\n- [pending] Review the result\n", encoding="utf-8")
+    (tmp_path / ".mode").write_text("gate\n", encoding="ascii")
+    args = ([str(ROOT / "scripts/check-complete.sh"), "--gate", str(plan)] if runtime == "sh" else
+            ["-NoProfile", "-File", str(ROOT / "scripts/check-complete.ps1"), "-Gate", str(plan)])
+    result = subprocess.run([executable, *args], cwd=tmp_path, input="{}", capture_output=True,
+                            text=True, encoding="utf-8")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["decision"] == "block"
+
+
+@pytest.mark.parametrize("directory", [
+    ".kiro/skills/planning-with-files/assets",
+    *[f"skills/i18n/planning-with-files-{lang}" for lang in ("ar", "de", "es", "zh", "zht")],
+])
+def test_shell_validation_keeps_explicit_path(directory, tmp_path):
+    shell = shutil.which("sh")
+    if shell is None:
+        pytest.skip("sh unavailable")
+    plan = tmp_path / "review plan.md"
+    phase = {"ar": "المرحلة", "zh": "阶段", "zht": "階段"}.get(directory.rsplit("-", 1)[-1], "Phase")
+    plan.write_text(f"### {phase} 1: Review [pending]\n", encoding="utf-8-sig")
+    result = subprocess.run([shell, str(ROOT / directory / "scripts/check-complete.sh"),
+                             "--validate", str(plan)], cwd=tmp_path, capture_output=True,
+                            text=True, encoding="utf-8")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "valid (1 phases)" in result.stdout
+
+
+@pytest.mark.parametrize("runtime", ["sh", "powershell"])
+def test_hermes_shipped_report_handles_unfinished_example(runtime, tmp_path):
+    executable = shutil.which("sh") if runtime == "sh" else PWSH
+    if executable is None:
+        pytest.skip(f"{runtime} unavailable")
+    plan = tmp_path / "task_plan.md"
+    fixture = next(case for case in CASES if case["name"] == "unfinished_markdown_example")
+    plan.write_text(fixture["plan"], encoding="utf-8")
+    scripts = ROOT / ".hermes/skills/planning-with-files/scripts"
+    args = ([str(scripts / "check-complete.sh"), str(plan)] if runtime == "sh" else
+            ["-NoProfile", "-File", str(scripts / "check-complete.ps1"), str(plan)])
+    result = subprocess.run([executable, *args], cwd=tmp_path, capture_output=True,
+                            encoding="utf-8", text=True)
+    assert result.returncode == 0, result.stderr
+    assert "phase completion unavailable" in result.stdout
+
+
+def test_shell_validation_rejects_unreadable_plan(tmp_path):
+    shell = shutil.which("sh")
+    if shell is None:
+        pytest.skip("sh unavailable")
+    plan = tmp_path / "task_plan.md"
+    plan.write_text("### Phase 1: Review [complete]\n", encoding="utf-8")
+    plan.chmod(0)
+    try:
+        if os.access(plan, os.R_OK):
+            pytest.skip("current user can read despite file mode")
+        result = subprocess.run([shell, str(ROOT / "scripts/check-complete.sh"),
+                                 "--validate", str(plan)], cwd=tmp_path, capture_output=True,
+                                text=True, encoding="utf-8")
+        assert result.returncode == 1
+        assert "valid (" not in result.stdout
+        assert "Illegal number" not in result.stderr
+    finally:
+        plan.chmod(0o600)
+
+
+def test_hermes_status_keeps_lowercase_heading_compatibility():
+    counts = hermes.phase_counts("### phase 1: Review\n**status:** Complete\n")
+    assert counts["total"] == counts["complete"] == 1
+
+
+def test_hermes_status_keeps_unfenced_inline_markers_without_headings():
+    counts = hermes.phase_counts("# Review\n- [complete] Design\n- [pending] Verify\n")
+    assert counts["total"] == 2
+    assert counts["complete"] == counts["pending"] == 1

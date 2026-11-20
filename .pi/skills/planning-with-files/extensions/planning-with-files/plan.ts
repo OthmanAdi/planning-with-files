@@ -29,6 +29,7 @@ export interface PlanStatus extends PlanPaths {
 	closed: boolean;
 	totalPhases: number;
 	completePhases: number;
+	invalidPhaseStructure?: boolean;
 	inProgressPhases: number;
 	pendingPhases: number;
 	firstLines50: string;
@@ -268,12 +269,13 @@ export function resolvePlanPaths(sessionCwd: string): PlanPaths {
 	return makeNone();
 }
 
-function planPhases(text: string): { heading: string; statuses: string[] }[] {
+function planPhases(text: string) {
   const phases: { heading: string; statuses: string[] }[] = []
   let phase: (typeof phases)[number] | null = null
   let fence = ""
   let fenceLength = 0
-  for (const line of text.split(/\r?\n/)) {
+  let malformedHeading = false
+  for (const line of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {
     if (fence) {
       if (new RegExp(`^ {0,3}${fence}{${fenceLength},}[ \\t]*$`).test(line)) fence = ""
       continue
@@ -282,17 +284,20 @@ function planPhases(text: string): { heading: string; statuses: string[] }[] {
     if (marker && (marker[1][0] !== "`" || !line.slice(marker[0].length).includes("`"))) {
       fence = marker[1][0]; fenceLength = marker[1].length; continue
     }
-    if (/^### Phase(?:[ \t]|$)/.test(line)) {
+    if (/^### Phase(?:[ \t]|$)/i.test(line)) {
       phase = { heading: line.slice(4), statuses: [] }
       phases.push(phase)
+    } else if (/^### Phase(?:[0-9:]|-[0-9])/i.test(line)) {
+      malformedHeading = true
+      phase = null
     } else if (/^ {0,3}#{1,3}(?:[ \t]|$)/.test(line)) phase = null
     if (phase) {
-      for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/g)) {
-        phase.statuses.push(match[1] || match[2])
+      for (const match of line.matchAll(/\*\*Status:\*\*[ \t]+(pending|in_progress|complete)(?![A-Za-z0-9_])|\[(pending|in_progress|complete)\]/gi)) {
+        phase.statuses.push((match[1] || match[2]).toLowerCase())
       }
     }
   }
-  return phases
+  return { phases, invalidStructure: fence !== "" || malformedHeading }
 }
 
 export function readPlanStatus(cwd: string): PlanStatus {
@@ -325,11 +330,11 @@ export function readPlanStatus(cwd: string): PlanStatus {
 	const closed = /<!--\s*pwf:\s*closed\s*-->/i.test(planContent);
 	const lines = planContent.split("\n");
 
-	const phases = planPhases(planContent);
+	const { phases, invalidStructure } = planPhases(planContent);
 	const total = phases.length;
 	const count = (state: string) => phases.filter((p) => p.statuses.length === 1 && p.statuses[0] === state).length;
 	const complete = count("complete");
-	const inProgress = count("in_progress");
+	const inProgress = phases.filter((p) => p.statuses.includes("in_progress")).length;
 	const pending = count("pending");
 
 	let progressTail20 = "";
@@ -346,6 +351,7 @@ export function readPlanStatus(cwd: string): PlanStatus {
 		closed,
 		totalPhases: total,
 		completePhases: complete,
+		invalidPhaseStructure: invalidStructure,
 		inProgressPhases: inProgress,
 		pendingPhases: pending,
 		firstLines50: lines.slice(0, 50).join("\n"),
@@ -355,7 +361,7 @@ export function readPlanStatus(cwd: string): PlanStatus {
 }
 
 export function isAllPhasesComplete(status: PlanStatus): boolean {
-	return status.exists && status.totalPhases > 0 && status.completePhases >= status.totalPhases;
+	return status.exists && !status.invalidPhaseStructure && status.totalPhases > 0 && status.completePhases >= status.totalPhases;
 }
 
 export function isPlanIncomplete(status: PlanStatus): boolean {
