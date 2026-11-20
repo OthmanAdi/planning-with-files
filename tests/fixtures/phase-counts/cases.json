@@ -37,7 +37,7 @@
   },
   {
     "name": "heading_boundaries",
-    "plan": "### Phase 1: Real\n**Status:** complete\n### Other section\n**Status:** pending\n#### Phase 9: Not a phase\n[complete]\n# Appendix\n**Status:** complete\n",
+    "plan": "### Phase 1: Real\n**Status:** complete\n### Phase-based metrics\n**Status:** pending\n#### Phase 9: Not a phase\n[complete]\n# Appendix\n**Status:** complete\n",
     "total": 1,
     "complete": 1,
     "in_progress": 0,
@@ -96,8 +96,7 @@
     "complete": 0,
     "in_progress": 0,
     "pending": 0,
-    "valid": false,
-    "smart_fallback": true
+    "valid": false
   },
   {
     "name": "fenced_legacy_table",
@@ -116,5 +115,43 @@
     "in_progress": 1,
     "pending": 0,
     "valid": true
+  },
+  {
+    "name": "windows_utf8_bom",
+    "plan": "\ufeff### Phase 1: Review\n**Status:** pending\n### Phase 2: Build\n**Status:** complete\n",
+    "total": 2,
+    "complete": 1,
+    "in_progress": 0,
+    "pending": 1,
+    "valid": true
+  },
+  {
+    "name": "active_with_pending_checklist_item",
+    "plan": "### Phase 1: Build\n**Status:** in_progress\n- [pending] Review the result\n",
+    "total": 1,
+    "complete": 0,
+    "in_progress": 1,
+    "pending": 0,
+    "valid": false
+  },
+  {
+    "name": "unfinished_markdown_example",
+    "plan": "### Phase 1: Review\n**Status:** complete\n\n````text\nsample output\n```\n",
+    "total": 1,
+    "complete": 1,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": false,
+    "invalid_structure": true
+  },
+  {
+    "name": "phase_heading_missing_space",
+    "plan": "### Phase 1: Review\n**Status:** complete\n### Phase2: Build\n**Status:** pending\n",
+    "total": 1,
+    "complete": 1,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": false,
+    "invalid_structure": true
   }
 ]

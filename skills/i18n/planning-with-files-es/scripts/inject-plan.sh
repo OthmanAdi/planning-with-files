@@ -1018,7 +1018,7 @@ elif mode_has 'inject-smart'; then
 fi
 
 smart_plan_extract() {
-    awk '
+    LC_ALL=C awk '
         function finish_phase() {
             if (in_phase) {
                 if (status_count != 1) invalid = 1
@@ -1044,21 +1044,23 @@ smart_plan_extract() {
             return fence != ""
         }
         function read_status(line,    token, boundary) {
-            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)|\[(pending|in_progress|complete)\]/)) {
+            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^A-Za-z0-9_]|$)|\[(pending|in_progress|complete)\]/)) {
                 token = substr(line, RSTART, RLENGTH)
-                boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
+                boundary = substr(token, 1, 2) == "**" && token ~ /[^A-Za-z0-9_]$/
                 sub(/^\*\*Status:\*\*[ \t]+|^\[/, "", token)
                 sub(/[^a-z_].*$/, "", token)
-                has_status = 1; status_count++; phase_status = token
+                status_count++; phase_status = token
                 line = substr(line, RSTART + RLENGTH - boundary)
             }
         }
+        NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
         fenced($0) {
             if (in_phase) curbuf = curbuf $0 "\n"
             else if (insec == "keep") keep = keep $0 "\n"
             next
         }
+        /^### Phase([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
         /^### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0; curbuf = $0 "\n"; read_status($0); next
         }
@@ -1077,8 +1079,8 @@ smart_plan_extract() {
         }
         END {
             finish_phase()
-            # Unrecognized status labels retain the raw-plan fallback.
-            if (total == 0 || !has_status) exit 9
+            # Ambiguous structure retains the ordinary bounded view.
+            if (total == 0 || invalid || malformed_heading || fence != "") exit 9
             if (title != "") print title
             printf "%s", keep
             print "phases: " counts["complete"] "/" total " complete"

@@ -215,9 +215,12 @@ def init_plan(
 
 
 def phase_counts(task_plan: str) -> dict[str, int]:
-    counts = {**gate_counts(task_plan), "failed": sum(states in (["failed"], ["blocked"]) for _, states in _plan_phases(task_plan))}
-    if counts["total"] == 0:
-        for line in _unfenced_lines(task_plan):
+    lines, invalid_structure = _unfenced_lines(task_plan)
+    phases = _plan_phases(lines, ignore_case=True)
+    counts = _phase_totals(phases, invalid_structure)
+    counts["failed"] = sum(states in (["failed"], ["blocked"]) for _, states in phases)
+    if counts["total"] == 0 and not invalid_structure:
+        for line in lines:
             stripped = line.strip()
             if not (stripped.startswith("|") and stripped.endswith("|")):
                 continue
@@ -225,9 +228,13 @@ def phase_counts(task_plan: str) -> dict[str, int]:
             if len(cells) < 2 or cells[0] in {"phase", "error"} or set(cells[0]) == {"-"}:
                 continue
             status = cells[1]
-            if status in counts:
+            if status in ("complete", "in_progress", "pending", "failed"):
                 counts[status] += 1
                 counts["total"] += 1
+        if counts["total"] == 0:
+            for state in ("complete", "in_progress", "pending"):
+                counts[state] = sum(line.count(f"[{state}]") for line in lines)
+                counts["total"] += counts[state]
     return counts
 
 
@@ -290,9 +297,13 @@ def extract_current_phase(task_plan: str) -> str:
     return "No phase found"
 
 
-def _unfenced_lines(task_plan: str):
+def _unfenced_lines(task_plan: str) -> tuple[list[str], bool]:
+    lines: list[str] = []
     fence = ""
     fence_length = 0
+    malformed_heading = False
+    if task_plan.startswith("\ufeff"):
+        task_plan = task_plan[1:]
     for line in task_plan.splitlines():
         if fence:
             if re.match(r"^ {0,3}" + re.escape(fence) + r"{" + str(fence_length) + r",}[ \t]*$", line):
@@ -303,35 +314,50 @@ def _unfenced_lines(task_plan: str):
             fence = marker[1][0]
             fence_length = len(marker[1])
             continue
-        yield line
+        if re.match(r"^### Phase(?:[0-9:]|-[0-9])", line, re.IGNORECASE):
+            malformed_heading = True
+        lines.append(line)
+    return lines, bool(fence) or malformed_heading
 
 
-def _plan_phases(task_plan: str) -> list[tuple[str, list[str]]]:
+def _plan_phases(lines: list[str], *, ignore_case: bool = False) -> list[tuple[str, list[str]]]:
+    flags = re.IGNORECASE if ignore_case else 0
     phases: list[tuple[str, list[str]]] = []
     phase = None
-    for line in _unfenced_lines(task_plan):
-        if re.match(r"^### Phase(?:[ \t]|$)", line):
+    for line in lines:
+        if re.match(r"^### Phase(?:[ \t]|$)", line, flags):
             phase = (line[4:], [])
             phases.append(phase)
         elif re.match(r"^ {0,3}#{1,3}(?:[ \t]|$)", line):
             phase = None
         if phase is not None:
-            for match in re.finditer(r"\*\*Status:\*\*[ \t]+(pending|in_progress|complete|failed|blocked)(?![A-Za-z0-9_])|\[(pending|in_progress|complete|failed|blocked)\]", line):
-                phase[1].append(match[1] or match[2])
+            for match in re.finditer(r"\*\*Status:\*\*[ \t]+(pending|in_progress|complete|failed|blocked)(?![A-Za-z0-9_])|\[(pending|in_progress|complete|failed|blocked)\]", line, flags):
+                phase[1].append((match[1] or match[2]).lower())
     return phases
 
 
 def first_in_progress_phase(task_plan: str) -> str:
-    return next((heading for heading, states in _plan_phases(task_plan) if states == ["in_progress"]), "")
+    lines, _ = _unfenced_lines(task_plan)
+    return next((heading for heading, states in _plan_phases(lines) if "in_progress" in states), "")
+
+
+def _phase_totals(phases: list[tuple[str, list[str]]], invalid_structure: bool) -> dict[str, int]:
+    counts = {"total": len(phases), "complete": 0, "in_progress": 0, "pending": 0}
+    for _, states in phases:
+        native_states = [state for state in states if state not in ("failed", "blocked")]
+        if "in_progress" in native_states:
+            counts["in_progress"] += 1
+        elif len(native_states) == 1:
+            counts[native_states[0]] += 1
+    if invalid_structure:
+        counts["invalid_structure"] = True
+    return counts
 
 
 def gate_counts(task_plan: str) -> dict[str, int]:
-    """Count one native status per real phase, matching creation validation."""
-    phases = _plan_phases(task_plan)
-    counts = {"total": len(phases)}
-    for state in ("complete", "in_progress", "pending"):
-        counts[state] = sum(states == [state] for _, states in phases)
-    return counts
+    """Count native statuses in real phases, retaining explicit active evidence."""
+    lines, invalid_structure = _unfenced_lines(task_plan)
+    return _phase_totals(_plan_phases(lines), invalid_structure)
 
 
 # The strictness-LOWERING mode tokens. Everything else raises strictness, and

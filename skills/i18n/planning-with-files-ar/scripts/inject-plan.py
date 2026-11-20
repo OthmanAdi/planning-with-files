@@ -652,12 +652,15 @@ def smart_plan_extract(data):
     """Return the smart view using the validated phase grammar (#377)."""
     phases = []
     phase = None
+    malformed_heading = False
     fence = b""
     fence_length = 0
     title = b""
     keep = b""
     insec = b""
     drows = []
+    if data.startswith(b"\xef\xbb\xbf"):
+        data = data[3:]
     records = data.split(b"\n")
     terminated = records[-1] == b""
     if terminated:
@@ -685,6 +688,9 @@ def smart_plan_extract(data):
         if re.match(br"^### Phase(?:[ \t]|$)", line):
             phase = {"body": b"", "statuses": []}
             phases.append(phase)
+        elif re.match(br"^### Phase(?:[0-9:]|-[0-9])", line):
+            malformed_heading = True
+            phase = None
         elif re.match(br"^ {0,3}#{1,3}(?:[ \t]|$)", line):
             phase = None
         if phase is not None:
@@ -709,8 +715,8 @@ def smart_plan_extract(data):
             keep += line + b"\n"
         elif insec == b"dec" and line.startswith(b"|"):
             drows.append(line)
-    # Unrecognized status labels retain the raw-plan fallback.
-    if not phases or not any(p["statuses"] for p in phases):
+    # Ambiguous structure retains the ordinary bounded view.
+    if fence or malformed_heading or not phases or any(len(p["statuses"]) != 1 for p in phases):
         return None
     # Preserve the shell smart view's existing empty-zero display.
     done = sum(p["statuses"] == [b"complete"] for p in phases)

@@ -91,16 +91,19 @@ if [ ! -f "$PLAN_FILE" ]; then
 fi
 
 # Count native statuses inside real phases, excluding fenced examples (#377).
-PLAN_COUNTS=$(awk '
+PLAN_COUNTS=$(LC_ALL=C awk '
         function finish_phase() {
             if (in_phase) {
                 if (status_count != 1) invalid = 1
                 else {
-                    counts[phase_status]++
-                    if (phase_status == "in_progress" && active_heading == "") active_heading = heading
+                    if (phase_status != "in_progress") counts[phase_status]++
+                }
+                if (has_active_status) {
+                    counts["in_progress"]++
+                    if (active_heading == "") active_heading = heading
                 }
             }
-            in_phase = 0; status_count = 0; phase_status = ""
+            in_phase = 0; status_count = 0; phase_status = ""; has_active_status = 0
         }
         function fenced(line,    trimmed, marker, run) {
             trimmed = line; sub(/^ ? ? ?/, "", trimmed)
@@ -115,17 +118,20 @@ PLAN_COUNTS=$(awk '
             return fence != ""
         }
         function read_status(line,    token, boundary) {
-            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^[:alnum:]_]|$)|\[(pending|in_progress|complete)\]/)) {
+            while (match(line, /\*\*Status:\*\*[ \t]+(pending|in_progress|complete)([^A-Za-z0-9_]|$)|\[(pending|in_progress|complete)\]/)) {
                 token = substr(line, RSTART, RLENGTH)
-                boundary = substr(token, 1, 2) == "**" && token ~ /[^[:alnum:]_]$/
+                boundary = substr(token, 1, 2) == "**" && token ~ /[^A-Za-z0-9_]$/
                 sub(/^\*\*Status:\*\*[ \t]+|^\[/, "", token)
                 sub(/[^a-z_].*$/, "", token)
                 status_count++; phase_status = token
+                if (token == "in_progress") has_active_status = 1
                 line = substr(line, RSTART + RLENGTH - boundary)
             }
         }
+        NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
         fenced($0) { next }
+        /^### Phase([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
         /^### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0
         }
@@ -133,15 +139,15 @@ PLAN_COUNTS=$(awk '
         in_phase { read_status($0) }
         END {
             finish_phase()
-            printf "%d %d %d %d %d\n%s\n", total, counts["complete"], counts["in_progress"], counts["pending"], invalid, active_heading
+            printf "%d %d %d %d %d %d\n%s\n", total, counts["complete"], counts["in_progress"], counts["pending"], invalid, (fence != "" || malformed_heading), active_heading
         }
-    ' "$PLAN_FILE")
-read -r TOTAL COMPLETE IN_PROGRESS PENDING INVALID <<EOF
+    ' 2>/dev/null < "$PLAN_FILE") || PLAN_COUNTS="0 0 0 0 0 1"
+read -r TOTAL COMPLETE IN_PROGRESS PENDING INVALID UNKNOWN <<EOF
 $PLAN_COUNTS
 EOF
 
 if [ "$VALIDATE" -eq 1 ]; then
-    if [ "$TOTAL" -eq 0 ] || [ "$INVALID" -ne 0 ]; then
+    if [ "$TOTAL" -eq 0 ] || [ "$INVALID" -ne 0 ] || [ "$UNKNOWN" -ne 0 ]; then
         echo "[planning-with-files] Plan format invalid: use ### Phase headings with exactly one native status per phase."
         exit 1
     fi
@@ -152,14 +158,16 @@ fi
 # issue #191: no "### Phase" headings -> not a phase-structured plan. Report
 # nothing rather than a false "0/0 phases complete" status. With TOTAL=0 the
 # gate can never legitimately block (IN_PROGRESS is also 0), so exit is safe.
-if [ "$TOTAL" -eq 0 ]; then
+if [ "$TOTAL" -eq 0 ] && [ "$UNKNOWN" -eq 0 ]; then
     exit 0
 fi
 
 # Explicit status reports retain completion text. Automatic gate checks have
 # nothing to report on success; keep evaluating all gate guards before here.
 advisory_report() {
-    if [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
+    if [ "$UNKNOWN" -ne 0 ]; then
+        echo "[planning-with-files] Plan format or read error: phase completion unavailable."
+    elif [ "$COMPLETE" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
         [ "$GATE" -eq 1 ] && return 0
         echo "[planning-with-files] ALL PHASES COMPLETE ($COMPLETE/$TOTAL). If the user has additional work, add new phases to task_plan.md before starting."
     else

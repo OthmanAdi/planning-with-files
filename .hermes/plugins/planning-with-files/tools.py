@@ -159,7 +159,15 @@ def planning_with_files_status(cwd: str = "") -> str:
 
 def _python_completion_report(plan_file: Path) -> dict:
     """Fallback for hosts without ``sh`` (native Windows Hermes Desktop)."""
-    counts = phase_counts(plan_file.read_text(encoding="utf-8", errors="replace"))
+    try:
+        counts = phase_counts(plan_file.read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return {"ok": False, "returncode": 1, "stdout": "", "stderr": "Plan read error.",
+                "complete": False, "route": "python"}
+    if counts.get("invalid_structure"):
+        return {"ok": True, "returncode": 0,
+                "stdout": "[planning-with-files] Plan format error: phase completion unavailable.",
+                "stderr": "", "complete": False, "route": "python"}
     complete = counts["total"] > 0 and counts["complete"] >= counts["total"]
     if complete:
         stdout = (

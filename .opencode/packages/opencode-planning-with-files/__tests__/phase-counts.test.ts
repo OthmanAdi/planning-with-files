@@ -9,7 +9,8 @@ describe("shared phase-count fixtures (#377)", () => {
   for (const fixture of cases) {
     it(fixture.name, () => {
       const { total, complete, in_progress, pending } = fixture
-      expect(gateCounts(fixture.plan)).toEqual({ total, complete, in_progress, pending })
+      expect(gateCounts(fixture.plan)).toEqual({ total, complete, in_progress, pending,
+        ...(fixture.invalid_structure ? { invalid_structure: true } : {}) })
     })
   }
 })
