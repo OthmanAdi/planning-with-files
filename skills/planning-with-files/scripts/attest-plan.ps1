@@ -177,6 +177,14 @@ public static class PwfAttestationNative {
         catch { handle.Dispose(); throw; }
     }
 
+    public static SafeFileHandle ClaimWriter(string path) {
+        SafeFileHandle handle = CreateFileW(
+            path, DELETE | FILE_READ_ATTRIBUTES, 0, IntPtr.Zero, CREATE_NEW,
+            FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+        if (handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error());
+        return handle;
+    }
+
     public static SafeFileHandle OpenAttestationWrite(string path) {
         uint access = GENERIC_READ | GENERIC_WRITE | DELETE | FILE_READ_ATTRIBUTES;
         SafeFileHandle handle = CreateFileW(
@@ -590,41 +598,52 @@ if ($Show) {
     exit 0
 }
 
-if ($Clear) {
-    if (Get-Item -LiteralPath $attestationFile -Force -ErrorAction SilentlyContinue) {
-        Remove-SafeFile -Path $attestationFile -ExpectedDirectory $attestationDir
-        Write-Output "[plan-attest] Cleared attestation for $planFile."
-    } else {
-        Write-Output "[plan-attest] No attestation to clear."
-    }
-    exit 0
-}
-
-$planStream = Open-SafeReadStream -Path $planFile -ExpectedDirectory (Split-Path -Parent $planFile)
+$writerDirectory = Open-TrustedDirectory -ExpectedDirectory $attestationDir
 try {
-    $sha256 = [Security.Cryptography.SHA256]::Create()
+    $claim = [PwfAttestationNative]::ClaimWriter($attestationFile + ".writer-lock")
     try {
-        $hashBytes = $sha256.ComputeHash($planStream)
+        Assert-HandleParent -Handle $claim -ExpectedDirectoryFinal $writerDirectory.FinalPath -ExpectedDirectoryIdentity $writerDirectory.Identity
+        if ($Clear) {
+            if (Get-Item -LiteralPath $attestationFile -Force -ErrorAction SilentlyContinue) {
+                Remove-SafeFile -Path $attestationFile -ExpectedDirectory $attestationDir
+                Write-Output "[plan-attest] Cleared attestation for $planFile."
+            } else {
+                Write-Output "[plan-attest] No attestation to clear."
+            }
+            exit 0
+        }
+
+        $planStream = Open-SafeReadStream -Path $planFile -ExpectedDirectory (Split-Path -Parent $planFile)
+        try {
+            $sha256 = [Security.Cryptography.SHA256]::Create()
+            try {
+                $hashBytes = $sha256.ComputeHash($planStream)
+            } finally {
+                $sha256.Dispose()
+            }
+        } finally {
+            $planStream.Dispose()
+        }
+        $hashVal = ([BitConverter]::ToString($hashBytes)).Replace("-", "").ToLowerInvariant()
+        $storedHash = Write-SafeAscii -Path $attestationFile -ExpectedDirectory $attestationDir -Value $hashVal
+
+        # Integrity verification (security A2.1): confirm the on-disk attestation
+        # matches the intended hash before reporting success. A silent write failure
+        # (permissions, full disk) must not leave a stale attestation and exit clean.
+        if ($null -ne $storedHash) { $storedHash = $storedHash.Trim() }
+        if ($storedHash -ne $hashVal) {
+            Write-AttestationRefusal "[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested."
+            exit 1
+        }
+
+        $short = $hashVal.Substring(0, 12)
+        Write-Output "[plan-attest] Locked $planFile"
+        Write-Output "[plan-attest] SHA-256: $short... (stored in $attestationFile)"
+        Write-Output "[plan-attest] Hooks will block injection if the file is modified without re-running this command."
+        exit 0
     } finally {
-        $sha256.Dispose()
+        try { [PwfAttestationNative]::DeleteOpened($claim) } finally { $claim.Dispose() }
     }
 } finally {
-    $planStream.Dispose()
+    $writerDirectory.Handle.Dispose()
 }
-$hashVal = ([BitConverter]::ToString($hashBytes)).Replace("-", "").ToLowerInvariant()
-$storedHash = Write-SafeAscii -Path $attestationFile -ExpectedDirectory $attestationDir -Value $hashVal
-
-# Integrity verification (security A2.1): confirm the on-disk attestation
-# matches the intended hash before reporting success. A silent write failure
-# (permissions, full disk) must not leave a stale attestation and exit clean.
-if ($null -ne $storedHash) { $storedHash = $storedHash.Trim() }
-if ($storedHash -ne $hashVal) {
-    Write-AttestationRefusal "[plan-attest] Attestation write verification FAILED for $attestationFile. Expected $hashVal, found $storedHash. The plan is NOT attested."
-    exit 1
-}
-
-$short = $hashVal.Substring(0, 12)
-Write-Output "[plan-attest] Locked $planFile"
-Write-Output "[plan-attest] SHA-256: $short... (stored in $attestationFile)"
-Write-Output "[plan-attest] Hooks will block injection if the file is modified without re-running this command."
-exit 0

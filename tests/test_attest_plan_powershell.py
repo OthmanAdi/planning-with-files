@@ -149,6 +149,20 @@ class PowerShellAttestationContainmentTests(unittest.TestCase):
             timeout=30,
         )
 
+    def test_attest_and_clear_respect_existing_writer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_bytes(b"new")
+            target = root / ".plan-attestation"
+            target.write_bytes(b"original")
+            claim = root / ".plan-attestation.writer-lock"
+            claim.write_bytes(b"other writer")
+            for args in ((), ("-Clear",)):
+                result = self._run(root, {}, *args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(target.read_bytes(), b"original")
+                self.assertEqual(claim.read_bytes(), b"other writer")
+
     def _make_link(self, item_type: str, link: Path, target: Path) -> bool:
         command = (
             "& { param($link, $target, $kind) "

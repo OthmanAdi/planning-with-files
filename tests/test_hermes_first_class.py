@@ -87,6 +87,20 @@ class FakeContext:
 
 
 class HermesFirstClassTests(unittest.TestCase):
+    def test_attestation_respects_existing_writer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task_plan.md").write_bytes(b"new")
+            target = root / ".plan-attestation"
+            target.write_bytes(b"original")
+            claim = root / ".plan-attestation.writer-lock"
+            claim.write_bytes(b"other writer")
+            with self.assertRaises(FileExistsError):
+                planning_module.write_attestation(root, root)
+            self.assertEqual(target.read_bytes(), b"original")
+            self.assertEqual(claim.read_bytes(), b"other writer")
+
+
     def setUp(self) -> None:
         with hook_state_module._STATE_LOCK:
             hook_state_module._SESSION_REMINDERS.clear()

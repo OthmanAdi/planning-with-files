@@ -90,13 +90,27 @@ def ensure_planning_files(project_dir: Path, template: str = "default") -> dict[
 
 def write_attestation(project_dir: Path, plan_dir: Path) -> str:
     """Lock task_plan.md the way attest-plan.sh does: a lowercase SHA-256 hex line."""
-    plan_file = plan_dir / "task_plan.md"
-    digest = hashlib.sha256(plan_file.read_bytes()).hexdigest()
     target = attestation_path_for(project_dir, plan_dir)
-    tmp = target.with_name(target.name + ".tmp")
-    tmp.write_text(digest + "\n", encoding="ascii")
-    os.replace(tmp, target)
-    return digest
+    lock = target.with_name(target.name + ".writer-lock")
+    claim = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        plan_file = plan_dir / "task_plan.md"
+        digest = hashlib.sha256(plan_file.read_bytes()).hexdigest()
+        tmp = target.with_name(target.name + ".tmp")
+        tmp.write_text(digest + "\n", encoding="ascii")
+        os.replace(tmp, target)
+        return digest
+    finally:
+        try:
+            held = os.fstat(claim)
+        finally:
+            os.close(claim)
+        try:
+            if os.path.samestat(held, lock.lstat()):
+                lock.unlink()
+        except FileNotFoundError:
+            pass
+
 
 
 def apply_v3_mode(project_dir: Path, plan_dir: Path, mode: str) -> dict[str, Any]:
