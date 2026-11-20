@@ -20,6 +20,7 @@ import {
   slugIsValid,
   summarizeStatus,
   verifyPlan,
+  writeAttestation,
 } from "../src/core.js"
 
 const GATED_PLAN = [
@@ -75,6 +76,18 @@ beforeEach(() => {
 
 afterEach(() => {
   fs.rmSync(root, { recursive: true, force: true })
+})
+
+it("leaves an existing writer claim and digest unchanged", () => {
+  const dir = slugPlan(root, "writing", { attest: true })
+  const target = path.join(dir, ".attestation")
+  const claim = target + ".writer-lock"
+  const original = fs.readFileSync(target, "utf8")
+  fs.writeFileSync(claim, "another writer")
+  fs.writeFileSync(path.join(dir, "task_plan.md"), "new")
+  expect(() => writeAttestation(root, dir)).toThrow()
+  expect(fs.readFileSync(target, "utf8")).toBe(original)
+  expect(fs.readFileSync(claim, "utf8")).toBe("another writer")
 })
 
 describe("resolver", () => {

@@ -753,12 +753,24 @@ function copyTemplates(planDir: string, templatesDir: string | null, template: s
 }
 
 export function writeAttestation(root: string, planDir: string): string {
-  const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(planDir, "task_plan.md"))).digest("hex")
   const target = attestationPathFor(root, planDir)
-  const tmp = `${target}.tmp.${process.pid}.${crypto.randomBytes(4).toString("hex")}`
-  writeText(tmp, `${digest}\n`)
-  fs.renameSync(tmp, target)
-  return digest
+  const lock = target + ".writer-lock"
+  const claim = fs.openSync(lock, "wx", 0o600)
+  try {
+    const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(planDir, "task_plan.md"))).digest("hex")
+    const tmp = `${target}.tmp.${process.pid}.${crypto.randomBytes(4).toString("hex")}`
+    writeText(tmp, `${digest}\n`)
+    fs.renameSync(tmp, target)
+    return digest
+  } finally {
+    try {
+      const held = fs.fstatSync(claim, { bigint: true })
+      const current = fs.lstatSync(lock, { bigint: true, throwIfNoEntry: false })
+      if (current && held.dev === current.dev && held.ino === current.ino) fs.unlinkSync(lock)
+    } finally {
+      fs.closeSync(claim)
+    }
+  }
 }
 
 export function applyV3Mode(root: string, planDir: string, mode: "autonomous" | "gated"): { marker: string; attestation: string } {

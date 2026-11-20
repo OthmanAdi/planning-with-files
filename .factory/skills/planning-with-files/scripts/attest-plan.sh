@@ -157,26 +157,25 @@ compute_hash() {
 
 mode="attest"
 target=""
-checkbox_only=0
 usage_error() {
-    printf "Usage: %s [--show|--clear|--checkbox-only|--target root|<plan-id>]\n" "$0" >&2
+    printf "Usage: %s [--show|--clear|--enable-checkbox-only|--checkbox-only] [--target root|<plan-id>]\n" "$0" >&2
     exit 2
 }
 case "${1:-}" in
-    --show)  [ "$#" -eq 1 ] || usage_error; mode="show"  ;;
-    --clear) [ "$#" -eq 1 ] || usage_error; mode="clear" ;;
-    --checkbox-only)
+    --clear|--show)
         [ "$#" -eq 1 ] || usage_error
-        mode="checkbox-only"
-        ;;
-    --target)
-        [ "$#" -eq 2 ] || usage_error
-        [ -n "$2" ] || usage_error
-        target="$2"
-        ;;
-    "") [ "$#" -eq 0 ] || usage_error ;;
-    *) usage_error ;;
+        mode="${1#--}"
+        shift ;;
+    --enable-checkbox-only|--checkbox-only)
+        mode="${1#--}"
+        shift ;;
 esac
+if [ "${1:-}" = "--target" ]; then
+    [ "$#" -eq 2 ] && [ -n "$2" ] || usage_error
+    target="$2"
+    shift 2
+fi
+[ "$#" -eq 0 ] || usage_error
 
 plan_file="$(resolve_plan_file)"
 resolve_status=$?
@@ -204,6 +203,229 @@ fi
 
 attestation_file="$(attestation_path_for "${plan_file}")"
 
+checkbox_state() {
+    command -v python3 >/dev/null 2>&1 || {
+        printf '[plan-attest] Checkbox enrollment requires POSIX Python 3.\n' >&2
+        return 1
+    }
+    python3 -I - "$1" "${plan_file}" "${attestation_file##*/}" <<'PWF_CHECKBOX_PY'
+# Private cache records contain byte offsets and filesystem identities, never plan text.
+import hashlib
+import json
+import os
+import re
+import secrets
+import stat
+import sys
+from contextlib import ExitStack
+
+mode, plan_path, attest = sys.argv[1:]
+def refuse(reason):
+    raise ValueError(reason)
+
+def run(stack):
+    if os.name != "posix" or not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
+        refuse("Checkbox enrollment requires POSIX Python 3 with no-follow file descriptors.")
+    dirs = os.O_DIRECTORY | os.O_RDONLY | os.O_NOFOLLOW
+    def directory(path):
+        fd = os.open("/", dirs)
+        stack.callback(os.close, fd)
+        for part in os.path.abspath(path).split("/"):
+            if part:
+                fd = os.open(part, dirs, dir_fd=fd)
+                stack.callback(os.close, fd)
+        return fd
+    parent_path = os.path.abspath(os.path.dirname(plan_path))
+    parent = os.open(".", dirs) if os.path.dirname(plan_path) == "." else directory(parent_path)
+    if os.path.dirname(plan_path) == ".":
+        stack.callback(os.close, parent)
+    # macOS exposes /var through /private/var. Canonicalize the home path
+    # before opening each component; never follow links inside the cache.
+    home = directory(os.path.realpath(os.path.expanduser("~")))
+    cache_name = ".pwf-checkbox-v1"
+    if mode == "enable-checkbox-only":
+        try:
+            os.mkdir(cache_name, 0o700, dir_fd=home)
+        except FileExistsError:
+            pass
+    try:
+        cache = os.open(cache_name, dirs, dir_fd=home)
+    except FileNotFoundError:
+        if mode == "forget":
+            return
+        refuse("No checkbox enrollment. Review the plan and use --enable-checkbox-only.")
+    stack.callback(os.close, cache)
+    attrs = os.fstat(cache)
+    if attrs.st_uid != os.geteuid() or attrs.st_mode & 0o077:
+        refuse("Checkbox cache must be an owner-only directory.")
+    key = hashlib.sha256(os.fsencode(os.path.join(parent_path, attest))).hexdigest()
+    def read_file(fd, name, private=False):
+        flags = os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW
+        with os.fdopen(os.open(name, flags, dir_fd=fd), "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                refuse("Expected a regular, singly linked file.")
+            if private and (info.st_uid != os.geteuid() or info.st_mode & 0o077):
+                refuse("Unsafe permissions on checkbox enrollment.")
+            data = stream.read()
+            after = os.fstat(stream.fileno())
+            if (info.st_size, info.st_ctime_ns) != (after.st_size, after.st_ctime_ns):
+                refuse("File changed during read. Retry.")
+            return data, info
+    def identity(info):
+        return [info.st_dev, info.st_ino, info.st_ctime_ns]
+    def atomic_write(fd, name, data):
+        tmp = ".pwf-" + secrets.token_hex(16)
+        writer = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
+        try:
+            with os.fdopen(writer, "wb") as output:
+                output.write(data)
+            os.replace(tmp, name, src_dir_fd=fd, dst_dir_fd=fd)
+        finally:
+            try:
+                os.unlink(tmp, dir_fd=fd)
+            except FileNotFoundError:
+                pass
+    record = None
+    try:
+        raw, _ = read_file(cache, key, private=True)
+        record = json.loads(raw)
+        if not isinstance(record, dict) or record.get("format") != "pwf-checkbox-1":
+            refuse("Unrecognized checkbox metadata.")
+    except FileNotFoundError:
+        pass
+    if mode == "forget":
+        if record is not None:
+            os.unlink(key, dir_fd=cache)
+        return
+    snapshot, plan_info = read_file(parent, "task_plan.md")
+    try:
+        stored, digest_info = read_file(parent, attest)
+        if not re.fullmatch(rb"[0-9a-f]{64}(?:\r?\n)?", stored):
+            refuse("Refusing to replace an unrecognized attestation file.")
+    except FileNotFoundError:
+        stored = digest_info = None
+    digest = hashlib.sha256(snapshot).hexdigest().encode("ascii") + b"\n"
+    boxes = {}
+    # A list-shaped line inside a Markdown code fence is example text.
+    fence = None
+    offset = 0
+    for line in snapshot.split(b"\n"):
+        marker = re.match(rb"[ \t]*(?:[-*+]\s+|[0-9]+[.)]\s+)?(`{3,}|~{3,})(.*)", line)
+        if fence is not None:
+            closing = re.fullmatch(rb" {0,3}(`{3,}|~{3,})[ \t]*\r?", line)
+            if closing and closing[1].startswith(fence):
+                fence = None
+        elif marker:
+            fence = marker[1]
+        else:
+            box = re.match(rb" {0,3}[-*][ \t]+\[([ x])\](?=[ \t]|\r?$)", line)
+            if box:
+                boxes[offset + box.start(1)] = box[1]
+        offset += len(line) + 1
+    if mode == "checkbox-only":
+        if record is None or digest_info is None or record.get("identity") != identity(digest_info):
+            refuse("No current checkbox enrollment. Review the plan and use --enable-checkbox-only.")
+        prior = bytearray(snapshot)
+        for offset in record["unchecked"]:
+            if boxes.get(offset) == b"x":
+                prior[offset] = ord(" ")
+        if hashlib.sha256(prior).hexdigest().encode("ascii") != stored.rstrip(b"\r\n"):
+            refuse("Changes exceed checkbox-only scope.")
+        if digest.rstrip() == stored.rstrip():
+            print("[plan-attest] Plan already matches attestation.")
+            return
+    if identity(os.stat("task_plan.md", dir_fd=parent, follow_symlinks=False)) != identity(plan_info):
+        refuse("Plan changed before commit. Retry.")
+    atomic_write(parent, attest, digest)
+    current, written_info = read_file(parent, attest)
+    if current != digest:
+        refuse("Attestation changed before verification.")
+    record = {"format": "pwf-checkbox-1", "identity": identity(written_info),
+              "unchecked": [pos for pos, value in boxes.items() if value == b" "]}
+    atomic_write(cache, key, json.dumps(record).encode("ascii"))
+    print("[plan-attest] Attested selected plan with checkbox enrollment.")
+try:
+    with ExitStack() as stack:
+        run(stack)
+except (OSError, ValueError, KeyError, TypeError) as error:
+    sys.exit("[plan-attest] " + str(error))
+
+PWF_CHECKBOX_PY
+}
+
+if [ "${mode}" != show ]; then
+    # Create in a private directory, then atomically claim the shared name
+    # with link(2). Never open an existing lock (which might be a link or FIFO).
+    writer_dir="$(dirname "${attestation_file}")"
+    case "${mode}" in
+        checkbox-only|enable-checkbox-only)
+            project_root="$(cd "${PWF_PLAN_ROOT:-.}" && pwd -P)" || exit 1
+            expected_slug="${writer_dir##*/}"
+            case "${target:-}" in
+                root) expected_slug="" ;;
+                "") expected_slug="${PLAN_ID:-${expected_slug}}" ;;
+                *) expected_slug="${target}" ;;
+            esac
+            cd -P "${writer_dir}" || exit 1
+            selected_dir="$(pwd -P)" || exit 1
+            if [ "${selected_dir}" != "${project_root}" ]; then
+                slug_is_valid "${expected_slug}" && [ "${selected_dir}" = "${project_root}/.planning/${expected_slug}" ] || exit 1
+            elif [ -n "${target:-${PLAN_ID:-}}" ] && [ "${target:-}" != root ]; then
+                exit 1
+            fi
+            writer_dir=.
+            plan_file=./task_plan.md
+            attestation_file="./${attestation_file##*/}"
+            ;;
+    esac
+    writer_name="${attestation_file##*/}.writer-lock"
+    staging="$(mktemp -d "${writer_dir}/.pwf-writer.XXXXXXXX")" || exit 1
+    claim="${staging}/${writer_name}"
+    : > "${claim}" || exit 1
+    trap 'rm -f "${claim}"; rmdir "${staging}"' EXIT
+    attempts=0
+    claim_writer() {
+        if [ "${hardlinks}" -eq 1 ]; then
+            ln "${claim}" "${writer_dir}/" 2>/dev/null
+        else
+            # FAT and similar volumes have no hard links. Use exclusive
+            # regular-file creation, and never accept an existing object.
+            lock_file="${writer_dir}/${writer_name}"
+            [ ! -e "${lock_file}" ] && [ ! -L "${lock_file}" ] &&
+                (set -C; : > "${lock_file}") 2>/dev/null &&
+                [ -f "${lock_file}" ] && [ ! -L "${lock_file}" ]
+        fi
+    }
+    hardlinks=0
+    if ln "${claim}" "${staging}/probe" 2>/dev/null; then
+        hardlinks=1
+        rm -f "${staging}/probe"
+    fi
+    until claim_writer; do
+        attempts=$((attempts + 1))
+        if [ "${attempts}" -ge 50 ]; then
+            printf '[plan-attest] Cannot acquire attestation writer lock.\n' >&2
+            exit 1
+        fi
+        sleep 0.1
+    done
+    release_writer() {
+        if [ "${hardlinks}" -eq 0 ] || [ "${claim}" -ef "${writer_dir}/${writer_name}" ]; then
+            rm -f "${writer_dir}/${writer_name}"
+        fi
+        rm -f "${claim}"
+        rmdir "${staging}"
+    }
+    trap release_writer EXIT
+    trap 'exit 1' HUP INT TERM
+    case "${mode}" in
+        checkbox-only|enable-checkbox-only)
+            checkbox_state "${mode}"
+            exit "$?" ;;
+    esac
+fi
+
 case "${mode}" in
     show)
         if [ -f "${attestation_file}" ]; then
@@ -224,10 +446,13 @@ case "${mode}" in
         ;;
     clear)
         if [ -f "${attestation_file}" ]; then
-            rm -f "${attestation_file}"
+            rm -f "${attestation_file}" || exit 1
             printf "[plan-attest] Cleared attestation for %s.\n" "${plan_file}"
         else
             printf "[plan-attest] No attestation to clear.\n"
+        fi
+        if [ -d "${HOME:-}/.pwf-checkbox-v1" ]; then
+            checkbox_state forget || printf '[plan-attest] Optional checkbox cache cleanup was unavailable.\n' >&2
         fi
         ;;
     attest)
@@ -324,182 +549,10 @@ case "${mode}" in
             exit 1
         fi
 
-        # Store the attested plan content for future checkbox-only re-attestation
-        attested_plan_file="$(dirname "${attestation_file}")/.attested-plan"
-        cp "${plan_file}" "${attested_plan_file}" 2>/dev/null || {
-            printf "[plan-attest] Warning: could not save attested plan copy.\n" >&2
-        }
-
         short_hash="$(printf "%s" "${hash_val}" | cut -c1-12)"
         printf "[plan-attest] Locked %s\n" "${plan_file}"
         printf "[plan-attest] SHA-256: %s... (stored in %s)\n" "${short_hash}" "${attestation_file}"
         printf "[plan-attest] Hooks will block injection if the file is modified without re-running this command.\n"
-        ;;
-    checkbox-only)
-        # Checkbox-only re-attestation: only allow if changes are exclusively
-        # [ ] -> [x] transitions compared to the last attested plan.
-        # Requires existing attestation and stored attested plan.
-        if [ ! -f "${attestation_file}" ]; then
-            printf "[plan-attest] No existing attestation to update. Run attest-plan.sh first.\n" >&2
-            exit 1
-        fi
-        stored_hash="$(tr -d '\r\n[:space:]' < "${attestation_file}" 2>/dev/null)"
-        if [ -z "${stored_hash}" ]; then
-            printf "[plan-attest] Attestation file is empty.\n" >&2
-            exit 1
-        fi
-
-        attested_plan_file="$(dirname "${attestation_file}")/.attested-plan"
-        if [ ! -f "${attested_plan_file}" ]; then
-            printf "[plan-attest] No stored attested plan for comparison. Re-attest manually first.\n" >&2
-            exit 1
-        fi
-
-        # Verify the stored attested plan matches the attestation hash
-        attested_plan_hash="$(compute_hash "${attested_plan_file}")" || exit 1
-        if [ "${attested_plan_hash}" != "${stored_hash}" ]; then
-            printf "[plan-attest] Stored attested plan does not match attestation; manual re-attestation required.\n" >&2
-            exit 1
-        fi
-
-        # Compute hash of current plan
-        current_hash="$(compute_hash "${plan_file}")" || exit 1
-
-        # If already matches, nothing to do
-        if [ "${current_hash}" = "${stored_hash}" ]; then
-            printf "[plan-attest] Plan already matches attestation; no checkbox changes detected.\n"
-            exit 0
-        fi
-
-        # Compare current plan with attested plan using diff
-        # Only allow changes that are [ ] -> [x] on task checkbox lines
-        diff_output="$(diff -u "${attested_plan_file}" "${plan_file}" 2>/dev/null || true)"
-        if [ -z "${diff_output}" ]; then
-            printf "[plan-attest] Plan content unchanged despite hash mismatch; manual re-attestation required.\n" >&2
-            exit 1
-        fi
-
-        # Check each changed line in the diff
-        # Only allow: -[ ] -> +[x] (i.e., line removed with [ ] and line added with [x] at same position)
-        # Reject: any other changes including [x] -> [ ], added/removed lines, text changes, etc.
-        # Unified diff shows all removals then all additions per hunk; match by position.
-        allowed=1
-        # Use awk to parse unified diff and validate changes
-        echo "${diff_output}" | awk '
-            BEGIN { 
-                in_hunk = 0
-                r_idx = 0
-                a_idx = 0
-                total_changes = 0
-            }
-            /^@@ / { 
-                # Validate previous hunk before starting new one
-                if (in_hunk && r_idx > 0) {
-                    if (r_idx != a_idx) exit 1
-                    for (i = 1; i <= r_idx; i++) {
-                        check_removed = removed_lines[i]
-                        gsub(/\[[[:space:]]*\]/, "[ ]", check_removed)
-                        check_added = added_lines[i]
-                        gsub(/\[x\]/, "[ ]", check_added)
-                        if (check_added != check_removed) exit 1
-                    }
-                    total_changes += r_idx
-                }
-                in_hunk = 1
-                r_idx = 0
-                a_idx = 0
-                next 
-            }
-            /^--- / || /^\+\+\+ / { next }
-            in_hunk && /^[-+]/ {
-                line = substr($0, 2)
-                if (substr($0, 1, 1) == "-") {
-                    # Removed line - must be a checkbox with [ ]
-                    if (line ~ /^[[:space:]]*[-*][[:space:]]*\[[[:space:]]*\]/) {
-                        r_idx++
-                        removed_lines[r_idx] = line
-                    } else {
-                        exit 1
-                    }
-                } else {
-                    # Added line - must be a checkbox with [x]
-                    if (line ~ /^[[:space:]]*[-*][[:space:]]*\[x\]/) {
-                        a_idx++
-                        added_lines[a_idx] = line
-                    } else {
-                        exit 1
-                    }
-                }
-            }
-            # Ignore context lines (starting with space) within hunk
-            in_hunk && /^ / { next }
-            END {
-                # Validate last hunk
-                if (in_hunk && r_idx > 0) {
-                    if (r_idx != a_idx) exit 1
-                    for (i = 1; i <= r_idx; i++) {
-                        check_removed = removed_lines[i]
-                        gsub(/\[[[:space:]]*\]/, "[ ]", check_removed)
-                        check_added = added_lines[i]
-                        gsub(/\[x\]/, "[ ]", check_added)
-                        if (check_added != check_removed) exit 1
-                    }
-                    total_changes += r_idx
-                }
-                if (total_changes == 0) exit 1
-            }
-        ' || allowed=0
-
-        if [ "${allowed}" -eq 1 ]; then
-            # Only checkbox [ ] -> [x] changes detected; update attestation
-            printf "[plan-attest] Checkbox-only changes detected; updating attestation.\n"
-            hash_val="${current_hash}"
-            tmp_file="${attestation_file}.tmp.$$"
-            printf "%s\n" "${hash_val}" > "${tmp_file}" 2>/dev/null || {
-                printf "[plan-attest] Failed to write %s\n" "${tmp_file}" >&2
-                exit 1
-            }
-            mv_ok=1
-            if command -v flock >/dev/null 2>&1; then
-                lock_dir="$(dirname "${attestation_file}")"
-                (
-                    flock -w 5 9 || true
-                    mv -f "${tmp_file}" "${attestation_file}"
-                ) 9>"${lock_dir}/.attestation.lock" 2>/dev/null || mv_ok=0
-                rm -f "${lock_dir}/.attestation.lock" 2>/dev/null
-            else
-                mv -f "${tmp_file}" "${attestation_file}" 2>/dev/null || mv_ok=0
-            fi
-            if [ "${mv_ok}" -eq 0 ] || [ ! -f "${attestation_file}" ]; then
-                fb_tmp="${attestation_file}.fb.$$"
-                printf "%s\n" "${hash_val}" > "${fb_tmp}" 2>/dev/null                     && mv -f "${fb_tmp}" "${attestation_file}" 2>/dev/null || {
-                    rm -f "${fb_tmp}" "${tmp_file}" 2>/dev/null
-                    printf "[plan-attest] Failed to write attestation %s\n" "${attestation_file}" >&2
-                    exit 1
-                }
-            fi
-            rm -f "${tmp_file}" 2>/dev/null
-
-            # Read-back verification
-            stored_hash="$(tr -d '\r\n[:space:]' < "${attestation_file}" 2>/dev/null)"
-            if [ "${stored_hash}" != "${hash_val}" ]; then
-                printf "[plan-attest] Attestation write verification FAILED for %s\n" "${attestation_file}" >&2
-                printf "[plan-attest] Expected %s, found %s. The plan is NOT attested.\n" "${hash_val}" "${stored_hash}" >&2
-                exit 1
-            fi
-
-            # Update the stored attested plan
-            cp "${plan_file}" "${attested_plan_file}" 2>/dev/null || {
-                printf "[plan-attest] Warning: could not update attested plan copy.\n" >&2
-            }
-
-            short_hash="$(printf "%s" "${hash_val}" | cut -c1-12)"
-            printf "[plan-attest] Re-attested %s (checkbox-only)\n" "${plan_file}"
-            printf "[plan-attest] SHA-256: %s... (stored in %s)\n" "${short_hash}" "${attestation_file}"
-        else
-            printf "[plan-attest] Changes exceed checkbox-only scope; manual re-attestation required.\n" >&2
-            exit 1
-        fi
         ;;
 esac
 
