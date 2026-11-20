@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- The shell attestation helper can explicitly enroll a plan for checkbox-only updates. It accepts leading task markers changing from unchecked to checked and verifies every other byte against the recorded digest (PR #367, #326).
+
 ### Fixed
 - Count completion statuses inside their own phase blocks across the completion reports, ledgers, smart injection and native integrations. Fenced examples and status quotes in later sections do not change the total. Plans saved with a UTF-8 byte-order mark retain their first phase (PR #381, #377).
 
 ### Thanks
 - @kuei51307-hub, for phase-scoped counting and shared fixtures (PR #381).
+- Ankit Kumar Jha (@ankitjha1405), for the checkbox-only re-attestation proposal and initial implementation (PR #367).
 
 ## [3.28.2] - 2026-11-10
 

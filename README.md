@@ -814,7 +814,7 @@ The v3 line adds features aimed at long-running agentic runs. Each one is listed
 - **Pi approval gate** (`/plan-execute`): Pi hooks stay passive with a status line until you approve the active plan for the current session.
 - **Session-catchup**: automatic recovery uses project planning files only. Explicit `--metadata` reads same-project local session records and emits aggregate counts only; explicit `--replay` may emit bounded nonce-framed excerpts.
 - **PreCompact progress flush** (`PreCompact` hook): surfaces a reminder to flush progress before compaction completes, and prints the active Plan-SHA256 when attested.
-- **SHA-256 plan attestation** (`/plan-attest`): locks `task_plan.md`; a tampered plan body is refused at injection.
+- **SHA-256 plan attestation** (`/plan-attest`): locks `task_plan.md`; a tampered plan body is refused at injection. On supported POSIX Python 3 runtimes, use the shell helper's `--enable-checkbox-only` flag to enroll a plan, then `--checkbox-only` to refresh its attestation after checking tasks.
 - **Run ledger**: an append-only JSONL record of phase transitions that replaces the raw `progress.md` tail in v3 modes with a fixed-shape summary.
 - **Host capability tiers**: hard block on Claude Code, Codex, and Continue; follow-up injection on Cursor, Pi, Kiro, Hermes Agent, and OpenCode; notify-only elsewhere.
 - **Per-invocation opt-out** (`PLANNING_DISABLED=1`, v3.4.0): a one-shot session that merely shares a cwd with an incomplete plan skips all plan reading at every hook entry point. Covers the Copilot and Cursor routes since v3.10.2 and the Hermes plugin since v3.13.0; Gemini lifecycle hooks, including SessionEnd, honor it since v3.26.0.

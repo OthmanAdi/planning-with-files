@@ -119,6 +119,7 @@ These amazing people have contributed code, documentation, or significant improv
 - **[Ankit Kumar Jha](https://github.com/ankitjha1405)** — [PR #364](https://github.com/OthmanAdi/planning-with-files/pull/364)
   - Aligned the localized `/plan` commands with plan selection and the initializer.
   - Added shell `-Help` handling ([PR #365](https://github.com/OthmanAdi/planning-with-files/pull/365)) and a FAQ for tasks nearing compaction ([PR #366](https://github.com/OthmanAdi/planning-with-files/pull/366)).
+  - Proposed and implemented the initial opt-in checkbox progress support for [PR #367](https://github.com/OthmanAdi/planning-with-files/pull/367).
 
 - **[Dylan Duan](https://github.com/Kiddo4993)** — [PR #351](https://github.com/OthmanAdi/planning-with-files/pull/351)
   - Aligned Claude plugin commands with selected-plan, initialization and validation contracts, with focused command checks.
