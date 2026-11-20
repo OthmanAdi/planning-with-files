@@ -22,7 +22,7 @@ fi
 
 [ "$VALIDATE" -ne 0 ] || PLAN_FILE="${1:-.kiro/plan/task_plan.md}"
 
-if [ ! -f "$PLAN_FILE" ]; then
+if [ "$VALIDATE" -eq 0 ] && [ ! -f "$PLAN_FILE" ]; then
   echo "[planning-with-files] No task plan at $PLAN_FILE — run bootstrap or specify path."
   exit 0
 fi
@@ -67,7 +67,7 @@ PLAN_COUNTS=$(LC_ALL=C awk '
         }
         NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
-        fenced($0) { next }
+        fenced($0) || /^ ? ? ?>/ { next }
         /^ ? ? ?### Phase([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
         /^ ? ? ?### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0

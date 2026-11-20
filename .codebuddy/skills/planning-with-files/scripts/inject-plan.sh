@@ -1055,7 +1055,7 @@ smart_plan_extract() {
         }
         NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
-        fenced($0) {
+        fenced($0) || /^ ? ? ?>/ {
             if (in_phase) curbuf = curbuf $0 "\n"
             else if (insec == "keep") keep = keep $0 "\n"
             next

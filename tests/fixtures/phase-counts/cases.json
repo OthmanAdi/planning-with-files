@@ -162,5 +162,24 @@
     "in_progress": 1,
     "pending": 2,
     "valid": true
+  },
+  {
+    "name": "quoted_example_is_not_phase_evidence",
+    "plan": "### Phase 1: Build\n\n  > ```markdown\n  > **Status:** complete\n  > ```\n",
+    "total": 1,
+    "complete": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "valid": false
+  },
+  {
+    "name": "quoted_example_stays_in_active_phase_body",
+    "plan": "### Phase 1: Build\n**Status:** in_progress\n\n> Expected output: [complete]\n",
+    "total": 1,
+    "complete": 0,
+    "in_progress": 1,
+    "pending": 0,
+    "valid": true,
+    "smart_contains": "> Expected output: [complete]"
   }
 ]

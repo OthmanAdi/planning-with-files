@@ -15,7 +15,7 @@ if ($Validate) {
 # sessions that share a cwd with a plan but never opted into it.
 if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
-if (-not (Test-Path -LiteralPath $PlanFile)) {
+if (-not $Validate -and -not (Test-Path -LiteralPath $PlanFile)) {
     # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
     if ($Gate) { exit 0 }
     Write-Host '[planning-with-files-ar] لم يتم العثور على task_plan.md — لا توجد جلسة تخطيط نشطة.'
@@ -64,6 +64,7 @@ foreach ($line in (($content -creplace '^\uFEFF', '') -split '\r?\n')) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
+    if ($line -match '^ {0,3}>') { continue }
     if ($line -cmatch '^ {0,3}### المرحلة(?:[0-9:]|-[0-9])') {
         Complete-Phase
         $malformedHeading = $true
@@ -101,7 +102,9 @@ if ($Validate) {
 
 if ($fence -or $malformedHeading) {
     Write-Output '[planning-with-files] Plan format error: phase completion unavailable.'
-} elseif ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
+} elseif ($TOTAL -eq 0) {
+    exit 0
+} elseif ($COMPLETE -eq $TOTAL) {
     Write-Host ('[planning-with-files-ar] اكتملت جميع المراحل (' + $COMPLETE + '/' + $TOTAL + '). إذا كان لدى المستخدم عمل إضافي، أضف مراحل في task_plan.md قبل البدء.')
 } else {
     Write-Host ('[planning-with-files-ar] المهمة قيد التنفيذ (' + $COMPLETE + '/' + $TOTAL + ' مرحلة مكتملة). حدّث progress.md قبل التوقف.')

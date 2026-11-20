@@ -23,7 +23,7 @@ fi
 
 [ "$VALIDATE" -ne 0 ] || PLAN_FILE="${1:-task_plan.md}"
 
-if [ ! -f "$PLAN_FILE" ]; then
+if [ "$VALIDATE" -eq 0 ] && [ ! -f "$PLAN_FILE" ]; then
     # Automatic gate checks have nothing to report without a plan (header:
     # "plans stay silent in --gate mode"); the explicit report keeps its notice.
     [ "$GATE" -eq 1 ] && exit 0
@@ -71,7 +71,7 @@ PLAN_COUNTS=$(LC_ALL=C awk '
         }
         NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
-        fenced($0) { next }
+        fenced($0) || /^ ? ? ?>/ { next }
         /^ ? ? ?### 階段([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
         /^ ? ? ?### 階段([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0

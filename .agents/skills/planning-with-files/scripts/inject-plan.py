@@ -672,7 +672,7 @@ def smart_plan_extract(data):
         marker = re.match(br"^ {0,3}(`{3,}|~{3,})", line)
         if marker and marker.group(1)[:1] == b"`" and b"`" in line[marker.end():]:
             marker = None
-        quoted = bool(fence or marker)
+        quoted = bool(fence or marker or re.match(br"^ {0,3}>", line))
         if fence:
             if re.match(br"^ {0,3}" + re.escape(fence) + br"{" + str(fence_length).encode() + br",}[ \t]*$", line):
                 fence = b""
