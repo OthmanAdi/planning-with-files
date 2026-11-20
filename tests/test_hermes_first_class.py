@@ -97,6 +97,10 @@ class HermesFirstClassTests(unittest.TestCase):
             claim.write_bytes(b"other writer")
             with self.assertRaises(FileExistsError):
                 planning_module.write_attestation(root, root)
+            with self.assertRaises(FileExistsError):
+                planning_module.apply_v3_mode(root, root, "gated")
+            for marker in (".nonce", ".mode", ".stop_blocks"):
+                self.assertFalse((root / marker).exists())
             self.assertEqual(target.read_bytes(), b"original")
             self.assertEqual(claim.read_bytes(), b"other writer")
 

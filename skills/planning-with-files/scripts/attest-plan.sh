@@ -311,17 +311,21 @@ def run(stack):
     fence = None
     offset = 0
     for line in snapshot.split(b"\n"):
-        marker = re.match(rb"[ \t]*(?:[-*+]\s+|[0-9]+[.)]\s+)?(`{3,}|~{3,})(.*)", line)
+        # A UTF-8 BOM is ignored by Markdown only at the document start.
+        # Keep offsets into the original byte string for digest reconstruction.
+        bom = 3 if offset == 0 and line.startswith(b"\xef\xbb\xbf") else 0
+        content = line[bom:]
+        marker = re.match(rb" {0,3}(?:[-*+][ ]{1,4}|[0-9]{1,9}[.)][ ]{1,4})?(`{3,}|~{3,})(.*)", content)
         if fence is not None:
-            closing = re.fullmatch(rb" {0,3}(`{3,}|~{3,})[ \t]*\r?", line)
+            closing = re.fullmatch(rb" {0,3}(`{3,}|~{3,})[ \t]*\r?", content)
             if closing and closing[1].startswith(fence):
                 fence = None
-        elif marker:
+        elif marker and (marker[1].startswith(b"~") or b"`" not in marker[2]):
             fence = marker[1]
         else:
-            box = re.match(rb" {0,3}[-*][ \t]+\[([ x])\](?=[ \t]|\r?$)", line)
+            box = re.match(rb" {0,3}[-*][ \t]+\[([ x])\](?=[ \t]|\r?$)", content)
             if box:
-                boxes[offset + box.start(1)] = box[1]
+                boxes[offset + bom + box.start(1)] = box[1]
         offset += len(line) + 1
     if mode == "checkbox-only":
         if record is None or digest_info is None or record.get("identity") != identity(digest_info):
@@ -385,24 +389,14 @@ if [ "${mode}" != show ]; then
     : > "${claim}" || exit 1
     trap 'rm -f "${claim}"; rmdir "${staging}"' EXIT
     attempts=0
-    claim_writer() {
-        if [ "${hardlinks}" -eq 1 ]; then
-            ln "${claim}" "${writer_dir}/" 2>/dev/null
-        else
-            # FAT and similar volumes have no hard links. Use exclusive
-            # regular-file creation, and never accept an existing object.
-            lock_file="${writer_dir}/${writer_name}"
-            [ ! -e "${lock_file}" ] && [ ! -L "${lock_file}" ] &&
-                (set -C; : > "${lock_file}") 2>/dev/null &&
-                [ -f "${lock_file}" ] && [ ! -L "${lock_file}" ]
-        fi
-    }
-    hardlinks=0
-    if ln "${claim}" "${staging}/probe" 2>/dev/null; then
-        hardlinks=1
+    if ! ln "${claim}" "${staging}/probe" 2>/dev/null ||
+       ! [ "${claim}" -ef "${staging}/probe" ]; then
         rm -f "${staging}/probe"
+        printf '[plan-attest] This filesystem cannot create the required atomic hard-link writer claim.\n' >&2
+        exit 1
     fi
-    until claim_writer; do
+    rm -f "${staging}/probe"
+    until ln "${claim}" "${writer_dir}/" 2>/dev/null; do
         attempts=$((attempts + 1))
         if [ "${attempts}" -ge 50 ]; then
             printf '[plan-attest] Cannot acquire attestation writer lock.\n' >&2
@@ -411,7 +405,7 @@ if [ "${mode}" != show ]; then
         sleep 0.1
     done
     release_writer() {
-        if [ "${hardlinks}" -eq 0 ] || [ "${claim}" -ef "${writer_dir}/${writer_name}" ]; then
+        if [ "${claim}" -ef "${writer_dir}/${writer_name}" ]; then
             rm -f "${writer_dir}/${writer_name}"
         fi
         rm -f "${claim}"

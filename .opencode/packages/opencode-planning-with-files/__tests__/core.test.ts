@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import {
   BANNER,
   ambiguityNotice,
+  applyV3Mode,
   attestationPathFor,
   buildContext,
   checkComplete,
@@ -89,6 +90,10 @@ it("leaves an existing writer claim and digest unchanged", () => {
   fs.writeFileSync(claim, "another writer")
   fs.writeFileSync(path.join(dir, "task_plan.md"), "new")
   expect(() => writeAttestation(root, dir)).toThrow()
+  expect(() => applyV3Mode(root, dir, "gated")).toThrow()
+  for (const marker of [".mode", ".stop_blocks", ".nonce"]) {
+    expect(fs.existsSync(path.join(dir, marker))).toBe(false)
+  }
   expect(fs.readFileSync(target, "utf8")).toBe(original)
   expect(fs.readFileSync(claim, "utf8")).toBe("another writer")
 })

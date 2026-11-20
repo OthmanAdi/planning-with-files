@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import datetime as _dt
 import hashlib
 import os
@@ -88,18 +89,13 @@ def ensure_planning_files(project_dir: Path, template: str = "default") -> dict[
     }
 
 
-def write_attestation(project_dir: Path, plan_dir: Path) -> str:
-    """Lock task_plan.md the way attest-plan.sh does: a lowercase SHA-256 hex line."""
+@contextmanager
+def _attestation_writer(project_dir: Path, plan_dir: Path):
     target = attestation_path_for(project_dir, plan_dir)
     lock = target.with_name(target.name + ".writer-lock")
     claim = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
-        plan_file = plan_dir / "task_plan.md"
-        digest = hashlib.sha256(plan_file.read_bytes()).hexdigest()
-        tmp = target.with_name(target.name + ".tmp")
-        tmp.write_text(digest + "\n", encoding="ascii")
-        os.replace(tmp, target)
-        return digest
+        yield target
     finally:
         try:
             held = os.fstat(claim)
@@ -112,21 +108,36 @@ def write_attestation(project_dir: Path, plan_dir: Path) -> str:
             pass
 
 
+def _write_locked_attestation(plan_dir: Path, target: Path) -> str:
+    plan_file = plan_dir / "task_plan.md"
+    digest = hashlib.sha256(plan_file.read_bytes()).hexdigest()
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_text(digest + "\n", encoding="ascii")
+    os.replace(tmp, target)
+    return digest
+
+
+def write_attestation(project_dir: Path, plan_dir: Path) -> str:
+    with _attestation_writer(project_dir, plan_dir) as target:
+        return _write_locked_attestation(plan_dir, target)
+
 
 def apply_v3_mode(project_dir: Path, plan_dir: Path, mode: str) -> dict[str, Any]:
     """Write the v3 markers init-session.sh writes: counter reset, nonce, .mode, attestation."""
     if mode not in {"autonomous", "gated"}:
         raise ValueError(f"unknown mode: {mode!r} (expected autonomous or gated)")
-    (plan_dir / ".stop_blocks").write_text("0\n", encoding="ascii")
-    try:
-        (plan_dir / ".gate_last_ledger").unlink()
-    except FileNotFoundError:
-        pass
-    (plan_dir / ".nonce").write_text(secrets.token_hex(8) + "\n", encoding="ascii")
-    marker = "autonomous gate\n" if mode == "gated" else "autonomous\n"
-    (plan_dir / ".mode").write_text(marker, encoding="ascii")
-    digest = write_attestation(project_dir, plan_dir)
-    return {"marker": marker.strip(), "attestation": digest}
+    with _attestation_writer(project_dir, plan_dir) as target:
+        (plan_dir / ".stop_blocks").write_text("0\n", encoding="ascii")
+        try:
+            (plan_dir / ".gate_last_ledger").unlink()
+        except FileNotFoundError:
+            pass
+        (plan_dir / ".nonce").write_text(secrets.token_hex(8) + "\n", encoding="ascii")
+        marker = "autonomous gate\n" if mode == "gated" else "autonomous\n"
+        (plan_dir / ".mode").write_text(marker, encoding="ascii")
+        digest = _write_locked_attestation(plan_dir, target)
+        return {"marker": marker.strip(), "attestation": digest}
+
 
 
 

@@ -752,16 +752,12 @@ function copyTemplates(planDir: string, templatesDir: string | null, template: s
   return created
 }
 
-export function writeAttestation(root: string, planDir: string): string {
+function withAttestationWriter<T>(root: string, planDir: string, write: (target: string) => T): T {
   const target = attestationPathFor(root, planDir)
   const lock = target + ".writer-lock"
   const claim = fs.openSync(lock, "wx", 0o600)
   try {
-    const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(planDir, "task_plan.md"))).digest("hex")
-    const tmp = `${target}.tmp.${process.pid}.${crypto.randomBytes(4).toString("hex")}`
-    writeText(tmp, `${digest}\n`)
-    fs.renameSync(tmp, target)
-    return digest
+    return write(target)
   } finally {
     try {
       const held = fs.fstatSync(claim, { bigint: true })
@@ -773,17 +769,31 @@ export function writeAttestation(root: string, planDir: string): string {
   }
 }
 
+function writeLockedAttestation(planDir: string, target: string): string {
+  const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(planDir, "task_plan.md"))).digest("hex")
+  const tmp = `${target}.tmp.${process.pid}.${crypto.randomBytes(4).toString("hex")}`
+  writeText(tmp, `${digest}\n`)
+  fs.renameSync(tmp, target)
+  return digest
+}
+
+export function writeAttestation(root: string, planDir: string): string {
+  return withAttestationWriter(root, planDir, target => writeLockedAttestation(planDir, target))
+}
+
 export function applyV3Mode(root: string, planDir: string, mode: "autonomous" | "gated"): { marker: string; attestation: string } {
-  writeText(path.join(planDir, ".stop_blocks"), "0\n")
-  try {
-    fs.unlinkSync(path.join(planDir, ".gate_last_ledger"))
-  } catch {
-    // absent is fine
-  }
-  writeText(path.join(planDir, ".nonce"), `${crypto.randomBytes(8).toString("hex")}\n`)
-  const marker = mode === "gated" ? "autonomous gate" : "autonomous"
-  writeText(path.join(planDir, ".mode"), `${marker}\n`)
-  return { marker, attestation: writeAttestation(root, planDir) }
+  return withAttestationWriter(root, planDir, target => {
+    writeText(path.join(planDir, ".stop_blocks"), "0\n")
+    try {
+      fs.unlinkSync(path.join(planDir, ".gate_last_ledger"))
+    } catch {
+      // absent is fine
+    }
+    writeText(path.join(planDir, ".nonce"), `${crypto.randomBytes(8).toString("hex")}\n`)
+    const marker = mode === "gated" ? "autonomous gate" : "autonomous"
+    writeText(path.join(planDir, ".mode"), `${marker}\n`)
+    return { marker, attestation: writeLockedAttestation(planDir, target) }
+  })
 }
 
 export function initPlan(
