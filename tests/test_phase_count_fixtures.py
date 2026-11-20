@@ -182,14 +182,16 @@ def test_active_phase_with_pending_checklist_still_requests_continuation(runtime
     if executable is None:
         pytest.skip(f"{runtime} unavailable")
     plan = tmp_path / "task_plan.md"
-    plan.write_text("### Phase 1: Build\n**Status:** in_progress\n- [pending] Review the result\n", encoding="utf-8")
+    plan.write_text("  ### Phase 1: Build\n**Status:** in_progress\n- [pending] Review the result\n", encoding="utf-8")
     (tmp_path / ".mode").write_text("gate\n", encoding="ascii")
     args = ([str(ROOT / "scripts/check-complete.sh"), "--gate", str(plan)] if runtime == "sh" else
             ["-NoProfile", "-File", str(ROOT / "scripts/check-complete.ps1"), "-Gate", str(plan)])
     result = subprocess.run([executable, *args], cwd=tmp_path, input="{}", capture_output=True,
                             text=True, encoding="utf-8")
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["decision"] == "block"
+    decision = json.loads(result.stdout)
+    assert decision["decision"] == "block"
+    assert "Phase 1: Build" in decision["reason"]
 
 
 @pytest.mark.parametrize("directory", [

@@ -64,12 +64,12 @@ foreach ($line in (($content -creplace '^\uFEFF', '') -split '\r?\n')) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
-    if ($line -cmatch '^### المرحلة(?:[0-9:]|-[0-9])') {
+    if ($line -cmatch '^ {0,3}### المرحلة(?:[0-9:]|-[0-9])') {
         Complete-Phase
         $malformedHeading = $true
         continue
     }
-    if ($line -cmatch '^### المرحلة(?:[ \t]|$)') {
+    if ($line -cmatch '^ {0,3}### المرحلة(?:[ \t]|$)') {
         Complete-Phase
         $counts.total++
         $phase = @{ Heading = $line; Statuses = @() }

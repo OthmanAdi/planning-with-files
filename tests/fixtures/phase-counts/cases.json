@@ -153,5 +153,14 @@
     "pending": 0,
     "valid": false,
     "invalid_structure": true
+  },
+  {
+    "name": "indented_atx_phases",
+    "plan": "### Phase 1: Review\n**Status:** complete\n ### Phase 2: Build\n**Status:** pending\n  ### Phase 3: Validate\n**Status:** in_progress\n   ### Phase 4: Document\n**Status:** pending\n## Notes\n    ### Phase 5: Code example\n",
+    "total": 4,
+    "complete": 1,
+    "in_progress": 1,
+    "pending": 2,
+    "valid": true
   }
 ]

@@ -1060,8 +1060,8 @@ smart_plan_extract() {
             else if (insec == "keep") keep = keep $0 "\n"
             next
         }
-        /^### Phase([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
-        /^### Phase([ \t]|$)/ {
+        /^ ? ? ?### Phase([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
+        /^ ? ? ?### Phase([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0; curbuf = $0 "\n"; read_status($0); next
         }
         /^ ? ? ?(###|##|#)([ \t]|$)/ { finish_phase() }

@@ -72,11 +72,11 @@ PLAN_COUNTS=$(LC_ALL=C awk '
         NR == 1 { sub(/^\357\273\277/, "") }
         { sub(/\r$/, "") }
         fenced($0) { next }
-        /^### المرحلة([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
-        /^### المرحلة([ \t]|$)/ {
+        /^ ? ? ?### المرحلة([0-9:]|-[0-9])/ { finish_phase(); malformed_heading = 1; next }
+        /^ ? ? ?### المرحلة([ \t]|$)/ {
             finish_phase(); total++; in_phase = 1; heading = $0
         }
-        !/^### المرحلة([ \t]|$)/ && /^ ? ? ?(###|##|#)([ \t]|$)/ { finish_phase() }
+        !/^ ? ? ?### المرحلة([ \t]|$)/ && /^ ? ? ?(###|##|#)([ \t]|$)/ { finish_phase() }
         in_phase { read_status($0) }
         END {
             finish_phase()
