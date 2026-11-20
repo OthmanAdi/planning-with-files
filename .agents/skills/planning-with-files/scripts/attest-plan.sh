@@ -274,18 +274,24 @@ def run(stack):
             return data, info
     def identity(info):
         return [info.st_dev, info.st_ino, info.st_ctime_ns]
-    def atomic_write(fd, name, data):
+    def generation(info, digest):
+        # Rename may change ctime. These values survive publishing the staged
+        # inode and distinguish a fresh strict attestation of identical bytes.
+        return [info.st_dev, info.st_ino, info.st_mtime_ns, digest.decode("ascii").strip()]
+    def stage(fd, data):
         tmp = ".pwf-" + secrets.token_hex(16)
         writer = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=fd)
-        try:
-            with os.fdopen(writer, "wb") as output:
-                output.write(data)
-            os.replace(tmp, name, src_dir_fd=fd, dst_dir_fd=fd)
-        finally:
+        def cleanup():
             try:
                 os.unlink(tmp, dir_fd=fd)
             except FileNotFoundError:
                 pass
+        stack.callback(cleanup)
+        with os.fdopen(writer, "wb") as output:
+            output.write(data)
+            output.flush()
+            info = os.fstat(output.fileno())
+        return tmp, info
     record = None
     try:
         raw, _ = read_file(cache, key, private=True)
@@ -307,8 +313,11 @@ def run(stack):
         stored = digest_info = None
     digest = hashlib.sha256(snapshot).hexdigest().encode("ascii") + b"\n"
     boxes = {}
+    # Only standalone, flush-left "- [ ]" and "* [ ]" with one ASCII space
+    # after the bullet are eligible. Indented tasks stay under strict approval.
     # A list-shaped line inside a Markdown code fence is example text.
     fence = None
+    comment = False
     offset = 0
     for line in snapshot.split(b"\n"):
         # A UTF-8 BOM is ignored by Markdown only at the document start.
@@ -320,34 +329,65 @@ def run(stack):
             closing = re.fullmatch(rb" {0,3}(`{3,}|~{3,})[ \t]*\r?", content)
             if closing and closing[1].startswith(fence):
                 fence = None
+        elif comment:
+            if b"-->" in content:
+                comment = False
+                if content.partition(b"-->")[2].strip():
+                    refuse("Ambiguous HTML after comment. Review the plan manually.")
         elif marker and (marker[1].startswith(b"~") or b"`" not in marker[2]):
             fence = marker[1]
+        elif b"<!--" in content:
+            prefix, _, tail = content.partition(b"<!--")
+            if prefix.strip():
+                refuse("Ambiguous HTML comment. Review the plan manually.")
+            comment = b"-->" not in tail
+            if not comment and tail.partition(b"-->")[2].strip():
+                refuse("Ambiguous HTML after comment. Review the plan manually.")
         else:
-            box = re.match(rb" {0,3}[-*][ \t]+\[([ x])\](?=[ \t]|\r?$)", content)
+            if re.match(rb"^[ \t]*(?:[-*+]|[0-9]{1,9}[.)])?[ \t]*<(?:/?[a-zA-Z]|[!?])", content):
+                refuse("Raw HTML blocks require manual re-attestation.")
+            box = re.match(rb"[-*] \[([ x])\](?=[ \t]|\r?$)", content)
             if box:
                 boxes[offset + bom + box.start(1)] = box[1]
         offset += len(line) + 1
+    def check_plan_generation():
+        current = os.stat("task_plan.md", dir_fd=parent, follow_symlinks=False)
+        if identity(current) != identity(plan_info):
+            refuse("Plan changed during attestation. Retry.")
+    previous = None
+    if record and digest_info:
+        selected = generation(digest_info, stored)
+        previous = next((entry for entry in record.get("generations", [])
+                         if entry["id"] == selected), None)
     if mode == "checkbox-only":
-        if record is None or digest_info is None or record.get("identity") != identity(digest_info):
+        if previous is None:
             refuse("No current checkbox enrollment. Review the plan and use --enable-checkbox-only.")
         prior = bytearray(snapshot)
-        for offset in record["unchecked"]:
+        for offset in previous["unchecked"]:
             if boxes.get(offset) == b"x":
                 prior[offset] = ord(" ")
         if hashlib.sha256(prior).hexdigest().encode("ascii") != stored.rstrip(b"\r\n"):
             refuse("Changes exceed checkbox-only scope.")
         if digest.rstrip() == stored.rstrip():
+            check_plan_generation()
             print("[plan-attest] Plan already matches attestation.")
             return
-    if identity(os.stat("task_plan.md", dir_fd=parent, follow_symlinks=False)) != identity(plan_info):
-        refuse("Plan changed before commit. Retry.")
-    atomic_write(parent, attest, digest)
-    current, written_info = read_file(parent, attest)
-    if current != digest:
+    check_plan_generation()
+    digest_tmp, staged = stage(parent, digest)
+    candidate = {"id": generation(staged, digest),
+                 "unchecked": [pos for pos, value in boxes.items() if value == b" "]}
+    entries = [previous, candidate] if previous else [candidate]
+    intent = {"format": "pwf-checkbox-1", "generations": entries}
+    cache_tmp, _ = stage(cache, json.dumps(intent).encode("ascii"))
+    # Until the digest rename, its previous generation remains authoritative.
+    # Afterwards the candidate record is already usable, even across a retry.
+    os.replace(cache_tmp, key, src_dir_fd=cache, dst_dir_fd=cache)
+    check_plan_generation()
+    os.replace(digest_tmp, attest, src_dir_fd=parent, dst_dir_fd=parent)
+    current, written = read_file(parent, attest)
+    if generation(written, current) != candidate["id"]:
         refuse("Attestation changed before verification.")
-    record = {"format": "pwf-checkbox-1", "identity": identity(written_info),
-              "unchecked": [pos for pos, value in boxes.items() if value == b" "]}
-    atomic_write(cache, key, json.dumps(record).encode("ascii"))
+    check_plan_generation()
     print("[plan-attest] Attested selected plan with checkbox enrollment.")
 try:
     with ExitStack() as stack:
@@ -389,14 +429,44 @@ if [ "${mode}" != show ]; then
     : > "${claim}" || exit 1
     trap 'rm -f "${claim}"; rmdir "${staging}"' EXIT
     attempts=0
-    if ! ln "${claim}" "${staging}/probe" 2>/dev/null ||
-       ! [ "${claim}" -ef "${staging}/probe" ]; then
-        rm -f "${staging}/probe"
-        printf '[plan-attest] This filesystem cannot create the required atomic hard-link writer claim.\n' >&2
-        exit 1
+    lock_path="${writer_dir}/${writer_name}"
+    owner="${staging##*/}"
+    if ln "${claim}" "${staging}/probe" 2>/dev/null && [ "${claim}" -ef "${staging}/probe" ]; then
+        lock_type=link
+    else
+        case "$(uname -s)" in
+            MINGW*|MSYS*|CYGWIN*)
+                lock_type=windows
+                if command -v pwsh >/dev/null 2>&1; then windows_shell=pwsh
+                elif command -v powershell.exe >/dev/null 2>&1; then windows_shell=powershell.exe
+                else printf '[plan-attest] Native PowerShell is required for this volume.\n' >&2; exit 1
+                fi
+                native_lock="$(cygpath -aw "${lock_path}")" || exit 1 ;;
+            *) lock_type=directory ;;
+        esac
     fi
     rm -f "${staging}/probe"
-    until ln "${claim}" "${writer_dir}/" 2>/dev/null; do
+    claim_writer() {
+        case "${lock_type}" in
+            link) ln "${claim}" "${writer_dir}/" 2>/dev/null ;;
+            directory)
+                # On POSIX mkdir is exclusive, including on volumes without hard links.
+                (umask 077; mkdir "${lock_path}") 2>/dev/null || return 1
+                mkdir "${lock_path}/${owner}" || return 1 ;;
+            windows)
+                PWF_CLAIM_PATH="${native_lock}" PWF_CLAIM_OWNER="${owner}" \
+                "${windows_shell}" -NoProfile -NonInteractive -Command '
+                    $ErrorActionPreference = "Stop"
+                    try {
+                        $s = [IO.File]::Open($env:PWF_CLAIM_PATH, "CreateNew", "Write", "None")
+                        try {
+                            $data = [Text.Encoding]::ASCII.GetBytes($env:PWF_CLAIM_OWNER)
+                            $s.Write($data, 0, $data.Length)
+                        } finally { $s.Dispose() }
+                    } catch { exit 1 }' ;;
+        esac
+    }
+    until claim_writer; do
         attempts=$((attempts + 1))
         if [ "${attempts}" -ge 50 ]; then
             printf '[plan-attest] Cannot acquire attestation writer lock.\n' >&2
@@ -405,9 +475,13 @@ if [ "${mode}" != show ]; then
         sleep 0.1
     done
     release_writer() {
-        if [ "${claim}" -ef "${writer_dir}/${writer_name}" ]; then
-            rm -f "${writer_dir}/${writer_name}"
-        fi
+        case "${lock_type}" in
+            link) [ "${claim}" -ef "${lock_path}" ] && rm -f "${lock_path}" ;;
+            directory) rmdir "${lock_path}/${owner}" && rmdir "${lock_path}" ;;
+            windows)
+                if [ -f "${lock_path}" ] && [ ! -L "${lock_path}" ] &&
+                   [ "$(cat "${lock_path}")" = "${owner}" ]; then rm -f "${lock_path}"; fi ;;
+        esac
         rm -f "${claim}"
         rmdir "${staging}"
     }

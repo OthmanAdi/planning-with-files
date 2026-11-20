@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from unittest import mock
 import unittest
 from pathlib import Path
 
@@ -564,7 +565,7 @@ class PlanAttestationTests(unittest.TestCase):
 
 
     @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
-    def test_missing_atomic_link_support_refuses_before_writing(self):
+    def test_missing_atomic_link_support_uses_exclusive_directory(self):
         plan = self.tmp / "task_plan.md"
         plan.write_bytes(b"- [ ] ordinary task\n")
         commands = self.tmp / "bin"
@@ -573,16 +574,15 @@ class PlanAttestationTests(unittest.TestCase):
         unsupported.write_text("#!/bin/sh\nexit 1\n", encoding="ascii")
         unsupported.chmod(0o755)
         result = self._run(env={"PATH": str(commands) + os.pathsep + os.environ["PATH"]})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("cannot create the required atomic hard-link", result.stderr)
-        self.assertFalse((self.tmp / ".plan-attestation").exists())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.tmp / ".plan-attestation").read_text().strip(), sha256_of(plan))
         self.assertFalse((self.tmp / ".plan-attestation.writer-lock").exists())
         self.assertEqual(list(self.tmp.glob(".pwf-writer.*")), [])
 
     @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
     def test_checkbox_only_enrollment_and_exact_bytes(self):
         plan = self.tmp / "task_plan.md"
-        before = b"# Plan\r\n- [ ] one [ ]\r\n  * [ ] two\r\n"
+        before = b"# Plan\r\n- [ ] one [ ]\r\n* [ ] two\r\n"
         after = before.replace(b"- [ ]", b"- [x]")
         plan.write_bytes(before)
         self.assertEqual(self._run().returncode, 0)
@@ -648,6 +648,21 @@ class PlanAttestationTests(unittest.TestCase):
         self.assertEqual(self._run("--checkbox-only").returncode, 0)
 
     @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
+    def test_checkbox_only_requires_standalone_tasks(self):
+        plan = self.tmp / "task_plan.md"
+        before = (b"- parent\n  - [ ] nested\n-    [ ] padded\n*\t[ ] tab\n"
+                  b"<!-- details\n- [ ] example\n-->\n- [ ] standalone\n")
+        plan.write_bytes(before)
+        self.assertEqual(self._run("--enable-checkbox-only").returncode, 0)
+        for word in (b"nested", b"padded", b"tab", b"example"):
+            plan.write_bytes(before.replace(b"[ ] " + word, b"[x] " + word))
+            self.assertNotEqual(self._run("--checkbox-only").returncode, 0)
+        plan.write_bytes(before.replace(b"[ ] standalone", b"[x] standalone"))
+        self.assertEqual(self._run("--checkbox-only").returncode, 0)
+        plan.write_bytes(b"<pre>\n- [ ] example\n</pre>\n")
+        self.assertNotEqual(self._run("--enable-checkbox-only").returncode, 0)
+
+    @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
     def test_checkbox_only_fence_context_and_bom_offsets(self):
         plan = self.tmp / "task_plan.md"
         bom = bytes.fromhex("efbbbf")
@@ -685,6 +700,62 @@ class PlanAttestationTests(unittest.TestCase):
         self.assertEqual(self._run("--clear").returncode, 0)
         self.assertFalse((self.tmp / ".plan-attestation").exists())
         self.assertEqual(record.read_bytes(), b"unrelated")
+
+    def _checkbox_helper(self):
+        # Exercise storage faults with deterministic syscall doubles. The normal
+        # CLI tests above cover dispatch, selection, writer acquisition and cleanup.
+        script = SCRIPT.read_text(encoding="utf-8")
+        code = script.split("<<'PWF_CHECKBOX_PY'\n", 1)[1].split("\nPWF_CHECKBOX_PY", 1)[0]
+        argv = ["checkbox", "checkbox-only", str(self.tmp / "task_plan.md"), ".plan-attestation"]
+        with mock.patch.object(sys, "argv", argv), mock.patch.dict(os.environ, HOME=str(self.tmp / "home")):
+            exec(compile(code, "<checkbox helper>", "exec"), {"__name__": "__main__"})
+
+    @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
+    def test_checkbox_storage_failures_remain_retryable(self):
+        plan = self.tmp / "task_plan.md"
+        previous = b"- [ ] task\n"
+        for failure in ("cache", "digest"):
+            with self.subTest(failure=failure):
+                plan.write_bytes(previous)
+                self.assertEqual(self._run("--enable-checkbox-only").returncode, 0)
+                plan.write_bytes(b"- [x] task\n")
+                replace = os.replace
+                def fail_write(src, dest, **kwargs):
+                    is_digest = dest == ".plan-attestation"
+                    if is_digest == (failure == "digest"):
+                        raise OSError("simulated storage failure")
+                    return replace(src, dest, **kwargs)
+                with mock.patch("os.replace", side_effect=fail_write), self.assertRaises(SystemExit):
+                    self._checkbox_helper()
+                self.assertEqual((self.tmp / ".plan-attestation").read_text().strip(),
+                                 hashlib.sha256(previous).hexdigest())
+                self.assertEqual(self._run("--checkbox-only").returncode, 0)
+
+    @unittest.skipUnless(os.name == "posix", "checkbox mode uses POSIX descriptors")
+    def test_checkbox_success_rechecks_plan_generation(self):
+        plan = self.tmp / "task_plan.md"
+        for checked, changed_at in ((False, 1), (True, 3)):
+            with self.subTest(checked=checked):
+                plan.write_bytes(b"- [ ] task\n")
+                self.assertEqual(self._run("--enable-checkbox-only").returncode, 0)
+                if checked:
+                    plan.write_bytes(b"- [x] task\n")
+                real_stat = os.stat
+                seen = 0
+                def changed_generation(path, *args, **kwargs):
+                    nonlocal seen
+                    result = real_stat(path, *args, **kwargs)
+                    if path == "task_plan.md" and "dir_fd" in kwargs:
+                        seen += 1
+                        if seen == changed_at:
+                            return mock.Mock(st_dev=result.st_dev, st_ino=result.st_ino,
+                                             st_ctime_ns=result.st_ctime_ns + 1)
+                    return result
+                with mock.patch("os.stat", side_effect=changed_generation), self.assertRaisesRegex(
+                        SystemExit, "Plan changed during attestation"):
+                    self._checkbox_helper()
+                self.assertEqual(seen, changed_at)
+                self.assertEqual(self._run("--checkbox-only").returncode, 0)
 
     def sha256_of(self, path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
