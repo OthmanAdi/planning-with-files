@@ -27,6 +27,15 @@
 </p>
 <!-- sponsor:swiftproxy:end -->
 
+<!-- sponsor:proxy-seller:start -->
+<p align="center">
+<a href="https://proxy-seller.com/?partner=018DD81930B54142"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/proxy-seller-logo.png" alt="Proxy-Seller logo" width="56"></a><br>
+<sub>Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
+Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>.<br>
+Paid sponsorship · Affiliate links</sub>
+</p>
+<!-- sponsor:proxy-seller:end -->
+
 <!-- oss-support:coderabbit:start -->
 <p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
 <!-- oss-support:coderabbit:end -->
