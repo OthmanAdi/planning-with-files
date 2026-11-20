@@ -706,7 +706,9 @@ class PlanAttestationTests(unittest.TestCase):
         # CLI tests above cover dispatch, selection, writer acquisition and cleanup.
         script = SCRIPT.read_text(encoding="utf-8")
         code = script.split("<<'PWF_CHECKBOX_PY'\n", 1)[1].split("\nPWF_CHECKBOX_PY", 1)[0]
-        argv = ["checkbox", "checkbox-only", str(self.tmp / "task_plan.md"), ".plan-attestation"]
+        # Shell dispatch enters the physical plan directory before invoking Python.
+        physical_plan = self.tmp.resolve() / "task_plan.md"
+        argv = ["checkbox", "checkbox-only", str(physical_plan), ".plan-attestation"]
         with mock.patch.object(sys, "argv", argv), mock.patch.dict(os.environ, HOME=str(self.tmp / "home")):
             exec(compile(code, "<checkbox helper>", "exec"), {"__name__": "__main__"})
 
@@ -725,7 +727,8 @@ class PlanAttestationTests(unittest.TestCase):
                     if is_digest == (failure == "digest"):
                         raise OSError("simulated storage failure")
                     return replace(src, dest, **kwargs)
-                with mock.patch("os.replace", side_effect=fail_write), self.assertRaises(SystemExit):
+                with mock.patch("os.replace", side_effect=fail_write), self.assertRaisesRegex(
+                        SystemExit, "simulated storage failure"):
                     self._checkbox_helper()
                 self.assertEqual((self.tmp / ".plan-attestation").read_text().strip(),
                                  hashlib.sha256(previous).hexdigest())
