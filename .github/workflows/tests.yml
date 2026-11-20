@@ -31,8 +31,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     # Windows runs the full suite through Git Bash and native PowerShell.
-    # Successful runs already approach 15 minutes; allow runner variance.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || 15 }}
+    # The full Windows suite can exceed 30 minutes on hosted runners.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 45 || 15 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
