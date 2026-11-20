@@ -16,7 +16,7 @@ each script with PATH pointing at that dir alone:
            the 'shasum -a 256' call form and output shape), stat rejecting
            -c and serving -f '%m' (translated to GNU stat -c '%Y' first,
            native BSD stat -f '%m' second, python mtime last), date passed
-           through, and the POSIX text tools the scripts use. Canonicalization
+           through, and the POSIX text and filesystem tools the scripts use. Canonicalization
            receives an exact interpreter through PWF_TRUSTED_PYTHON instead
            of exposing Python on PATH.
 
@@ -71,8 +71,11 @@ PASSTHROUGH_TOOLS = (
     "chmod",
     "mkdir",
     "mktemp",
+    "ln",
     "mv",
     "rm",
+    "rmdir",
+    "sleep",
     "wc",
     "date",
 )
