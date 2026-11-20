@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Count completion statuses inside their own phase blocks across the completion reports, ledgers, smart injection and native integrations. Fenced examples and status quotes in later sections do not change the total. Plans saved with a UTF-8 byte-order mark retain their first phase (PR #381, #377).
+
+### Thanks
+- @kuei51307-hub, for phase-scoped counting and shared fixtures (PR #381).
+
 ## [3.28.2] - 2026-11-10
 
 ### Fixed
