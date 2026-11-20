@@ -36,6 +36,8 @@ def test_python_consumers(case):
     assert {k: hermes.phase_counts(case["plan"])[k] for k in expected} == expected
     view = injector.smart_plan_extract(case["plan"].encode())
     if case["valid"]:
+        if "smart_contains" in case:
+            assert case["smart_contains"].encode() in view
         assert f"phases: {case['complete'] or ''}/{case['total']} complete".encode() in view
     else:
         assert view is None
@@ -102,6 +104,8 @@ def test_shell_smart_view(case, tmp_path):
     assert result.returncode == 0, result.stderr
     assert f"phases: {case['complete'] or ''}/{case['total']} complete" in result.stdout
     assert result.stdout.encode() == injector.smart_plan_extract(case["plan"].encode())
+    if "smart_contains" in case:
+        assert case["smart_contains"] in result.stdout
 
 
 @pytest.mark.parametrize("state", ["failed", "blocked"])
@@ -109,6 +113,17 @@ def test_hermes_preserves_failed_status_reporting(state):
     counts = hermes.phase_counts("### Phase 1: Repair\n**Status:** " + state + "\n")
     assert counts["total"] == counts["failed"] == 1
     assert counts["complete"] == 0
+
+
+@pytest.mark.parametrize("primary", ["complete", "pending", "in_progress"])
+@pytest.mark.parametrize("other", ["failed", "blocked"])
+def test_hermes_counts_only_unambiguous_completion_and_pending(primary, other):
+    plan = f"### Phase 1: Review\n**Status:** {primary}\n[{other}] Check the result\n"
+    for count in (hermes.phase_counts, hermes.gate_counts):
+        counts = count(plan)
+        assert counts["total"] == 1
+        assert counts["complete"] == counts["pending"] == 0
+        assert counts["in_progress"] == (1 if primary == "in_progress" else 0)
 
 
 @pytest.mark.skipif(not PWSH, reason="PowerShell unavailable")
@@ -134,6 +149,11 @@ def test_powershell_selected_path_is_literal(route, phase_label, status_label, t
     invalid = subprocess.run([PWSH, "-NoProfile", "-File", str(ROOT / route), "-PlanFile", str(selected), "-Validate"],
                              cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
     assert invalid.returncode == 1, invalid.stdout
+    advisory = subprocess.run([PWSH, "-NoProfile", "-File", str(ROOT / route), "-PlanFile", str(selected)],
+                              cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")
+    assert advisory.returncode == 0, advisory.stderr
+    assert advisory.stdout == ""
+
 
 
 def test_hermes_keeps_unfenced_legacy_table_support():
@@ -186,8 +206,10 @@ def test_active_phase_with_pending_checklist_still_requests_continuation(runtime
     (tmp_path / ".mode").write_text("gate\n", encoding="ascii")
     args = ([str(ROOT / "scripts/check-complete.sh"), "--gate", str(plan)] if runtime == "sh" else
             ["-NoProfile", "-File", str(ROOT / "scripts/check-complete.ps1"), "-Gate", str(plan)])
+    excluded = {"PLAN_ID", "PWF_PLAN_ROOT", "PLANNING_DISABLED", "PWF_SESSION_ID", "PWF_GATE_CAP"}
+    env = {key: value for key, value in os.environ.items() if key not in excluded}
     result = subprocess.run([executable, *args], cwd=tmp_path, input="{}", capture_output=True,
-                            text=True, encoding="utf-8")
+                            text=True, encoding="utf-8", env=env)
     assert result.returncode == 0, result.stderr
     decision = json.loads(result.stdout)
     assert decision["decision"] == "block"

@@ -314,6 +314,8 @@ def _unfenced_lines(task_plan: str) -> tuple[list[str], bool]:
             fence = marker[1][0]
             fence_length = len(marker[1])
             continue
+        if re.match(r"^ {0,3}>", line):
+            continue
         if re.match(r"^ {0,3}### Phase(?:[0-9:]|-[0-9])", line, re.IGNORECASE):
             malformed_heading = True
         lines.append(line)
@@ -344,11 +346,12 @@ def first_in_progress_phase(task_plan: str) -> str:
 def _phase_totals(phases: list[tuple[str, list[str]]], invalid_structure: bool) -> dict[str, int]:
     counts = {"total": len(phases), "complete": 0, "in_progress": 0, "pending": 0}
     for _, states in phases:
-        native_states = [state for state in states if state not in ("failed", "blocked")]
-        if "in_progress" in native_states:
+        if "in_progress" in states:
             counts["in_progress"] += 1
-        elif len(native_states) == 1:
-            counts[native_states[0]] += 1
+        elif states == ["complete"]:
+            counts["complete"] += 1
+        elif states == ["pending"]:
+            counts["pending"] += 1
     if invalid_structure:
         counts["invalid_structure"] = True
     return counts

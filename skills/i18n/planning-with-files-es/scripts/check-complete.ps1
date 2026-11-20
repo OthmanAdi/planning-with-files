@@ -15,7 +15,7 @@ if ($Validate) {
 # sessions that share a cwd with a plan but never opted into it.
 if ($env:PLANNING_DISABLED -eq '1' -and -not $Validate) { exit 0 }
 
-if (-not (Test-Path -LiteralPath $PlanFile)) {
+if (-not $Validate -and -not (Test-Path -LiteralPath $PlanFile)) {
     # Automatic gate checks have nothing to report without a plan; the explicit report keeps its notice.
     if ($Gate) { exit 0 }
     Write-Host '[planning-with-files-es] No se encontró task_plan.md — no hay sesión de planificación activa.'
@@ -64,6 +64,7 @@ foreach ($line in (($content -creplace '^\uFEFF', '') -split '\r?\n')) {
         $fence = $Matches[1].Substring(0, 1); $fenceLength = $Matches[1].Length
         continue
     }
+    if ($line -match '^ {0,3}>') { continue }
     if ($line -cmatch '^ {0,3}### Phase(?:[0-9:]|-[0-9])') {
         Complete-Phase
         $malformedHeading = $true
@@ -101,7 +102,9 @@ if ($Validate) {
 
 if ($fence -or $malformedHeading) {
     Write-Output '[planning-with-files] Plan format error: phase completion unavailable.'
-} elseif ($COMPLETE -eq $TOTAL -and $TOTAL -gt 0) {
+} elseif ($TOTAL -eq 0) {
+    exit 0
+} elseif ($COMPLETE -eq $TOTAL) {
     Write-Host ('[planning-with-files-es] Todas las fases completadas (' + $COMPLETE + '/' + $TOTAL + '). Si el usuario tiene trabajo adicional, añadir fases en task_plan.md antes de comenzar.')
 } else {
     Write-Host ('[planning-with-files-es] Tarea en progreso (' + $COMPLETE + '/' + $TOTAL + ' fases completadas). Actualizar progress.md antes de detenerse.')

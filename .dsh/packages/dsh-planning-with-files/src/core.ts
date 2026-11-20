@@ -506,6 +506,7 @@ function planPhases(text: string) {
     if (marker && (marker[1][0] !== "`" || !line.slice(marker[0].length).includes("`"))) {
       fence = marker[1][0]; fenceLength = marker[1].length; continue
     }
+    if (/^ {0,3}>/.test(line)) continue
     if (/^ {0,3}### Phase(?:[ \t]|$)/.test(line)) {
       phase = { heading: line.trimStart().slice(4), statuses: [] }
       phases.push(phase)
