@@ -7,8 +7,12 @@
 </h1>
 
 <p align="center">
-  <strong>The planning skill your agent cannot ignore.</strong><br>
-  Not a prompt it might follow. A hook that fires every turn, a plan on disk that survives <code>/clear</code>, and 3 out of 3 blind A/B wins to show it works.
+  Planning with Files saves your plan, findings, and progress in Markdown. After <code>/clear</code>, your agent can pick up from those files.
+</p>
+
+<p align="center">
+  <a href="#readme-nav-before-clear"><strong>See it survive /clear →</strong></a> ·
+  <a href="#readme-nav-quick-install"><strong>Install</strong></a>
 </p>
 
 ### <a name="sponsor"></a>Sponsors & supporters
@@ -31,8 +35,7 @@
 <p align="center">
 <a href="https://proxy-seller.com/?partner=018DD81930B54142"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/proxy-seller-logo.png" alt="Proxy-Seller logo" width="32"></a><br>
 <sub>Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
-Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>.<br>
-Paid sponsorship · Affiliate links</sub>
+Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>. <em>Ad · Affiliate links</em></sub>
 </p>
 <!-- sponsor:proxy-seller:end -->
 
@@ -42,13 +45,9 @@ Paid sponsorship · Affiliate links</sub>
 
 ---
 
-<p align="center">
-  <em>Your agent's context window dies. The plan does not.</em>
-</p>
+The three project files are <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code>. When lifecycle hooks are active, they bring selected planning context back into the session. Automatic recovery reads project files only. Reading records from past sessions in the same project requires an explicit catchup mode.
 
-<p align="center">
-Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
-</p>
+The skill works across 60+ agents through the Agent Skills standard. Native integrations include Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode, and DeepSeek Harness.
 
 <p align="center">
   <a href="https://github.com/OthmanAdi/planning-with-files/stargazers"><img src="https://img.shields.io/github/stars/OthmanAdi/planning-with-files?style=flat&color=yellow" alt="Stars"></a>
@@ -67,16 +66,10 @@ Persistent file-based planning for AI coding agents and long-running agent tasks
 </p>
 
 <p align="center">
-  <a href="#readme-nav-before-clear"><strong>See it survive /clear</strong></a> ·
-  <a href="#readme-nav-quick-install"><strong>Install</strong></a> ·
   <a href="#readme-nav-long-running">Long-running tasks</a> ·
-  <a href="#readme-nav-hosts">First-class hosts</a>
+  <a href="#readme-nav-hosts">First-class hosts</a> ·
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md">Full installation guide</a>
 </p>
-
-<p align="center">
-  <sub>Open the Commands, Multi-agent runs, Benchmarks &amp; more section below for the reference · <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md">Full install guide</a></sub>
-</p>
-
 
 ## Contributors
 
@@ -200,7 +193,7 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
 <a id="community"></a>
 
 <details>
-<summary><div align="center"><strong>🌍 Built with Planning with Files</strong></div></summary>
+<summary><strong>Explore projects built with Planning with Files →</strong></summary>
 
 ### Forks & Extensions
 
