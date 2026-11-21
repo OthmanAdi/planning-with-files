@@ -1,4 +1,5 @@
 """An eligible plan gets one fixed notice when no interpreter is usable."""
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -6,7 +7,12 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.skipif(not (shutil.which("sh") and shutil.which("realpath")), reason="requires sh and realpath")
+# Both tests strip PATH to control which tools the hook can find. Git Bash on
+# Windows does not honor that the same way, so they run on POSIX hosts only.
+@pytest.mark.skipif(
+    os.name == "nt" or not (shutil.which("sh") and shutil.which("realpath")),
+    reason="requires POSIX sh and realpath",
+)
 def test_no_python_notice(tmp_path):
     script = Path(__file__).resolve().parents[1] / "scripts" / "inject-plan.sh"
     (tmp_path / "task_plan.md").write_text("# Private plan body\n")
@@ -14,7 +20,7 @@ def test_no_python_notice(tmp_path):
     (tmp_path / "realpath").symlink_to(shutil.which("realpath"))
     result = subprocess.run(
         [shutil.which("sh"), str(script), "--context=userprompt"], cwd=tmp_path, env={"PATH": str(tmp_path)},
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, encoding="utf-8", check=True,
     )
     assert result.stdout == (
         "[planning-with-files] Plan injection needs Python 3.8 or newer "
@@ -22,7 +28,7 @@ def test_no_python_notice(tmp_path):
     )
 
 
-@pytest.mark.skipif(not shutil.which("sh"), reason="requires sh")
+@pytest.mark.skipif(os.name == "nt" or not shutil.which("sh"), reason="requires POSIX sh")
 def test_no_canonicalizer_notice(tmp_path):
     script = Path(__file__).resolve().parents[1] / "scripts" / "inject-plan.sh"
     sh = shutil.which("sh")
@@ -41,6 +47,7 @@ def test_no_canonicalizer_notice(tmp_path):
         env={"PATH": str(bin_dir)},
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
     )
     assert result.stdout == (
@@ -55,6 +62,7 @@ def test_no_canonicalizer_notice(tmp_path):
             env={"PATH": str(bin_dir)},
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=True,
         )
         assert quiet.stdout == ""
