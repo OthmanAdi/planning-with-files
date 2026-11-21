@@ -29,6 +29,45 @@
 
 set -u
 
+# Pure-sh backslash-to-forward-slash normalizer; result lands in $NORM_OUT.
+# Windows-native coreutils builds (e.g. C:\Program Files\coreutils on PATH
+# ahead of Git's usr/bin) canonicalize MSYS-style /c/... input to C:\-style
+# backslash output. The containment prefix match below is written with forward
+# slashes, so without this normalization every canonical pair mismatches and
+# injection silently goes dark. On POSIX systems paths contain no backslash
+# and this is the identity. A literal backslash in a Unix filename normalizes
+# to "/" and at worst fails containment, the safe direction. No subshell, no
+# fork: plain parameter expansion in a loop.
+norm_slashes() {
+    NORM_OUT=""
+    _ns_rest="$1"
+    while :; do
+        case "${_ns_rest}" in
+            *\\*)
+                NORM_OUT="${NORM_OUT}${_ns_rest%%\\*}/"
+                _ns_rest="${_ns_rest#*\\}"
+                ;;
+            *)
+                NORM_OUT="${NORM_OUT}${_ns_rest}"
+                break
+                ;;
+        esac
+    done
+}
+
+# Return true when a candidate path names the Microsoft Store WindowsApps
+# directory. Matching is case-insensitive and works after slash normalization.
+is_windowsapps_path() {
+    norm_slashes "$1"
+    case "${NORM_OUT}" in
+        [Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]|\
+        [Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]/*|\
+        */[Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]|\
+        */[Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]/*) return 0 ;;
+    esac
+    return 1
+}
+
 # Validate candidate interpreters supplied by the selector wrappers below.
 # Windows Store app aliases can exist as python3.exe while refusing every
 # script invocation. Probe candidates privately and fail closed if none runs.
@@ -73,6 +112,25 @@ select_python() {
         "$(command -v python3 2>/dev/null)" \
         "$(command -v python 2>/dev/null)"
 }
+
+# plan-doctor.sh sources this file so it can call select_python instead of
+# keeping a second copy. When this file is not the program being executed,
+# stop before any plan read or cache write and leave the caller in control.
+_pwf_self=$0
+case "$_pwf_self" in
+    *\\*) _pwf_self=${_pwf_self##*\\} ;;
+esac
+case "$_pwf_self" in
+    */*) _pwf_self=${_pwf_self##*/} ;;
+esac
+case "$_pwf_self" in
+    inject-plan.sh) ;;
+    *)
+        unset _pwf_self
+        return 0 2>/dev/null || exit 0
+        ;;
+esac
+unset _pwf_self
 
 # issue #195: per-invocation opt-out (PLANNING_DISABLED=1) for one-shot/CI
 # sessions that share a cwd with a plan but never opted into it.
@@ -142,45 +200,6 @@ slug_is_valid() {
         '') return 1 ;;
         *[!A-Za-z0-9._-]*) return 1 ;;
         [A-Za-z0-9_]*) return 0 ;;
-    esac
-    return 1
-}
-
-# Pure-sh backslash-to-forward-slash normalizer; result lands in $NORM_OUT.
-# Windows-native coreutils builds (e.g. C:\Program Files\coreutils on PATH
-# ahead of Git's usr/bin) canonicalize MSYS-style /c/... input to C:\-style
-# backslash output. The containment prefix match below is written with forward
-# slashes, so without this normalization every canonical pair mismatches and
-# injection silently goes dark. On POSIX systems paths contain no backslash
-# and this is the identity. A literal backslash in a Unix filename normalizes
-# to "/" and at worst fails containment — the safe direction. No subshell, no
-# fork: plain parameter expansion in a loop.
-norm_slashes() {
-    NORM_OUT=""
-    _ns_rest="$1"
-    while :; do
-        case "${_ns_rest}" in
-            *\\*)
-                NORM_OUT="${NORM_OUT}${_ns_rest%%\\*}/"
-                _ns_rest="${_ns_rest#*\\}"
-                ;;
-            *)
-                NORM_OUT="${NORM_OUT}${_ns_rest}"
-                break
-                ;;
-        esac
-    done
-}
-
-# Return true when a candidate path names the Microsoft Store WindowsApps
-# directory. Matching is case-insensitive and works after slash normalization.
-is_windowsapps_path() {
-    norm_slashes "$1"
-    case "${NORM_OUT}" in
-        [Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]|\
-        [Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]/*|\
-        */[Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]|\
-        */[Ww][Ii][Nn][Dd][Oo][Ww][Ss][Aa][Pp][Pp][Ss]/*) return 0 ;;
     esac
     return 1
 }
@@ -350,6 +369,10 @@ if [ "$CONTEXT" = "preflight" ]; then
 fi
 
 [ -n "$PWF_PYTHON" ] || PWF_PYTHON="$(select_python 2>/dev/null)" || PWF_PYTHON=""
+if [ "$CONTEXT" = "userprompt" ] && [ -z "$PWF_PYTHON" ]; then
+    printf '%s\n' '[planning-with-files] Plan injection needs Python 3.8 or newer and no usable interpreter was found — nothing injected.'
+    exit 0
+fi
 
 # Cache failure always preserves the reference output. This helper reads only
 # the bounded private view, never a second copy of the live plan.

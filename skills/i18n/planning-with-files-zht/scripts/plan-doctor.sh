@@ -79,13 +79,28 @@ if [ -n "${FORMAT_PLAN}" ] && [ -f "${SCRIPT_DIR}/check-complete.sh" ]; then
     fi
 fi
 
+# Same selector inject-plan.sh uses, so the doctor and the injector agree on
+# Python 3.8+. Sourcing returns before that script reads a plan. A stub or a
+# doctor-only install defines no select_python; the injection section covers
+# a missing injector.
+if [ -f "${SCRIPT_DIR}/inject-plan.sh" ]; then
+    . "${SCRIPT_DIR}/inject-plan.sh"
+fi
+if command -v select_python >/dev/null 2>&1; then
+    if interpreter="$(select_python)"; then
+        ok "interpreter: ${interpreter}"
+    else
+        fail "interpreter: none found; Claude Code plan injection needs Python 3.8 or newer"
+    fi
+fi
+
 # --- [3] hook injection ------------------------------------------------------
 INJ="${SCRIPT_DIR}/inject-plan.sh"
 if [ -f "${INJ}" ]; then
     OUT="$(sh "${INJ}" --context=userprompt 2>/dev/null)" || OUT=""
     if [ -z "${OUT}" ]; then
         if [ -n "${RES}" ] || [ -f task_plan.md ]; then
-            fail "injection: a plan resolves but inject-plan.sh emitted NOTHING — hooks are dark. Known silent causes: pre-v3.6.0 with a Windows-native realpath on PATH; PLANNING_DISABLED=1; a plan dir outside the project root; a stale .planning/sessions/ dir with no attached session (silences pretool/precompact fires entirely — the userprompt fire names it)."
+            fail "injection: a plan resolves but inject-plan.sh emitted NOTHING — hooks are dark. Known silent causes: pre-v3.6.0 with a Windows-native realpath on PATH; PLANNING_DISABLED=1; a plan dir outside the project root; a stale .planning/sessions/ dir with no attached session (silences pretool/precompact fires entirely — the userprompt fire names it); no CPython 3.8+ on PATH."
         else
             ok "injection: silent because no plan exists here (correct behavior)"
         fi
@@ -129,6 +144,9 @@ if [ -f "${INJ}" ]; then
                 ;;
             *'PLAN_ID does not name a plan directory'*)
                 warn "injection: PLAN_ID names no plan directory under .planning — fix or unset the pin; a set PLAN_ID is a binding and fails closed rather than selecting another plan"
+                ;;
+            '[planning-with-files] Plan injection needs Python 3.8 or newer and no usable interpreter was found — nothing injected.')
+                fail "injection: no usable Python 3.8 or newer interpreter was found"
                 ;;
             *)
                 BYTES="$(printf '%s' "${OUT}" | wc -c | tr -d '[:space:]')"

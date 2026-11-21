@@ -205,6 +205,8 @@ rm -rf ~/.claude/skills/planning-with-files
 
 ## Requirements
 
+- Claude Code plugin and standalone hooks need CPython 3.8 or newer for plan injection. Git for Windows does not ship it. Without it, UserPromptSubmit prints one fixed notice and injects no plan bytes.
+
 - **Claude Code plugin lifecycle:** tested against the current stable release. No older minimum is claimed without a compatibility receipt.
 - **Standalone skill:** core file-based planning remains available, but hooks register only after the skill is invoked.
 
