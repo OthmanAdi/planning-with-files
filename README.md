@@ -47,6 +47,13 @@ Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-sel
 </p>
 <!-- sponsor:proxy-seller:end -->
 
+<!-- oss-support:neon:start -->
+<p align="center">
+<a href="https://neon.com"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/neon-logo.svg" alt="Neon" width="112"></a><br>
+<sub>Infrastructure credits from the Neon Open Source Program.</sub>
+</p>
+<!-- oss-support:neon:end -->
+
 <!-- oss-support:coderabbit:start -->
 <p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
 <!-- oss-support:coderabbit:end -->
