@@ -52,8 +52,9 @@ def test_no_canonicalizer_notice(tmp_path):
     )
     assert result.stdout == (
         "[planning-with-files] Plan injection could not verify the plan path: "
-        "it needs realpath, readlink -f, or Python 3.8 or newer, and none was "
-        "usable, so nothing was injected.\n"
+        "it needs realpath, readlink -f, or an absolute PWF_TRUSTED_PYTHON or "
+        "PYTHON_BIN path to Python 3.8 or newer, and none was usable, so "
+        "nothing was injected.\n"
     )
     for context in ("pretool", "precompact", "preflight", "validate"):
         quiet = subprocess.run(

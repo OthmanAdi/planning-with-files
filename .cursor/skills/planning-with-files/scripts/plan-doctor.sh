@@ -164,8 +164,8 @@ if [ -f "${INJ}" ]; then
             '[planning-with-files] Plan injection needs Python 3.8 or newer and no usable interpreter was found — nothing injected.')
                 fail "injection: no usable Python 3.8 or newer interpreter was found"
                 ;;
-            '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or Python 3.8 or newer, and none was usable, so nothing was injected.')
-                fail "injection: could not verify the plan path because realpath, readlink -f, and Python 3.8 or newer were all unavailable"
+            '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or an absolute PWF_TRUSTED_PYTHON or PYTHON_BIN path to Python 3.8 or newer, and none was usable, so nothing was injected.')
+                fail "injection: could not verify the plan path because realpath, readlink -f, and an absolute PWF_TRUSTED_PYTHON or PYTHON_BIN path to Python 3.8 or newer were all unavailable"
                 ;;
             *)
                 BYTES="$(printf '%s' "${OUT}" | wc -c | tr -d '[:space:]')"

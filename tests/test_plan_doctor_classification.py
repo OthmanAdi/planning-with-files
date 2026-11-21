@@ -44,7 +44,7 @@ CONTROL_LITERALS = """# Task Plan: doctor literals
 - [ ] reword the Ambiguous plan notice
 - [ ] check PWF_PLAN_ROOT is not a supported absolute local directory wording
 - [ ] and PLAN_ID does not name a plan directory too
-- [ ] [planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or Python 3.8 or newer, and none was usable, so nothing was injected.
+- [ ] [planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or an absolute PWF_TRUSTED_PYTHON or PYTHON_BIN path to Python 3.8 or newer, and none was usable, so nothing was injected.
 """
 
 

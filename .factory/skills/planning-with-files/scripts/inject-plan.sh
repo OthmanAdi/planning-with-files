@@ -379,7 +379,7 @@ fi
 PWF_PYTHON="$(select_explicit_python 2>/dev/null)" || PWF_PYTHON=""
 if ! is_within_root "$PRECHECK_PLAN_FILE"; then
     if [ "$CONTEXT" = "userprompt" ] && ! canonicalize "${PWF_PLAN_ROOT:-.}" >/dev/null 2>&1; then
-        printf '%s\n' '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or Python 3.8 or newer, and none was usable, so nothing was injected.'
+        printf '%s\n' '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or an absolute PWF_TRUSTED_PYTHON or PYTHON_BIN path to Python 3.8 or newer, and none was usable, so nothing was injected.'
     fi
     exit 0
 fi
