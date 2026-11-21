@@ -1,6 +1,6 @@
 # Language variants
 
-`planning-with-files` ships the planning workflow in six languages. The English skill is the canonical one. Arabic, German, Spanish, Simplified Chinese and Traditional Chinese are full translations: the SKILL.md body, the three templates, and the user-facing output of `check-complete`, `init-session` and `session-catchup` are all translated, and each variant carries the same 20 scripts as the canonical skill.
+`planning-with-files` ships the planning workflow in six languages. The English skill is the canonical one. Arabic, German, Spanish, Simplified Chinese and Traditional Chinese are full translations: the SKILL.md body, the three templates, and the user-facing output of `check-complete`, `init-session` and `session-catchup` are all translated, and each variant carries the same 22 scripts as the canonical skill. See the [canonical scripts directory](../skills/planning-with-files/scripts/) for the current inventory.
 
 All language variants use the same recovery consent boundary. Automatic recovery reads project planning files only. Explicit `session-catchup.py --metadata` reads same-project local session records and emits aggregate counts only, without transcript bytes; explicit `--replay` may emit bounded nonce-framed excerpts. The catchup path contains no network upload operation.
 
@@ -54,15 +54,15 @@ Because the plugin no longer registers them, there is no `planning-with-files:pl
 
 ## Status tokens stay in English
 
-Every translated `task_plan.md` template keeps the status markers as literal English:
+Every translated `task_plan.md` template keeps the status values as literal English: `pending`, `in_progress`, and `complete`. The field label may be translated to match the language, but only when that translation's own checker runs. Canonical fallback (`scripts/check-complete.sh`) matches only `**Status:**`; a phase labeled `**Estado:**` is treated as having no status and is invalid / untrackable with `--validate`. For example, the Spanish template ships one status line per phase:
 
 ```markdown
-- **Status:** pending
-- **Status:** in_progress
-- **Status:** complete
+- **Estado:** pending
 ```
 
-The completion gate matches those exact strings with `grep -F`. Translating them silently disables the gate, so the surrounding prose is translated and the tokens are not. The five language commands state this explicitly so the model does not translate them either.
+The other allowed values are `in_progress` and `complete`. Put exactly one native status line in each `### Phase` block; copying several into one phase makes the checker mark it invalid.
+
+Preserve those English tokens. The completion checker reads them inside each `### Phase` block; a translated token is unrecognized, so that phase never counts as complete and `--validate` rejects the plan. Surrounding prose is translated and the tokens are not. The five language commands state this explicitly so the model does not translate them either.
 
 ## Reporting a translation problem
 
