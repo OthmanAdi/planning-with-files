@@ -97,8 +97,12 @@ BACKEND_PLAN_ID='paste-the-printed-PLAN_ID-here'
 Do not rebuild the first plan's ID from today's date or the slug alone. The
 initializer prints the real `PLAN_ID`, and reusing a name appends `-2`, `-3`,
 and so on. The active-plan pointer above is shared and suits sequential
-switching. For concurrent sessions, set a different `PLAN_ID` in each host's
-environment before starting it, using the exact ID printed by initialization.
+switching while exactly one plan exists; the resolver reads that pointer
+only then. With two or more plans an unset `PLAN_ID` is ambiguous and
+resolves to nothing, so each host must export `PLAN_ID=<printed id>` and
+update it when switching; the pin overrides the pointer. For concurrent
+sessions, set a different `PLAN_ID` in each host's environment before
+starting it, using the exact ID printed by initialization.
 In PowerShell use `$env:PLAN_ID = 'the-printed-id'`; in a POSIX shell use
 `export PLAN_ID=the-printed-id`. Setting it inside one tool subprocess does not
 change an already-running host. Use separate worktrees if per-task host pins are
