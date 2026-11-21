@@ -290,10 +290,12 @@ The skill demonstrably enforces the 3-file planning pattern across diverse task 
 
 ---
 
-## Reproducing These Results
+## Historical evaluation procedure (outline only)
 
-```bash
-# Clone the eval framework
+This is an outline of the author-run procedure behind the figures above, not a runnable recipe. The raw runs and helper scripts live in a separate local evaluation checkout, not in this repo, so the historical figures cannot be reproduced from a clean clone of this repository. They are kept for context together with the limitations stated above.
+
+```text
+# Clone the eval framework (illustrative; not a runnable command)
 gh api repos/anthropics/skills/contents/skills/skill-creator ...
 
 # Set up workspace
@@ -309,4 +311,6 @@ mkdir -p eval-workspace/iteration-1/{eval-1,eval-2,...}/{with_skill,without_skil
 # See eval-workspace/iteration-1/benchmark.json for full data
 ```
 
-Raw benchmark data: [`eval-workspace/iteration-1/benchmark.json`](../planning-with-files-eval-test/eval-workspace/iteration-1/benchmark.json) (in eval-test copy, not tracked in main repo)
+The aggregated raw data is `eval-workspace/iteration-1/benchmark.json`, a local path in that separate checkout; it is not tracked in this repo and has no GitHub link.
+
+For something runnable from a clean clone, use the public project-file-only recovery fixture at [examples/file-only-recovery/README.md](../examples/file-only-recovery/README.md). It grades a separate, disposable task, so it does not reproduce the historical 5.0 and 13.3 figures above.
