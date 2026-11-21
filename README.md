@@ -7,9 +7,11 @@
 </h1>
 
 <p align="center">
-  <b>The planning skill your agent cannot ignore.</b>
-  
-  The skill that force your agent to store findings, and progress in Markdown. After <code>/clear</code>, your agent can pick up from those files.
+  <b>The planning skill your agent cannot ignore.</b> </p>
+  <p align="center">
+  A fine crafted skill that force your agent to store findings, and progress in Markdown.</p>
+  <p align="center">
+  After <code>/clear</code>, your agent can pick up from those files.
 </p>
 
 <p align="center">
