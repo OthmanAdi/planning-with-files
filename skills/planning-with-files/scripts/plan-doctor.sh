@@ -19,7 +19,23 @@
 
 set -u
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd 2>/dev/null)" || SCRIPT_DIR="."
+_pwf_dir=$0
+case "$_pwf_dir" in
+    */*|*\\*)
+        _pwf_tail=${_pwf_dir##*/}
+        case "$_pwf_tail" in
+            *\\*) _pwf_dir=${_pwf_dir%\\*} ;;
+            *) _pwf_dir=${_pwf_dir%/*} ;;
+        esac
+        case "$_pwf_dir" in
+            '') _pwf_dir=/ ;;
+            [A-Za-z]:) _pwf_dir="${_pwf_dir}/" ;;
+        esac
+        ;;
+    *) _pwf_dir=. ;;
+esac
+SCRIPT_DIR="$(cd "$_pwf_dir" 2>/dev/null && pwd 2>/dev/null)" || SCRIPT_DIR="."
+unset _pwf_dir _pwf_tail
 
 ok()   { printf 'PASS  %s\n' "$1"; }
 warn() { printf 'WARN  %s\n' "$1"; }
@@ -147,6 +163,9 @@ if [ -f "${INJ}" ]; then
                 ;;
             '[planning-with-files] Plan injection needs Python 3.8 or newer and no usable interpreter was found — nothing injected.')
                 fail "injection: no usable Python 3.8 or newer interpreter was found"
+                ;;
+            '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or Python 3.8 or newer, and none was usable, so nothing was injected.')
+                fail "injection: could not verify the plan path because realpath, readlink -f, and Python 3.8 or newer were all unavailable"
                 ;;
             *)
                 BYTES="$(printf '%s' "${OUT}" | wc -c | tr -d '[:space:]')"

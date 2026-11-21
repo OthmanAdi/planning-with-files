@@ -190,7 +190,19 @@ fi
 # precompact carries no plan body, so both stay silent to avoid the spam.
 SESSION_ATTACHED=0
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd 2>/dev/null)" || SCRIPT_DIR="."
+norm_slashes "$0"
+case "$NORM_OUT" in
+    */*)
+        _pwf_dir=${NORM_OUT%/*}
+        case "$_pwf_dir" in
+            '') _pwf_dir=/ ;;
+            [A-Za-z]:) _pwf_dir="${_pwf_dir}/" ;;
+        esac
+        ;;
+    *) _pwf_dir=. ;;
+esac
+SCRIPT_DIR="$(cd "$_pwf_dir" 2>/dev/null && pwd 2>/dev/null)" || SCRIPT_DIR="."
+unset _pwf_dir
 
 # Plan-id safe-identifier check. Pure-sh case patterns; semantics match the
 # previous grep -E '^[A-Za-z0-9_][A-Za-z0-9._-]*$' exactly, without a grep
@@ -358,7 +370,12 @@ fi
 [ -f "$PRECHECK_PLAN_FILE" ] || exit 0
 [ -L "$PRECHECK_PLAN_FILE" ] && exit 0
 PWF_PYTHON="$(select_explicit_python 2>/dev/null)" || PWF_PYTHON=""
-is_within_root "$PRECHECK_PLAN_FILE" || exit 0
+if ! is_within_root "$PRECHECK_PLAN_FILE"; then
+    if [ "$CONTEXT" = "userprompt" ] && ! canonicalize "${PWF_PLAN_ROOT:-.}" >/dev/null 2>&1; then
+        printf '%s\n' '[planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or Python 3.8 or newer, and none was usable, so nothing was injected.'
+    fi
+    exit 0
+fi
 
 # Cheap eligibility probe for hook adapters that must reject bad project state
 # before parsing host JSON. It emits no project bytes, does not inspect session

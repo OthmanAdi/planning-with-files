@@ -20,3 +20,41 @@ def test_no_python_notice(tmp_path):
         "[planning-with-files] Plan injection needs Python 3.8 or newer "
         "and no usable interpreter was found — nothing injected.\n"
     )
+
+
+@pytest.mark.skipif(not shutil.which("sh"), reason="requires sh")
+def test_no_canonicalizer_notice(tmp_path):
+    script = Path(__file__).resolve().parents[1] / "scripts" / "inject-plan.sh"
+    sh = shutil.which("sh")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    try:
+        (bin_dir / Path(sh).name).symlink_to(sh)
+    except OSError:
+        shutil.copy2(sh, bin_dir / Path(sh).name)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "task_plan.md").write_text("# Private plan body\n")
+    result = subprocess.run(
+        [sh, str(script), "--context=userprompt"],
+        cwd=project,
+        env={"PATH": str(bin_dir)},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout == (
+        "[planning-with-files] Plan injection could not verify the plan path: "
+        "it needs realpath, readlink -f, or Python 3.8 or newer, and none was "
+        "usable, so nothing was injected.\n"
+    )
+    for context in ("pretool", "precompact", "preflight", "validate"):
+        quiet = subprocess.run(
+            [sh, str(script), f"--context={context}"],
+            cwd=project,
+            env={"PATH": str(bin_dir)},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert quiet.stdout == ""

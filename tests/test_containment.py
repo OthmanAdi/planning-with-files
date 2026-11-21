@@ -330,6 +330,28 @@ class InjectorInterpreterContainmentTests(unittest.TestCase):
                 "PATH Python must remain unexecuted until containment succeeds",
             )
 
+    @unittest.skipUnless(SYMLINK_OK, "platform cannot create an escaping dir symlink")
+    def test_escaping_planning_root_stays_silent_and_does_not_execute_path_python(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside:
+            root = Path(tmp)
+            outside_planning = Path(outside) / ".planning"
+            outside_plan = outside_planning / "escape"
+            outside_plan.mkdir(parents=True)
+            (outside_plan / "task_plan.md").write_text("# outside\n", encoding="utf-8")
+            (outside_planning / ".active_plan").write_text("escape\n", encoding="utf-8")
+            os.symlink(outside_planning, root / ".planning", target_is_directory=True)
+            marker = root / "path-python-executed"
+            bin_dir = self.make_python_canaries(root, marker)
+
+            result = self.run_with_canaries(root, bin_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual("", result.stdout)
+            self.assertFalse(
+                marker.exists(),
+                "PATH Python must remain unexecuted on precheck containment escape",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
