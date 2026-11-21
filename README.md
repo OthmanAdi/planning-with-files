@@ -2,9 +2,11 @@
 <img src="media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
 </div>
 
-<h1 align="center">
+<br>
+
+<div align="center">
   &nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
-</h1>
+</div>
 
 <p align="center">
   <b>The planning skill your agent cannot ignore.</b> </p>
@@ -19,8 +21,10 @@
   <a href="#readme-nav-quick-install"><strong>Install</strong></a>
 </p>
 
-### <a name="sponsor"></a>Sponsors & supporters
-
+<hr>
+<h3 align="center">
+<a name="sponsor"></a>Sponsors & supporters
+</p>
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
