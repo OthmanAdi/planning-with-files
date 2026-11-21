@@ -353,5 +353,36 @@ class InjectorInterpreterContainmentTests(unittest.TestCase):
             )
 
 
+
+class InjectorScriptDirTests(unittest.TestCase):
+    """A POSIX install path with a literal backslash must not fall back to CWD."""
+
+    @unittest.skipUnless(have_sh() and os.name != "nt", "POSIX sh required")
+    def test_backslash_install_dir_never_runs_project_helper(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install = root / "pwf\\install" / "scripts"
+            shutil.copytree(REPO_ROOT / "scripts", install)
+            project = root / "project"
+            project.mkdir()
+            (project / "task_plan.md").write_text("# plan\n", encoding="utf-8")
+            marker = root / "project-helper-executed"
+            (project / "inject-plan.py").write_text(
+                f"open({str(marker)!r}, 'w').close()\n", encoding="utf-8"
+            )
+            env = dict(os.environ, PWF_SESSION_ID="sess-1")
+            env.pop("PWF_PRETOOL", None)
+            result = subprocess.run(
+                ["sh", str(install / "inject-plan.sh"), "--context=userprompt"],
+                cwd=project,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertFalse(marker.exists(), "project inject-plan.py must never run")
+
+
 if __name__ == "__main__":
     unittest.main()

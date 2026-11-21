@@ -190,10 +190,15 @@ fi
 # precompact carries no plan body, so both stay silent to avoid the spam.
 SESSION_ATTACHED=0
 
-norm_slashes "$0"
-case "$NORM_OUT" in
+# Only recognized Windows spellings (drive letter or UNC) are normalized; a
+# POSIX path keeps any literal backslash so it resolves to the real directory.
+case "$0" in
+    [A-Za-z]:\\*|\\\\*) norm_slashes "$0"; _pwf_self=$NORM_OUT ;;
+    *) _pwf_self=$0 ;;
+esac
+case "$_pwf_self" in
     */*)
-        _pwf_dir=${NORM_OUT%/*}
+        _pwf_dir=${_pwf_self%/*}
         case "$_pwf_dir" in
             '') _pwf_dir=/ ;;
             [A-Za-z]:) _pwf_dir="${_pwf_dir}/" ;;
@@ -201,8 +206,10 @@ case "$NORM_OUT" in
         ;;
     *) _pwf_dir=. ;;
 esac
-SCRIPT_DIR="$(cd "$_pwf_dir" 2>/dev/null && pwd 2>/dev/null)" || SCRIPT_DIR="."
-unset _pwf_dir
+# An unresolvable install directory leaves SCRIPT_DIR empty so helpers are
+# skipped; never fall back to the project directory for executable helpers.
+SCRIPT_DIR="$(cd "$_pwf_dir" 2>/dev/null && pwd 2>/dev/null)" || SCRIPT_DIR=""
+unset _pwf_dir _pwf_self
 
 # Plan-id safe-identifier check. Pure-sh case patterns; semantics match the
 # previous grep -E '^[A-Za-z0-9_][A-Za-z0-9._-]*$' exactly, without a grep
@@ -395,7 +402,7 @@ fi
 # the bounded private view, never a second copy of the live plan.
 pretool_cache_action() {
     [ -n "${PWF_SESSION_ID:-}" ] && [ "${PWF_PRETOOL:-}" != "always" ] || return 0
-    [ -n "$PWF_PYTHON" ] && [ -f "${SCRIPT_DIR}/inject-plan.py" ] || return 0
+    [ -n "$PWF_PYTHON" ] && [ -n "$SCRIPT_DIR" ] && [ -f "${SCRIPT_DIR}/inject-plan.py" ] || return 0
     "$PWF_PYTHON" -I -B "${SCRIPT_DIR}/inject-plan.py" --pretool-cache "$@" 2>/dev/null || :
 }
 case "$CONTEXT" in
@@ -1303,7 +1310,8 @@ prepare_ledger_snapshot() {
     done
 }
 
-LSUM_SH="${SCRIPT_DIR}/ledger-summary.sh"
+LSUM_SH=""
+[ -n "$SCRIPT_DIR" ] && LSUM_SH="${SCRIPT_DIR}/ledger-summary.sh"
 case "$MODE" in
     autonomous|gated)
         if [ -f "$LSUM_SH" ]; then
