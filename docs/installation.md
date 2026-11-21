@@ -205,6 +205,8 @@ rm -rf ~/.claude/skills/planning-with-files
 
 ## Requirements
 
+- Plan injection in the Claude Code plugin and standalone hooks has two routes. The fast path (`scripts/inject-plan.py`) runs under any CPython 3.6 or newer the hook finds. The reference route (`scripts/inject-plan.sh`), used when the fast path is off or cannot answer, needs CPython 3.8 or newer. Git for Windows ships no Python. When neither route has a usable interpreter, UserPromptSubmit prints one fixed notice and injects no plan bytes.
+
 - **Claude Code plugin lifecycle:** tested against the current stable release. No older minimum is claimed without a compatibility receipt.
 - **Standalone skill:** core file-based planning remains available, but hooks register only after the skill is invoked.
 
