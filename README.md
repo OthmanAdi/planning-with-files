@@ -449,6 +449,7 @@ Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBU
 
 | Version | Highlights |
 |---------|------------|
+| **v3.29.1** | Fixes the sponsor links in both READMEs, shows how to switch plans using the printed `PLAN_ID`, and identifies which evaluation readers can run from a clean clone (PRs #391, #388, #385). |
 | **v3.29.0** | Counts statuses inside their own phases across reports and integrations, handles UTF-8 byte-order marks and indented headings, and adds explicit opt-in checkbox-only re-attestation to the shell helper (PRs #381, #367). |
 | **v3.28.2** | Completes shell and native PowerShell help handling; adds recovery grader and npm README checks to pytest; documents native PowerShell fixture use and preserves trial receipts; clarifies compaction and recovery behavior (PRs #365, #366, #368, #373, #374, #375). |
 | **v3.28.1** | `attest-plan` reports one refusal that names its cause on both routes and adds `-Target` on PowerShell; echoed selectors cannot forge output; `init-session` refuses mistyped switches; localized `/plan` commands follow plan selection; faster JSON listing on Git Bash (PR #353, #360, #362, #363, #364) |
