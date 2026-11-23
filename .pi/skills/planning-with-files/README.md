@@ -28,34 +28,34 @@
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
-<sub><strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong></sub>
+<strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong>
 </p>
 <!-- sponsor:evomi:end -->
 
 <!-- sponsor:swiftproxy:start -->
 <p align="center">
 <a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112"></a><br>
-<sub><strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.</sub>
+<strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.
 </p>
 <!-- sponsor:swiftproxy:end -->
 
 <!-- sponsor:proxy-seller:start -->
 <p align="center">
 <a href="https://proxy-seller.com/?partner=018DD81930B54142"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/proxy-seller-logo.png" alt="Proxy-Seller logo" width="32"></a><br>
-<sub>Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
-Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>. <em>Ad · Affiliate links</em></sub>
+Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
+Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get&nbsp;started</a>. <em>Ad&nbsp;·&nbsp;Affiliate&nbsp;links</em>
 </p>
 <!-- sponsor:proxy-seller:end -->
 
 <!-- oss-support:neon:start -->
-<p align="center">
+<div align="center">
 <a href="https://neon.com"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/neon-logo.svg" alt="Neon" width="112"></a><br>
-<sub>Infrastructure credits from the Neon Open Source Program.</sub>
-</p>
+Infrastructure credits from the Neon Open Source Program.
+</div>
 <!-- oss-support:neon:end -->
 
 <!-- oss-support:coderabbit:start -->
-<p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
+<p align="center">OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</p>
 <!-- oss-support:coderabbit:end -->
 
 ---
