@@ -2,9 +2,11 @@
 <img src="media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
 </div>
 
-<h1 align="center">
+<br>
+
+<div align="center">
   &nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
-</h1>
+</div>
 
 <p align="center">
   <b>The planning skill your agent cannot ignore.</b> </p>
@@ -19,8 +21,10 @@
   <a href="#readme-nav-quick-install"><strong>Install</strong></a>
 </p>
 
-### <a name="sponsor"></a>Sponsors & supporters
-
+<hr>
+<h3 align="center">
+<a name="sponsor"></a>Sponsors & supporters
+</p>
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
@@ -42,6 +46,13 @@
 Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>. <em>Ad · Affiliate links</em></sub>
 </p>
 <!-- sponsor:proxy-seller:end -->
+
+<!-- oss-support:neon:start -->
+<p align="center">
+<a href="https://neon.com"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/neon-logo.svg" alt="Neon" width="112"></a><br>
+<sub>Infrastructure credits from the Neon Open Source Program.</sub>
+</p>
+<!-- oss-support:neon:end -->
 
 <!-- oss-support:coderabbit:start -->
 <p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
