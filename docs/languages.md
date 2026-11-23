@@ -54,15 +54,15 @@ Because the plugin no longer registers them, there is no `planning-with-files:pl
 
 ## Status tokens stay in English
 
-Every translated `task_plan.md` template keeps the status values as literal English: `pending`, `in_progress`, and `complete`. The field label may be translated to match the language, but only when that translation's own checker runs. Canonical fallback (`scripts/check-complete.sh`) matches a `**Status:**` line; a phase labeled `**Estado:**` is not that match. For example, the Spanish template ships one status line per phase:
+Every translated `task_plan.md` template keeps the status values as literal English: `pending`, `in_progress`, and `complete`. The field label may be translated to match the language, but only when that translation's own checker runs, and only as the exact label that template ships for its checker. The Spanish checker recognizes `**Estado:**`, not every Spanish rendering of “Status” (for example, `**Situación:** pending` is not recognized). Canonical fallback (`scripts/check-complete.sh`) matches a `**Status:**` line; a phase labeled `**Estado:**` is not that match. Copy the exact status label from the template for the checker you run. For example, the Spanish template ships one status line per phase:
 
 ```markdown
 - **Estado:** pending
 ```
 
-The other allowed values are `in_progress` and `complete`. Put exactly one native status line in each phase, and use the phase heading from your language's template. Arabic and both Chinese templates use localized headings (`### المرحلة`, `### 阶段`, and `### 階段`). Copying several status lines into one phase makes the checker mark it invalid.
+The other allowed values are `in_progress` and `complete`. Put exactly one native status line in each phase, and use the phase heading from your language's template. Arabic and both Chinese templates use localized headings (`### المرحلة`, `### 阶段`, and `### 階段`). Use `### Phase` with the canonical checker, and the localized heading with that language's checker. Copying several status lines into one phase makes the checker mark it invalid.
 
-The checker accepts a recognized English marker such as `[complete]` in the phase, so the presence of a translated value alone does not determine the result. That marker counts as the one status for the phase. On the canonical checker, a `**Estado:**` phase with no such marker is invalid / untrackable with `--validate`. Surrounding prose is translated and the tokens are not. The five language commands state this explicitly so the model does not translate them either.
+The checker accepts a recognized English marker such as `[complete]` in the phase, so the presence of a translated value alone does not determine the result. That marker counts as the one status for the phase only when no other status is recognized in the same phase; a Spanish phase that has both `**Estado:** pending` and `[complete]` has two recognized statuses, so `--validate` rejects it. On the canonical checker, a `**Estado:**` phase with no such marker is invalid / untrackable with `--validate`. Surrounding prose is translated and the tokens are not. The five language commands state this explicitly so the model does not translate them either.
 
 ## Reporting a translation problem
 
