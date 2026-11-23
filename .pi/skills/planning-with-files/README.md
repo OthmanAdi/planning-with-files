@@ -23,8 +23,8 @@
 
 <hr>
 <h3 align="center">
-<a name="sponsor"></a>Sponsors & supporters
-</p>
+<a name="sponsor"></a><a name="sponsors--supporters"></a>Sponsors & supporters
+</h3>
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
