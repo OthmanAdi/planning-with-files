@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.29.1] - 2026-11-23
+
+### Fixed
+
+- The quick start uses the exact `PLAN_ID` printed by the initializer, including the suffix it adds when a name is reused. It explains how to pin and switch plans when a project has more than one (PR #388, #382).
+- The evaluation guide identifies the historical benchmark procedure as an outline, removes a broken link to local data and points readers to the public file-only recovery fixture (PR #385, #384).
+- The `#sponsor` and `#sponsors--supporters` links both lead to the sponsor heading in the repository and npm READMEs (PR #391).
+
+### Thanks
+
+- Arian Valdivieso (@arianvaldivieso) wrote the evaluation guide correction, submitted by @avaldivieso-meraki (PR #385).
+- @inverteum corrected the named-plan examples and explained when each host needs its own `PLAN_ID` (PR #388).
+
 ## [3.29.0] - 2026-11-20
 
 ### Added
