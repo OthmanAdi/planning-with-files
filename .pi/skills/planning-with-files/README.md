@@ -1,54 +1,76 @@
 <div align="center">
-<img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.0/media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
+<img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.1/media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
 </div>
 
-<h1 align="center">
-  Planning with Files&nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
-</h1>
+<br>
+
+<div align="center">
+  &nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
+</div>
 
 <p align="center">
-  <strong>The planning skill your agent cannot ignore.</strong><br>
-  Not a prompt it might follow. A hook that fires every turn, a plan on disk that survives <code>/clear</code>, and 3 out of 3 blind A/B wins to show it works.
+  <b>The planning skill your agent cannot ignore.</b> </p>
+  <p align="center">
+  A fine crafted skill that force your agent to store findings, and progress in Markdown.</p>
+  <p align="center">
+  After <code>/clear</code>, your agent can pick up from those files.
 </p>
 
-### <a name="sponsor"></a>Sponsors & supporters
+<p align="center">
+  <a href="#readme-nav-before-clear"><strong>See it survive /clear →</strong></a> ·
+  <a href="#readme-nav-quick-install"><strong>Install</strong></a>
+</p>
+
+<hr>
+<h3 align="center">
+<a name="sponsor"></a><a name="sponsors--supporters"></a>Sponsors & supporters
+</h3>
+<!-- sponsor:v-api:start -->
+<p align="center">
+<a name="v-api"></a><strong>Sponsored by V-API</strong><br>
+<a href="https://gpt.ge/en"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/v-api-sponsor.png" width="320" alt="gpt.ge — 650+ models. One API key."></a><br>
+<sub><strong><a href="https://gpt.ge/en">gpt.ge</a></strong> · Connect your coding agent to GPT, Claude, and Gemini. Pay as you go.</sub>
+</p>
+<!-- sponsor:v-api:end -->
 
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
-<sub><strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong></sub>
+<strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong>
 </p>
 <!-- sponsor:evomi:end -->
 
 <!-- sponsor:swiftproxy:start -->
 <p align="center">
 <a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112"></a><br>
-<sub><strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.</sub>
+<strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.
 </p>
 <!-- sponsor:swiftproxy:end -->
 
 <!-- sponsor:proxy-seller:start -->
 <p align="center">
 <a href="https://proxy-seller.com/?partner=018DD81930B54142"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/proxy-seller-logo.png" alt="Proxy-Seller logo" width="32"></a><br>
-<sub>Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
-Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>.<br>
-Paid sponsorship · Affiliate links</sub>
+Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
+Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get&nbsp;started</a>. <em>Ad&nbsp;·&nbsp;Affiliate&nbsp;links</em>
 </p>
 <!-- sponsor:proxy-seller:end -->
 
+<!-- oss-support:neon:start -->
+<div align="center">
+<a href="https://neon.com"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/neon-logo.svg" alt="Neon" width="112"></a><br>
+Infrastructure credits from the Neon Open Source Program.
+</div>
+<!-- oss-support:neon:end -->
+
 <!-- oss-support:coderabbit:start -->
-<p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
+<p align="center">OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</p>
 <!-- oss-support:coderabbit:end -->
 
 ---
 
-<p align="center">
-  <em>Your agent's context window dies. The plan does not.</em>
-</p>
+The three project files are <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code>. When lifecycle hooks are active, they bring selected planning context back into the session. Automatic recovery reads project files only. Reading records from past sessions in the same project requires an explicit catchup mode.
 
-<p align="center">
-Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
-</p>
+The skill works across 60+ agents through the Agent Skills standard. Native integrations include Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode, and DeepSeek Harness.
 
 <p align="center">
   <a href="https://github.com/OthmanAdi/planning-with-files/stargazers"><img src="https://img.shields.io/github/stars/OthmanAdi/planning-with-files?style=flat&color=yellow" alt="Stars"></a>
@@ -61,26 +83,20 @@ Persistent file-based planning for AI coding agents and long-running agent tasks
 </p>
 
 <p align="center">
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md"><img src="https://img.shields.io/badge/benchmark-96.7%25_pass_(29%2F30)-2da44e?style=flat" alt="Benchmark: 96.7 percent assertion pass rate with skill"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md"><img src="https://img.shields.io/badge/blind_A%2FB-3%2F3_wins-2da44e?style=flat" alt="Blind A/B: 3 of 3 wins"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/LICENSE"><img src="https://img.shields.io/github/license/OthmanAdi/planning-with-files?style=flat" alt="MIT license"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md"><img src="https://img.shields.io/badge/benchmark-96.7%25_pass_(29%2F30)-2da44e?style=flat" alt="Benchmark: 96.7 percent assertion pass rate with skill"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md"><img src="https://img.shields.io/badge/blind_A%2FB-3%2F3_wins-2da44e?style=flat" alt="Blind A/B: 3 of 3 wins"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/LICENSE"><img src="https://img.shields.io/github/license/OthmanAdi/planning-with-files?style=flat" alt="MIT license"></a>
 </p>
 
 <p align="center">
-  <a href="#readme-nav-before-clear"><strong>See it survive /clear</strong></a> ·
-  <a href="#readme-nav-quick-install"><strong>Install</strong></a> ·
   <a href="#readme-nav-long-running">Long-running tasks</a> ·
-  <a href="#readme-nav-hosts">First-class hosts</a>
+  <a href="#readme-nav-hosts">First-class hosts</a> ·
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md">Full installation guide</a>
 </p>
-
-<p align="center">
-  <sub>Open the Commands, Multi-agent runs, Benchmarks &amp; more section below for the reference · <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md">Full install guide</a></sub>
-</p>
-
 
 ## Contributors
 
-Code, documentation, and issue contributors. Select a portrait to open a GitHub profile or archived credit. [Full credits](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTORS.md).
+Code, documentation, and issue contributors. Select a portrait to open a GitHub profile or archived credit. [Full credits](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTORS.md).
 
 <!-- contributor-portraits:start -->
 <p align="center">
@@ -159,7 +175,7 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
   <a href="https://github.com/Skulli485" title="@Skulli485"><img src="https://github.com/Skulli485.png?size=56" width="48" height="48" alt="@Skulli485"></a>
   <a href="https://github.com/carterusedulm2-maker" title="@carterusedulm2-maker"><img src="https://github.com/carterusedulm2-maker.png?size=56" width="48" height="48" alt="@carterusedulm2-maker"></a>
   <a href="https://github.com/gauravvojha" title="@gauravvojha"><img src="https://github.com/gauravvojha.png?size=56" width="48" height="48" alt="@gauravvojha"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTORS.md" title="@CleanDev-Fix, archived credit"><img src="https://github.com/identicons/CleanDev-Fix.png" width="48" height="48" alt="@CleanDev-Fix"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTORS.md" title="@CleanDev-Fix, archived credit"><img src="https://github.com/identicons/CleanDev-Fix.png" width="48" height="48" alt="@CleanDev-Fix"></a>
   <a href="https://github.com/bmyury" title="@bmyury"><img src="https://github.com/bmyury.png?size=56" width="48" height="48" alt="@bmyury"></a>
   <a href="https://github.com/oaabahussain" title="@oaabahussain"><img src="https://github.com/oaabahussain.png?size=56" width="48" height="48" alt="@oaabahussain"></a>
   <a href="https://github.com/gavinlinasd" title="@gavinlinasd"><img src="https://github.com/gavinlinasd.png?size=56" width="48" height="48" alt="@gavinlinasd"></a>
@@ -192,57 +208,10 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
   <a href="https://github.com/Yigtwxx" title="@Yigtwxx"><img src="https://github.com/Yigtwxx.png?size=56" width="48" height="48" alt="@Yigtwxx"></a>
   <a href="https://github.com/RioTheGreat-ai" title="@RioTheGreat-ai"><img src="https://github.com/RioTheGreat-ai.png?size=56" width="48" height="48" alt="@RioTheGreat-ai"></a>
   <a href="https://github.com/kmichels" title="@kmichels"><img src="https://github.com/kmichels.png?size=56" width="48" height="48" alt="@kmichels"></a>
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTORS.md" title="@voidborne-d, archived credit"><img src="https://github.com/identicons/voidborne-d.png" width="48" height="48" alt="@voidborne-d"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTORS.md" title="@voidborne-d, archived credit"><img src="https://github.com/identicons/voidborne-d.png" width="48" height="48" alt="@voidborne-d"></a>
   <a href="https://github.com/Kiddo4993" title="@Kiddo4993"><img src="https://github.com/Kiddo4993.png?size=56" width="48" height="48" alt="@Kiddo4993"></a>
 </p>
 <!-- contributor-portraits:end -->
-
-<a id="community"></a>
-
-<details>
-<summary><div align="center"><strong>🌍 Built with Planning with Files</strong></div></summary>
-
-### Forks & Extensions
-
-| Fork | Author | What They Built |
-|------|--------|-----------------|
-| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
-| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
-| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
-| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
-| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
-| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
-
-### Used in the Wild
-
-| Project | What It Is |
-|---------|-----------|
-| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
-| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
-| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
-| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
-| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
-| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
-
-### Skill Registries & Hubs
-
-| Registry | What It Is |
-|----------|-----------|
-| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
-
-### Bundled snapshots & adaptations
-
-| Project | Verified relationship |
-|---------|-----------------------|
-| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
-| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
-
-*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
-
-Full list of everyone who made this project better: [CONTRIBUTORS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/./CONTRIBUTORS.md).
-
-</details>
-
 
 <a id="readme-nav-quick-install"></a>
 
@@ -252,7 +221,7 @@ Full list of everyone who made this project better: [CONTRIBUTORS.md](https://gi
 npx skills add OthmanAdi/planning-with-files --skill planning-with-files -g
 ```
 
-All install methods: [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md).
+All install methods: [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md).
 
 ---
 
@@ -263,7 +232,7 @@ All install methods: [docs/installation.md](https://github.com/OthmanAdi/plannin
 Every coding agent loses its working memory when the context window resets. The plan does not have to die with it.
 
 <p align="center">
-  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/media/pwf-context-story-v1.mp4"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.0/media/pwf-context-story-v1.gif" alt="Illustrated workflow: planning files preserve the task state through a context reset" width="760"></a>
+  <a href="https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/media/pwf-context-story-v1.mp4"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.1/media/pwf-context-story-v1.gif" alt="Illustrated workflow: planning files preserve the task state through a context reset" width="760"></a>
 </p>
 
 <a id="readme-nav-long-running"></a>
@@ -344,56 +313,56 @@ npx skills add OthmanAdi/planning-with-files --skill planning-with-files-zht -g
 
 These are real translations, not an English body with a translated description: the SKILL.md prose, the templates, and the user-facing output of `check-complete`, `init-session` and `session-catchup` are all localized. Use the phase headings and status fields in your chosen template. The completion checker reads statuses from those phase blocks and skips examples and notes outside them.
 
-Since v3.10.0 the variants also ship the full script surface: attestation, the Stop gate, the ledger, phase status and plan-doctor used to be canonical-only, which quietly made every non-English install a subset install. Full details, including what changed on the plugin route in v3.11.0, are in [docs/languages.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/languages.md).
+Since v3.10.0 the variants also ship the full script surface: attestation, the Stop gate, the ledger, phase status and plan-doctor used to be canonical-only, which quietly made every non-English install a subset install. Full details, including what changed on the plugin route in v3.11.0, are in [docs/languages.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/languages.md).
 
 They live under `skills/i18n/`, one directory deeper than the canonical skill. The install commands above are unchanged, because `npx skills add` resolves `--skill` by skill name across the whole repository. The Claude Code plugin scan reads `skills/*/SKILL.md` without recursing, so the plugin route registers the canonical skill alone and no longer carries five extra descriptions in every session's system prompt. On that route the `/plan-ar`, `/plan-de`, `/plan-es`, `/plan-zh` and `/plan-zht` commands read the translated skill from disk instead of invoking it by name.
 
 </details>
 
 <details id="enhanced-support-per-ide-setup-guides">
-<summary><strong>Enhanced Support: per-IDE setup guides</strong></summary>
+<summary><strong>🛠️ Enhanced Support: per-IDE setup guides</strong></summary>
 
 | IDE | Installation Guide | Integration |
 |-----|-------------------|-------------|
-| Claude Code | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md) | Plugin + SKILL.md + Hooks |
-| Cursor | [Cursor Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/cursor.md) | Skills + [hooks.json](https://cursor.com/docs/hooks) |
-| GitHub Copilot | [Copilot Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/copilot.md) | [Hooks](https://docs.github.com/en/copilot/reference/hooks-configuration) (incl. errorOccurred) |
-| Mastra Code | [Mastra Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/mastra.md) | Skills + [Hooks](https://mastra.ai/docs/mastra-code/configuration) |
-| Gemini CLI | [Gemini Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/gemini.md) | Skills + [Hooks](https://geminicli.com/docs/hooks/) |
-| Kiro | [Kiro Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/kiro.md) | [Agent Skills](https://kiro.dev/docs/skills/) |
-| Codex | [Codex Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/codex.md) | [Skills + Hooks](https://developers.openai.com/codex/skills) |
-| Qoder CLI | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md#2-qoder-plugin) | Skill + seven lifecycle hooks; Bash and Python 3.10+ required |
-| Hermes Agent | [Hermes Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/hermes.md) | Skill + native plugin (tools, `/pwf`, `pre_llm_call`, `post_tool_call`, `pre_verify` gate), CLI and Desktop |
-| CodeBuddy | [CodeBuddy Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/codebuddy.md) | [Skills + Hooks](https://www.codebuddy.ai/docs/cli/skills) |
-| FactoryAI Droid | [Factory Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/factory.md) | [Skills + Hooks](https://docs.factory.ai/cli/configuration/skills) |
-| OpenCode | [OpenCode Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/opencode.md) | Native plugin `opencode-planning-with-files` (`chat.message` injection, write reminders, compaction flush, `session.idle` gate, `pwf_*` tools, `/pwf` commands) + skill |
-| DeepSeek Harness | [DeepSeek Harness Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/deepseek-harness.md) | Native plugin `dsh-planning-with-files` (`agent/pre-step` injection, write reminders, post-compaction restore, `agent/turn-stopping` gate, `pwf_*` tools, `/pwf` commands) + skill |
+| Claude Code | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md) | Plugin + SKILL.md + Hooks |
+| Cursor | [Cursor Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/cursor.md) | Skills + [hooks.json](https://cursor.com/docs/hooks) |
+| GitHub Copilot | [Copilot Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/copilot.md) | [Hooks](https://docs.github.com/en/copilot/reference/hooks-configuration) (incl. errorOccurred) |
+| Mastra Code | [Mastra Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/mastra.md) | Skills + [Hooks](https://mastra.ai/docs/mastra-code/configuration) |
+| Gemini CLI | [Gemini Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/gemini.md) | Skills + [Hooks](https://geminicli.com/docs/hooks/) |
+| Kiro | [Kiro Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/kiro.md) | [Agent Skills](https://kiro.dev/docs/skills/) |
+| Codex | [Codex Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/codex.md) | [Skills + Hooks](https://developers.openai.com/codex/skills) |
+| Qoder CLI | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md#2-qoder-plugin) | Skill + seven lifecycle hooks; Bash and Python 3.10+ required |
+| Hermes Agent | [Hermes Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/hermes.md) | Skill + native plugin (tools, `/pwf`, `pre_llm_call`, `post_tool_call`, `pre_verify` gate), CLI and Desktop |
+| CodeBuddy | [CodeBuddy Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/codebuddy.md) | [Skills + Hooks](https://www.codebuddy.ai/docs/cli/skills) |
+| FactoryAI Droid | [Factory Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/factory.md) | [Skills + Hooks](https://docs.factory.ai/cli/configuration/skills) |
+| OpenCode | [OpenCode Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/opencode.md) | Native plugin `opencode-planning-with-files` (`chat.message` injection, write reminders, compaction flush, `session.idle` gate, `pwf_*` tools, `/pwf` commands) + skill |
+| DeepSeek Harness | [DeepSeek Harness Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/deepseek-harness.md) | Native plugin `dsh-planning-with-files` (`agent/pre-step` injection, write reminders, post-compaction restore, `agent/turn-stopping` gate, `pwf_*` tools, `/pwf` commands) + skill |
 
 </details>
 
 <details>
-<summary><strong>Standard Agent Skills: discovery paths</strong></summary>
+<summary><strong>🧭 Standard Agent Skills: discovery paths</strong></summary>
 
 | IDE | Installation Guide | Skill Discovery Path |
 |-----|-------------------|---------------------|
-| Continue | [Continue Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/continue.md) | `.continue/skills/` + [.prompt files](https://docs.continue.dev/customize/deep-dives/prompts) |
-| Pi Agent | [Pi Agent Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/pi-agent.md) | `.pi/skills/` ([npm package](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)) |
-| OpenClaw | [OpenClaw Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/openclaw.md) | `.openclaw/skills/` ([docs](https://docs.openclaw.ai/tools/skills)) |
-| Autohand Code | [Autohand Code Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/autohand.md) | `~/.autohand/skills/` or `.autohand/skills/` |
-| Antigravity | [Antigravity Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/antigravity.md) | `.agent/skills/` ([docs](https://codelabs.developers.google.com/getting-started-with-antigravity-skills)) |
-| Kilocode | [Kilocode Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/kilocode.md) | `.kilocode/skills/` ([docs](https://kilo.ai/docs/agent-behavior/skills)) |
-| AdaL CLI (Sylph AI) | [AdaL Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/adal.md) | `.adal/skills/` ([docs](https://docs.sylph.ai/features/plugins-and-skills)) |
+| Continue | [Continue Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/continue.md) | `.continue/skills/` + [.prompt files](https://docs.continue.dev/customize/deep-dives/prompts) |
+| Pi Agent | [Pi Agent Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/pi-agent.md) | `.pi/skills/` ([npm package](https://www.npmjs.com/package/@mariozechner/pi-coding-agent)) |
+| OpenClaw | [OpenClaw Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/openclaw.md) | `.openclaw/skills/` ([docs](https://docs.openclaw.ai/tools/skills)) |
+| Autohand Code | [Autohand Code Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/autohand.md) | `~/.autohand/skills/` or `.autohand/skills/` |
+| Antigravity | [Antigravity Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/antigravity.md) | `.agent/skills/` ([docs](https://codelabs.developers.google.com/getting-started-with-antigravity-skills)) |
+| Kilocode | [Kilocode Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/kilocode.md) | `.kilocode/skills/` ([docs](https://kilo.ai/docs/agent-behavior/skills)) |
+| AdaL CLI (Sylph AI) | [AdaL Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/adal.md) | `.adal/skills/` ([docs](https://docs.sylph.ai/features/plugins-and-skills)) |
 
 > **Note:** If your IDE uses the legacy Rules system instead of Skills, see the [`legacy-rules-support`](https://github.com/OthmanAdi/planning-with-files/tree/legacy-rules-support) branch.
 
 </details>
 
 <details>
-<summary><strong>Sandbox runtimes</strong></summary>
+<summary><strong>📦 Sandbox runtimes</strong></summary>
 
 | Runtime | Status | Guide | Notes |
 |---------|--------|-------|-------|
-| BoxLite | ✅ Documented | [BoxLite Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/boxlite.md) | Run Claude Code + planning-with-files inside hardware-isolated micro-VMs |
+| BoxLite | ✅ Documented | [BoxLite Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/boxlite.md) | Run Claude Code + planning-with-files inside hardware-isolated micro-VMs |
 
 > BoxLite is a sandbox runtime, not an IDE. Skills load via [ClaudeBox](https://github.com/boxlite-ai/claudebox), BoxLite's official Claude Code integration layer.
 
@@ -427,11 +396,57 @@ They are complementary stages, not alternatives. Plan mode is where you design a
 
 ### What happens to the plan files after a task is complete?
 
-They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory stays in `.planning/`. Anything worth keeping should be promoted into code, a commit, or a doc. To set a finished named plan aside, `set-active-plan.sh --archive <slug>` previews the move to `.planning/.archive/<slug>/` and `--yes` applies it; `--restore <slug>` previews the move back and `--yes` applies it the same way. With one named plan left, hooks select it automatically again. See [After Completion: What Happens to the Plan Files](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan.
+They are working memory, not a tracked deliverable. `task_plan.md`, `findings.md`, `progress.md`, and the `.planning/` directory are gitignored by default and are not archived automatically: the next task overwrites the root plan, and a slug directory stays in `.planning/`. Anything worth keeping should be promoted into code, a commit, or a doc. To set a finished named plan aside, `set-active-plan.sh --archive <slug>` previews the move to `.planning/.archive/<slug>/` and `--yes` applies it; `--restore <slug>` previews the move back and `--yes` applies it the same way. With one named plan left, hooks select it automatically again. See [After Completion: What Happens to the Plan Files](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/workflow.md#after-completion-what-happens-to-the-plan-files) for the full lifecycle and how to retain a completed plan.
 
 ### How fast are the hooks?
 
 One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from 2.0 to 2.4 seconds before it, and the injected plan block is KV-cache stable by construction. The plan stays in the attention window every turn, and `/clear` stops being fatal.
+
+</details>
+
+<a id="community"></a>
+
+<details>
+<summary><strong>🚀 Explore projects built with Planning with Files →</strong></summary>
+
+### Forks & Extensions
+
+| Fork | Author | What They Built |
+|------|--------|-----------------|
+| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
+| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
+| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
+| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
+| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
+| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
+
+### Used in the Wild
+
+| Project | What It Is |
+|---------|-----------|
+| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
+| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
+| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
+| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
+| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
+| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
+
+### Skill Registries & Hubs
+
+| Registry | What It Is |
+|----------|-----------|
+| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
+
+### Bundled snapshots & adaptations
+
+| Project | Verified relationship |
+|---------|-----------------------|
+| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
+| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
+
+*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
+
+Full list of everyone who made this project better: [CONTRIBUTORS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/./CONTRIBUTORS.md).
 
 </details>
 
@@ -442,6 +457,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.29.1** | Fixes the sponsor links in both READMEs, shows how to switch plans using the printed `PLAN_ID`, and identifies which evaluation readers can run from a clean clone (PRs #391, #388, #385). |
 | **v3.29.0** | Counts statuses inside their own phases across reports and integrations, handles UTF-8 byte-order marks and indented headings, and adds explicit opt-in checkbox-only re-attestation to the shell helper (PRs #381, #367). |
 | **v3.28.2** | Completes shell and native PowerShell help handling; adds recovery grader and npm README checks to pytest; documents native PowerShell fixture use and preserves trial receipts; clarifies compaction and recovery behavior (PRs #365, #366, #368, #373, #374, #375). |
 | **v3.28.1** | `attest-plan` reports one refusal that names its cause on both routes and adds `-Target` on PowerShell; echoed selectors cannot forge output; `init-session` refuses mistyped switches; localized `/plan` commands follow plan selection; faster JSON listing on Git Bash (PR #353, #360, #362, #363, #364) |
@@ -547,7 +563,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 | **v2.7.0** | Gemini CLI support |
 | **v2.2.0** | Session recovery, Windows PowerShell, OS-aware hooks |
 
-[View all releases](https://github.com/OthmanAdi/planning-with-files/releases) · [CHANGELOG](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CHANGELOG.md)
+[View all releases](https://github.com/OthmanAdi/planning-with-files/releases) · [CHANGELOG](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CHANGELOG.md)
 
 > Parallel plan isolation (`.planning/YYYY-MM-DD-slug/` directories) and Codex session isolation shipped in v2.36.0. The `experimental/isolated-planning` branch was the earlier prototype; master is now the canonical location.
 
@@ -568,7 +584,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 | Autonomous loops burn tokens on recitation | Autonomous mode drops the per-tool-call recitation and replaces the raw progress tail with a fixed-shape ledger summary; injection is KV-cache stable and one hook fire costs about 289 ms |
 | Hooks that quietly stop firing | `/plan-doctor` self-checks resolution, injection, attestation, install surfaces and per-fire latency |
 
-Everything in that table is opt-in per plan and byte-identical to the previous behavior when no mode marker is set. Details: [v3 Long-Running Agent Features](#v3-long-running-agent-features) and [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/long-running-agent-tasks.md).
+Everything in that table is opt-in per plan and byte-identical to the previous behavior when no mode marker is set. Details: [v3 Long-Running Agent Features](#v3-long-running-agent-features) and [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/long-running-agent-tasks.md).
 
 ### Installation routes
 
@@ -640,7 +656,7 @@ What each route actually ships:
 | DeepSeek Harness `dsh plugin add` | yes, with the skill | **yes**, `/pwf`, `/pwf-status` | **yes**, plugin hooks incl. the gate |
 | ClawHub / manual copy | yes | no | frontmatter hooks, see note |
 
-Skill-route installs can end up silently hook-less (project trust not accepted, or frontmatter hooks not registering on project-level installs). The hooks are the differentiating mechanism, so if they matter to you, use the plugin route, then verify with `/plan-doctor`. Full matrix and the two silent killers: [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md#what-each-install-route-actually-ships).
+Skill-route installs can end up silently hook-less (project trust not accepted, or frontmatter hooks not registering on project-level installs). The hooks are the differentiating mechanism, so if they matter to you, use the plugin route, then verify with `/plan-doctor`. Full matrix and the two silent killers: [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md#what-each-install-route-actually-ships).
 
 Install acting up? Open your agent and say: *"Read docs/installation.md and docs/troubleshooting.md from OthmanAdi/planning-with-files and fix my install."* Then run `/plan-doctor`.
 
@@ -679,11 +695,11 @@ Per-platform setup guides, discovery paths and sandbox runtimes are in the colla
 - **Stall-aware gate.** The completion gate reads the ledger, not `progress.md` mtime, so a worker that stopped producing events releases the stop instead of looping.
 - **One plan, many hosts.** Claude Code, Codex, Pi, Hermes and OpenCode read the same files, the same `.attestation` and the same gate counters, so a plan can be handed from one agent to another mid-run.
 
-The contract and the `.mode` tokens are specified in the skill itself ([SKILL.md, Autonomous and Gated Modes](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/skills/planning-with-files/SKILL.md#autonomous-and-gated-modes-v3)) and in [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/long-running-agent-tasks.md).
+The contract and the `.mode` tokens are specified in the skill itself ([SKILL.md, Autonomous and Gated Modes](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/skills/planning-with-files/SKILL.md#autonomous-and-gated-modes-v3)) and in [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/long-running-agent-tasks.md).
 
 To find a saved plan, run the installed `scripts/set-active-plan.sh --list` helper from your project directory, or `scripts/set-active-plan.ps1 -List` in PowerShell. It lists named plans under that project's `.planning/` directory, with phase counts for the shipped English and translated templates. `[active]` marks the shared default pointer. Listing does not select a plan or attach a session; use the displayed ID as `PLAN_ID` before starting a concurrent task. Kiro's separate `.kiro/plan` layout is not part of this inventory.
 
-For agent-readable paths and state, add `--json` (PowerShell: `-Json`). The read-only response includes root and named triplets, missing/unreadable files, phase parse status, and the shared default separately from process-visible selection. Results are paged and capped at 16 KiB; this query does not run during ordinary activation. See the [inventory schema and worker handoff](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/skills/planning-with-files/plan-inventory.md).
+For agent-readable paths and state, add `--json` (PowerShell: `-Json`). The read-only response includes root and named triplets, missing/unreadable files, phase parse status, and the shared default separately from process-visible selection. Results are paged and capped at 16 KiB; this query does not run during ordinary activation. See the [inventory schema and worker handoff](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/skills/planning-with-files/plan-inventory.md).
 
 To set a finished named plan aside, run `set-active-plan.sh --archive <id>` (PowerShell: `-Archive <id>`). It previews the move to `.planning/.archive/<id>/`; `--yes` (`-Yes`) applies it. `--restore <id>` previews the move back and applies it with `--yes` the same way. Nothing is deleted and nothing is archived automatically. Once one named plan remains, hooks select it again without `PLAN_ID`. `--list --archived` shows archived plans.
 
@@ -724,7 +740,7 @@ Optional gated mode can request continuation only on a host that supports the re
 
 Keep automatic compaction enabled. The `PreCompact` hook flushes the planning reminder before compaction, and the plugin `SessionStart` path restores the active plan for the continuation.
 
-Maintainer depth (hook architecture, dispatcher layout, parity tooling) lives in [AGENTS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/AGENTS.md) and [docs/](https://github.com/OthmanAdi/planning-with-files/tree/v3.29.0/docs/).
+Maintainer depth (hook architecture, dispatcher layout, parity tooling) lives in [AGENTS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/AGENTS.md) and [docs/](https://github.com/OthmanAdi/planning-with-files/tree/v3.29.1/docs/).
 
 ## Commands
 
@@ -895,12 +911,12 @@ Everything below is the proof and the reference half: the benchmarks and their l
 
 ## Benchmark Results
 
-> **Methodology note:** the 96.7% figure comes from the v2.21.0 evaluation run on `claude-sonnet-4-6` (2026-03-06). It measures file-pattern fidelity (does the agent create and maintain the 3-file structure), not goal-drift over long autonomous runs. Newer models and the autonomous-mode work are not yet covered by this number. Full methodology, dataset, and assertion list: [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md).
+> **Methodology note:** the 96.7% figure comes from the v2.21.0 evaluation run on `claude-sonnet-4-6` (2026-03-06). It measures file-pattern fidelity (does the agent create and maintain the 3-file structure), not goal-drift over long autonomous runs. Newer models and the autonomous-mode work are not yet covered by this number. Full methodology, dataset, and assertion list: [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md).
 
 Evaluated with Anthropic's [skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator) framework: skill v2.21.0, model `claude-sonnet-4-6`, 2026-03-06. 10 parallel subagents, 5 task types, 30 objectively verifiable assertions, 3 blind A/B comparisons.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.0/media/benchmark-skill-vs-baseline.svg" width="860" alt="Eval results, with skill vs without: assertions passed 29 of 30 vs 2 of 30, 3-file pattern followed 5 of 5 vs 0 of 5, blind A/B wins 3 of 3 vs 0 of 3, average rubric score 10.0 vs 6.8">
+  <img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.1/media/benchmark-skill-vs-baseline.svg" width="860" alt="Eval results, with skill vs without: assertions passed 29 of 30 vs 2 of 30, 3-file pattern followed 5 of 5 vs 0 of 5, blind A/B wins 3 of 3 vs 0 of 3, average rubric score 10.0 vs 6.8">
 </p>
 
 | Test | with_skill | without_skill |
@@ -912,17 +928,17 @@ Evaluated with Anthropic's [skill-creator](https://github.com/anthropics/skills/
 
 ### Recovery after a context wipe
 
-> **Internal benchmark, v1 (2026-07-06).** Author-run against v3.4.0, harness-authored tasks, deterministic grading, no LLM grades anything. Treat it as the project's own measurement, not an independent comparison. Full method, arms, disclosed limits, and grader validation: [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md#test-5-competitive-benchmark-v1-seven-planning-methods-head-to-head-2026-07-06-internal).
+> **Internal benchmark, v1 (2026-07-06).** Author-run against v3.4.0, harness-authored tasks, deterministic grading, no LLM grades anything. Treat it as the project's own measurement, not an independent comparison. Full method, arms, disclosed limits, and grader validation: [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md#test-5-competitive-benchmark-v1-seven-planning-methods-head-to-head-2026-07-06-internal).
 
 Protocol: the session is hard-stopped at roughly half done, and a fresh session is told only "Continue the work in this directory." Every graded run across every arm ended pytest-green (77/77), so the difference is re-orientation cost, not correctness.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.0/media/recovery-turns.svg" width="860" alt="Turns to resume after a context wipe, internal benchmark v1: 5.0 with planning-with-files, 13.3 for a raw agent with no planning method">
+  <img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/v3.29.1/media/recovery-turns.svg" width="860" alt="Turns to resume after a context wipe, internal benchmark v1: 5.0 with planning-with-files, 13.3 for a raw agent with no planning method">
 </p>
 
-**With the planning files on disk, a resume took 5.0 turns on average; a raw agent took 13.3.** Planning-file recovery plus hook injection put phase state in front of the model before its first tool call, and the same run found no correctness penalty anywhere. This internal v1 used the earlier default transcript catchup; current automatic recovery is file-only and has not been re-benchmarked under the same protocol. Contributors can run that current protocol from [examples/file-only-recovery/](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/examples/file-only-recovery/README.md). Running the fixture is not a new measurement of the 5.0 or 13.3 figures. An animated summary lives at [docs/benchmark/index.html](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/benchmark/index.html) ([rendered view](https://htmlpreview.github.io/?https://github.com/OthmanAdi/planning-with-files/blob/master/docs/benchmark/index.html)).
+**With the planning files on disk, a resume took 5.0 turns on average; a raw agent took 13.3.** Planning-file recovery plus hook injection put phase state in front of the model before its first tool call, and the same run found no correctness penalty anywhere. This internal v1 used the earlier default transcript catchup; current automatic recovery is file-only and has not been re-benchmarked under the same protocol. Contributors can run that current protocol from [examples/file-only-recovery/](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/examples/file-only-recovery/README.md). Running the fixture is not a new measurement of the 5.0 or 13.3 figures. An animated summary lives at [docs/benchmark/index.html](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/benchmark/index.html) ([rendered view](https://htmlpreview.github.io/?https://github.com/OthmanAdi/planning-with-files/blob/master/docs/benchmark/index.html)).
 
-[Full methodology and results](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md) · [Technical write-up](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/article.md)
+[Full methodology and results](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md) · [Technical write-up](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/article.md)
 
 ## File Structure
 
@@ -960,25 +976,25 @@ Every release maintains 20 tracked parity targets plus the gitignored ClawHub up
 
 | Doc | What it covers |
 |-----|----------------|
-| [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/installation.md) | Every install route, the route matrix, the trust prerequisite |
-| [docs/quickstart.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/quickstart.md) | Your first planning session in 5 steps |
-| [docs/workflow.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/workflow.md) | Day-to-day usage, plan lifecycle, topic handoffs |
-| [docs/hermes.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/hermes.md) | Hermes Agent CLI and Desktop: install, `/pwf`, the `pre_verify` gate, Windows, migration from Claude Code |
-| [docs/opencode.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/opencode.md) | OpenCode: the native plugin, `/pwf`, the `session.idle` gate, `pwf_*` tools |
-| [docs/deepseek-harness.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/deepseek-harness.md) | DeepSeek Harness: the native plugin, profiles, `/pwf`, the turn-boundary gate, what DSH does not expose |
-| [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/evals.md) | Full benchmark methodology, raw numbers, disclosed limits |
-| [docs/troubleshooting.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/troubleshooting.md) | When hooks are quiet, plus `/plan-doctor` |
-| [docs/claude-code-lost-context-after-compaction.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/claude-code-lost-context-after-compaction.md) | Recovering and preventing context loss from compaction |
-| [docs/agent-forgets-plan-after-clear.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/agent-forgets-plan-after-clear.md) | The file-based fix when an agent forgets its plan after `/clear` |
-| [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/docs/long-running-agent-tasks.md) | Keeping a coding agent on track for hours: modes, gate, ledger |
-| [MIGRATION.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/MIGRATION.md) | v2 to v3 migration and host capability tiers |
-| [SECURITY.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/SECURITY.md) | Vulnerability reporting and hardening history |
-| [CONTRIBUTING.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTING.md) | How to contribute; authorship is preserved on merge |
-| Per-platform guides | 19+ setup docs in [docs/](https://github.com/OthmanAdi/planning-with-files/tree/v3.29.0/docs/), linked from the [platform tables](#works-across-19-platforms) |
+| [docs/installation.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md) | Every install route, the route matrix, the trust prerequisite |
+| [docs/quickstart.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/quickstart.md) | Your first planning session in 5 steps |
+| [docs/workflow.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/workflow.md) | Day-to-day usage, plan lifecycle, topic handoffs |
+| [docs/hermes.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/hermes.md) | Hermes Agent CLI and Desktop: install, `/pwf`, the `pre_verify` gate, Windows, migration from Claude Code |
+| [docs/opencode.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/opencode.md) | OpenCode: the native plugin, `/pwf`, the `session.idle` gate, `pwf_*` tools |
+| [docs/deepseek-harness.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/deepseek-harness.md) | DeepSeek Harness: the native plugin, profiles, `/pwf`, the turn-boundary gate, what DSH does not expose |
+| [docs/evals.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/evals.md) | Full benchmark methodology, raw numbers, disclosed limits |
+| [docs/troubleshooting.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/troubleshooting.md) | When hooks are quiet, plus `/plan-doctor` |
+| [docs/claude-code-lost-context-after-compaction.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/claude-code-lost-context-after-compaction.md) | Recovering and preventing context loss from compaction |
+| [docs/agent-forgets-plan-after-clear.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/agent-forgets-plan-after-clear.md) | The file-based fix when an agent forgets its plan after `/clear` |
+| [docs/long-running-agent-tasks.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/long-running-agent-tasks.md) | Keeping a coding agent on track for hours: modes, gate, ledger |
+| [MIGRATION.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/MIGRATION.md) | v2 to v3 migration and host capability tiers |
+| [SECURITY.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/SECURITY.md) | Vulnerability reporting and hardening history |
+| [CONTRIBUTING.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTING.md) | How to contribute; authorship is preserved on merge |
+| Per-platform guides | 19+ setup docs in [docs/](https://github.com/OthmanAdi/planning-with-files/tree/v3.29.1/docs/), linked from the [platform tables](#works-across-19-platforms) |
 
 ## Contributing
 
-Contributions welcome. Start with [CONTRIBUTING.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTING.md). Every shipped contribution is credited: commit authorship is preserved on merge, and contributors are listed in [CONTRIBUTORS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.0/CONTRIBUTORS.md), the CHANGELOG Thanks section, and the release notes.
+Contributions welcome. Start with [CONTRIBUTING.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTING.md). Every shipped contribution is credited: commit authorship is preserved on merge, and contributors are listed in [CONTRIBUTORS.md](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/CONTRIBUTORS.md), the CHANGELOG Thanks section, and the release notes.
 
 ## License
 

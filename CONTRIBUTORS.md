@@ -107,6 +107,12 @@ These amazing people have contributed code, documentation, or significant improv
 
 ### Other Contributors
 
+- **[Arian Valdivieso](https://github.com/arianvaldivieso)** — [PR #385](https://github.com/OthmanAdi/planning-with-files/pull/385)
+  - Clarified how to read the historical evaluation results and where to run the public recovery fixture. [@avaldivieso-meraki](https://github.com/avaldivieso-meraki) submitted the change.
+
+- **[inverteum](https://github.com/inverteum)** — [PR #388](https://github.com/OthmanAdi/planning-with-files/pull/388)
+  - Updated the quick start to use the printed plan ID and explained how to select a plan when several exist.
+
 - **[Eapp1e](https://github.com/Eapp1e)** — [PR #368](https://github.com/OthmanAdi/planning-with-files/pull/368)
   - Made `init-session.ps1 -?` print usage on native Windows PowerShell 5.1 and PowerShell 7 while preserving unknown-switch refusal.
 
@@ -533,6 +539,6 @@ If you've contributed and don't see your name here, please open an issue! We wan
 
 ---
 
-**Total Contributors:** 115 (114 community contributors plus the maintainer)
+**Total Contributors:** 117 (116 community contributors plus the maintainer)
 
-*Last updated: 2026-11-20*
+*Last updated: 2026-11-23*

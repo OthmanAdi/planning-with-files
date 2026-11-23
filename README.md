@@ -2,53 +2,75 @@
 <img src="media/pwf-banner-v5.webp" alt="PWF: Every task. Every step. Three planning files on a brass-inlaid base beneath an engraved arch" width="100%">
 </div>
 
-<h1 align="center">
-  Planning with Files&nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
-</h1>
+<br>
+
+<div align="center">
+  &nbsp;&nbsp;&nbsp;<a href="https://trendshift.io/repositories/17191" title="Trendshift: #1 daily across all languages, January 6, 2026"><img src="https://trendshift.io/api/badge/trendshift/repositories/17191/daily" alt="Trendshift: #1 Repository of the Day across all languages" width="250" height="55" align="middle"></a>
+</div>
 
 <p align="center">
-  <strong>The planning skill your agent cannot ignore.</strong><br>
-  Not a prompt it might follow. A hook that fires every turn, a plan on disk that survives <code>/clear</code>, and 3 out of 3 blind A/B wins to show it works.
+  <b>The planning skill your agent cannot ignore.</b> </p>
+  <p align="center">
+  A fine crafted skill that force your agent to store findings, and progress in Markdown.</p>
+  <p align="center">
+  After <code>/clear</code>, your agent can pick up from those files.
 </p>
 
-### <a name="sponsor"></a>Sponsors & supporters
+<p align="center">
+  <a href="#readme-nav-before-clear"><strong>See it survive /clear →</strong></a> ·
+  <a href="#readme-nav-quick-install"><strong>Install</strong></a>
+</p>
+
+<hr>
+<h3 align="center">
+<a name="sponsor"></a><a name="sponsors--supporters"></a>Sponsors & supporters
+</h3>
+<!-- sponsor:v-api:start -->
+<p align="center">
+<a name="v-api"></a><strong>Sponsored by V-API</strong><br>
+<a href="https://gpt.ge/en"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/v-api-sponsor.png" width="320" alt="gpt.ge — 650+ models. One API key."></a><br>
+<sub><strong><a href="https://gpt.ge/en">gpt.ge</a></strong> · Connect your coding agent to GPT, Claude, and Gemini. Pay as you go.</sub>
+</p>
+<!-- sponsor:v-api:end -->
 
 <!-- sponsor:evomi:start -->
 <p align="center">
 <a href="https://scrape.ly/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=planning-with-files&amp;utm_content=v2-banner"><img src="https://scrape.ly/brand/sponsor/cta-06d-07b-2x.png" width="320" alt="Scrape.ly by evomi: get structured data from Google, LinkedIn, Instagram, TikTok, Reddit and 500+ more. Connect to your Agent now."></a><br>
-<sub><strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong></sub>
+<strong>Your agent keeps the plan. Scrape.ly brings the web data.</strong>
 </p>
 <!-- sponsor:evomi:end -->
 
 <!-- sponsor:swiftproxy:start -->
 <p align="center">
 <a href="https://www.swiftproxy.net/?ref=planningwithfiles"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/swiftproxy-logo.png" alt="Swiftproxy logo" width="112"></a><br>
-<sub><strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.</sub>
+<strong><a href="https://www.swiftproxy.net/?ref=planningwithfiles">Swiftproxy</a></strong> · Residential proxies for browser automation.
 </p>
 <!-- sponsor:swiftproxy:end -->
 
 <!-- sponsor:proxy-seller:start -->
 <p align="center">
 <a href="https://proxy-seller.com/?partner=018DD81930B54142"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/proxy-seller-logo.png" alt="Proxy-Seller logo" width="32"></a><br>
-<sub>Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
-Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get started</a>.<br>
-Paid sponsorship · Affiliate links</sub>
+Proxy-Seller provides residential, ISP, datacenter IPv4/IPv6, and mobile proxies for scraping, automation, GEO-specific workflows, and data collection.<br>
+Use promo code <strong>PWF15</strong> for 15% off and <a href="https://proxy-seller.com/?partner=018DD81930B54142">get&nbsp;started</a>. <em>Ad&nbsp;·&nbsp;Affiliate&nbsp;links</em>
 </p>
 <!-- sponsor:proxy-seller:end -->
 
+<!-- oss-support:neon:start -->
+<div align="center">
+<a href="https://neon.com"><img src="https://raw.githubusercontent.com/OthmanAdi/planning-with-files/master/media/neon-logo.svg" alt="Neon" width="112"></a><br>
+Infrastructure credits from the Neon Open Source Program.
+</div>
+<!-- oss-support:neon:end -->
+
 <!-- oss-support:coderabbit:start -->
-<p align="center"><sub>OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</sub></p>
+<p align="center">OSS code review support: <a href="https://www.coderabbit.ai/oss">CodeRabbit’s open-source program</a>.</p>
 <!-- oss-support:coderabbit:end -->
 
 ---
 
-<p align="center">
-  <em>Your agent's context window dies. The plan does not.</em>
-</p>
+The three project files are <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code>. When lifecycle hooks are active, they bring selected planning context back into the session. Automatic recovery reads project files only. Reading records from past sessions in the same project requires an explicit catchup mode.
 
-<p align="center">
-Persistent file-based planning for AI coding agents and long-running agent tasks: the skill keeps <code>task_plan.md</code>, <code>findings.md</code>, and <code>progress.md</code> on disk. Activated lifecycle hooks inject selected project planning context, so the plan survives context loss, <code>/clear</code>, crashes, and compaction. Automatic recovery reads project files only. Reading same-project local agent session records for aggregate counts or bounded replay requires an explicit catchup mode. Installs across 60+ agents via the Agent Skills standard, with native plugins for Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode and DeepSeek Harness.
-</p>
+The skill works across 60+ agents through the Agent Skills standard. Native integrations include Claude Code, Codex CLI, Qoder CLI, Pi, Hermes Agent, OpenCode, and DeepSeek Harness.
 
 <p align="center">
   <a href="https://github.com/OthmanAdi/planning-with-files/stargazers"><img src="https://img.shields.io/github/stars/OthmanAdi/planning-with-files?style=flat&color=yellow" alt="Stars"></a>
@@ -67,16 +89,10 @@ Persistent file-based planning for AI coding agents and long-running agent tasks
 </p>
 
 <p align="center">
-  <a href="#readme-nav-before-clear"><strong>See it survive /clear</strong></a> ·
-  <a href="#readme-nav-quick-install"><strong>Install</strong></a> ·
   <a href="#readme-nav-long-running">Long-running tasks</a> ·
-  <a href="#readme-nav-hosts">First-class hosts</a>
+  <a href="#readme-nav-hosts">First-class hosts</a> ·
+  <a href="docs/installation.md">Full installation guide</a>
 </p>
-
-<p align="center">
-  <sub>Open the Commands, Multi-agent runs, Benchmarks &amp; more section below for the reference · <a href="docs/installation.md">Full install guide</a></sub>
-</p>
-
 
 ## Contributors
 
@@ -197,53 +213,6 @@ Code, documentation, and issue contributors. Select a portrait to open a GitHub 
 </p>
 <!-- contributor-portraits:end -->
 
-<a id="community"></a>
-
-<details>
-<summary><div align="center"><strong>🌍 Built with Planning with Files</strong></div></summary>
-
-### Forks & Extensions
-
-| Fork | Author | What They Built |
-|------|--------|-----------------|
-| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
-| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
-| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
-| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
-| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
-| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
-
-### Used in the Wild
-
-| Project | What It Is |
-|---------|-----------|
-| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
-| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
-| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
-| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
-| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
-| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
-
-### Skill Registries & Hubs
-
-| Registry | What It Is |
-|----------|-----------|
-| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
-
-### Bundled snapshots & adaptations
-
-| Project | Verified relationship |
-|---------|-----------------------|
-| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
-| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
-
-*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
-
-Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBUTORS.md).
-
-</details>
-
-
 <a id="readme-nav-quick-install"></a>
 
 ## Quick Install
@@ -351,7 +320,7 @@ They live under `skills/i18n/`, one directory deeper than the canonical skill. T
 </details>
 
 <details id="enhanced-support-per-ide-setup-guides">
-<summary><strong>Enhanced Support: per-IDE setup guides</strong></summary>
+<summary><strong>🛠️ Enhanced Support: per-IDE setup guides</strong></summary>
 
 | IDE | Installation Guide | Integration |
 |-----|-------------------|-------------|
@@ -372,7 +341,7 @@ They live under `skills/i18n/`, one directory deeper than the canonical skill. T
 </details>
 
 <details>
-<summary><strong>Standard Agent Skills: discovery paths</strong></summary>
+<summary><strong>🧭 Standard Agent Skills: discovery paths</strong></summary>
 
 | IDE | Installation Guide | Skill Discovery Path |
 |-----|-------------------|---------------------|
@@ -389,7 +358,7 @@ They live under `skills/i18n/`, one directory deeper than the canonical skill. T
 </details>
 
 <details>
-<summary><strong>Sandbox runtimes</strong></summary>
+<summary><strong>📦 Sandbox runtimes</strong></summary>
 
 | Runtime | Status | Guide | Notes |
 |---------|--------|-------|-------|
@@ -435,6 +404,52 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 </details>
 
+<a id="community"></a>
+
+<details>
+<summary><strong>🚀 Explore projects built with Planning with Files →</strong></summary>
+
+### Forks & Extensions
+
+| Fork | Author | What They Built |
+|------|--------|-----------------|
+| [devis](https://github.com/st01cs/devis) | [@st01cs](https://github.com/st01cs) | Interview-first workflow, `/devis:intv` and `/devis:impl` commands, guaranteed activation |
+| [multi-manus-planning](https://github.com/kmichels/multi-manus-planning) | [@kmichels](https://github.com/kmichels) | Multi-project support, SessionStart git sync |
+| [plan-cascade](https://github.com/Taoidle/plan-cascade) | [@Taoidle](https://github.com/Taoidle) | Multi-level task orchestration, parallel execution, multi-agent collaboration |
+| [agentfund-skill](https://github.com/RioTheGreat-ai/agentfund-skill) | [@RioTheGreat-ai](https://github.com/RioTheGreat-ai) | Crowdfunding for AI agents with milestone-based escrow on Base |
+| [openclaw-github-repo-commander](https://github.com/wd041216-bit/openclaw-github-repo-commander) | [@wd041216-bit](https://github.com/wd041216-bit) | 7-stage GitHub repo audit, optimization, and cleanup workflow for OpenClaw |
+| [planning-with-sysspec](https://github.com/tianshan/planning-with-sysspec) | [@tianshan](https://github.com/tianshan) | Spec-first extension adding structured module specifications, spec deltas and validation matrices ([source](https://github.com/tianshan/planning-with-sysspec/blob/66ff12e1e9e06e3303e54f2b5f94780d9e81a357/README.md#L188-L194)) |
+
+### Used in the Wild
+
+| Project | What It Is |
+|---------|-----------|
+| [lincolnwan/Planning-with-files-copilot-agent](https://github.com/lincolnwan/Planning-with-files-copilot-agent) | Entire Copilot agent repo built around the planning-with-files skill |
+| [cooragent/ClarityFinance](https://github.com/cooragent/ClarityFinance) | AI finance agent framework, Planning-with-Files approach directly credited |
+| [oeftimie/vv-claude-harness](https://github.com/oeftimie/vv-claude-harness) | Claude Code harness built on Manus-style persistent markdown planning |
+| [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) | Multi-agent team orchestration skill using file-based planning |
+| [smallnest/langgraphgo: Manus Agent](https://github.com/smallnest/langgraphgo/tree/master/examples/manus_agent) | Go implementation of the planning-with-files pattern with persistent task plans, research notes and output files ([source](https://github.com/smallnest/langgraphgo/blob/8babee09de0efb8762310f3bf6ad57070abddeb6/examples/manus_agent/README.md#L14-L37)) |
+| [a5c-ai/babysitter](https://github.com/a5c-ai/babysitter) | SDK planning, execution, session-recovery and verification processes adapted from planning-with-files ([source](https://github.com/a5c-ai/babysitter/blob/feb68abe397acc14f32b34984975c48fedba2b33/library/methodologies/planning-with-files/README.md#L1-L29)) |
+
+### Skill Registries & Hubs
+
+| Registry | What It Is |
+|----------|-----------|
+| [buzhangsan/skill-manager](https://github.com/buzhangsan/skill-manager) | Bilingual (EN/中文) Claude Code skill hub; planning-with-files installable one-click |
+
+### Bundled snapshots & adaptations
+
+| Project | Verified relationship |
+|---------|-----------------------|
+| [benchflow-ai/skillsbench](https://github.com/benchflow-ai/skillsbench) | Bundles planning-with-files v2.1.2 in its organize-messy-files benchmark task ([snapshot](https://github.com/benchflow-ai/skillsbench/blob/f860ecf02ef53412a030f8661c83d644b739ff01/tasks/organize-messy-files/environment/skills/planning-with-files/SKILL.md)) |
+| [sickn33/agentic-awesome-skills](https://github.com/sickn33/agentic-awesome-skills) | Cross-agent skill collection shipping an adapted planning-with-files copy, originally imported at v2.1.2 ([import](https://github.com/sickn33/agentic-awesome-skills/blob/7f46ed8ca119949ad3b406bc85e727db84ee6ece/skills/planning-with-files/SKILL.md)) |
+
+*Built something? [Open an issue](https://github.com/OthmanAdi/planning-with-files/issues) to get listed!*
+
+Full list of everyone who made this project better: [CONTRIBUTORS.md](./CONTRIBUTORS.md).
+
+</details>
+
 <a id="releases"></a>
 
 <details>
@@ -442,6 +457,7 @@ One hook fire measures 289ms wall-clock since the v3.6.0 optimization, down from
 
 | Version | Highlights |
 |---------|------------|
+| **v3.29.1** | Fixes the sponsor links in both READMEs, shows how to switch plans using the printed `PLAN_ID`, and identifies which evaluation readers can run from a clean clone (PRs #391, #388, #385). |
 | **v3.29.0** | Counts statuses inside their own phases across reports and integrations, handles UTF-8 byte-order marks and indented headings, and adds explicit opt-in checkbox-only re-attestation to the shell helper (PRs #381, #367). |
 | **v3.28.2** | Completes shell and native PowerShell help handling; adds recovery grader and npm README checks to pytest; documents native PowerShell fixture use and preserves trial receipts; clarifies compaction and recovery behavior (PRs #365, #366, #368, #373, #374, #375). |
 | **v3.28.1** | `attest-plan` reports one refusal that names its cause on both routes and adds `-Target` on PowerShell; echoed selectors cannot forge output; `init-session` refuses mistyped switches; localized `/plan` commands follow plan selection; faster JSON listing on Git Bash (PR #353, #360, #362, #363, #364) |
