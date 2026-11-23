@@ -25,76 +25,64 @@ continue to omit PreToolUse context.
 This reduces repeated context bytes. It does not remove hook process startup
 or promise a fixed token saving for every plan.
 
-## Attestation SHA cache
+## Attestation hash
 
 When plan attestation is enabled, the hooks compare the approved SHA-256 hash
-with the current `task_plan.md` before injecting plan content. v2.40.0 added a
-small transient cache for that hash calculation.
+with the current `task_plan.md` before injecting plan content.
 
-### Location
+### Per-fire hashing
 
-The cache lives under the first of these that resolves:
+Each hook fire reads the plan once into a private snapshot. When the plan is
+attested, the fire hashes that snapshot with `sha256sum` (or `shasum -a 256`)
+and checks the attestation against those exact bytes. Everything the fire
+injects from the plan is read from the same snapshot, so replacing
+`task_plan.md` during the fire cannot pass a different plan through. No
+attestation digest is reused between fires: a whole-second mtime and a cached
+digest are not trust signals, because `task_plan.md` can change while keeping
+both.
 
-```bash
-$XDG_CACHE_HOME/pwf-sha/        # when XDG_CACHE_HOME is set
-$HOME/.cache/pwf-sha/           # otherwise, when HOME is set
-${TMPDIR:-/tmp}/pwf-sha/        # fallback only when neither is set
-```
+The implementation is the attestation check in `scripts/inject-plan.sh` and its
+one-process twin `scripts/inject-plan.py`, which holds the plan snapshot in
+memory and hashes it with `hashlib`. On the shell route,
+`test_attested_fire_uses_and_cleans_private_snapshot` in
+`tests/test_hook_body_v240.py` asserts that an attested fire creates no
+`pwf-sha` directory and leaves the snapshot directory empty.
 
-v2.40.0 introduced the cache under `${TMPDIR:-/tmp}/pwf-sha/`. v3.0.0 moved it to
-the user-private path above so a world-writable `/tmp` can no longer be used to
-poison the attestation hash. Each cache entry stores the plan file mtime on the
-first line and the computed SHA-256 on the second line.
+### Snapshot location
 
-### Keying
-
-The cache key is the first 16 hex characters of the SHA-256 of the active plan
-file path (the path string, not the file contents). Each plan location gets its
-own entry:
-
-```text
-task_plan.md
-.planning/<plan-id>/task_plan.md
-```
-
-The stored hash is reused only when the current plan file mtime matches the
-cached mtime. If the file changes, the hook recomputes `sha256sum` or
-`shasum -a 256` and rewrites the cache entry. In gated mode the hook always
-recomputes on a hit, so the completion gate never trusts a stale entry.
-
-### When it helps
-
-The cache is most useful when:
-
-- Plan files are large.
-- Windows Git Bash process startup makes repeated `sha256sum` calls expensive.
-- The same attested plan fires hooks many times in one session.
-
-### When it is break-even
-
-For small plan files, the cache may be roughly break-even. The hook still starts
-shell commands, reads the cache entry, and checks the mtime. On those paths,
-Bash process startup can dominate the actual hash cost.
-
-### Containers and CI
-
-The cache is per-user and transient. In a container `HOME` is usually set (for
-example `/root`), so the cache lives at `$HOME/.cache/pwf-sha/`. Containers, CI
-jobs, and sandboxes that do not persist `$HOME` across restarts lose the cache
-between runs.
-
-That only affects speed. A cache miss recomputes the SHA-256 from the current
-plan file and preserves the same attestation behavior.
-
-### Clear or avoid reuse
-
-Clear the cache:
+The shell hook writes snapshots under the first of these that resolves:
 
 ```bash
-rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/pwf-sha/"
+$XDG_CACHE_HOME/pwf-snapshots/             # when XDG_CACHE_HOME is set
+$HOME/.cache/pwf-snapshots/                # otherwise, when HOME is set
+${TMPDIR:-/tmp}/pwf-snapshots-${UID:-user}/ # fallback only when neither is set
 ```
 
-There is no separate SHA-cache toggle, and overriding `TMPDIR` does not move the
-cache when `HOME` is set. The cache self-invalidates whenever the plan file mtime
-changes, so editing `task_plan.md` already forces a recompute. To force a clean
-state explicitly, remove the directory above.
+The hook creates the directory under umask 077, attempts `chmod 700` on it, and
+refuses it if it is a symlink. Each snapshot is a `mktemp` file that the hook
+removes when it exits, so the directory is normally empty between fires and
+needs no clearing. If the directory cannot be created or written, or the plan
+is larger than 4 MiB, the hook injects nothing. The Python twin applies the same
+directory checks before reading the plan.
+
+### Cost
+
+An attested fire hashes the whole plan, up to the 4 MiB limit, every time. On
+Windows Git Bash the cost of a fire is dominated by process startup, which is
+what `scripts/inject-plan.py` addresses by doing the whole fire in one
+interpreter.
+
+### Older `pwf-sha` directories
+
+v2.40.0 added an mtime-keyed digest cache under `${TMPDIR:-/tmp}/pwf-sha/`, and
+v3.0.0 moved it to `${XDG_CACHE_HOME:-$HOME/.cache}/pwf-sha/`. Current hooks
+neither read nor write that directory. A leftover one in your cache directory
+can be deleted:
+
+```bash
+rm -rf -- "${XDG_CACHE_HOME:-$HOME/.cache}/pwf-sha"
+```
+
+A `/tmp/pwf-sha` left by v2.40 sits in a shared directory. Check it with
+`ls -ld /tmp/pwf-sha` and delete it only if it is a directory you own, not a
+symlink.
