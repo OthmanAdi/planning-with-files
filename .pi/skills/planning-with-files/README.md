@@ -324,7 +324,7 @@ They live under `skills/i18n/`, one directory deeper than the canonical skill. T
 
 | IDE | Installation Guide | Integration |
 |-----|-------------------|-------------|
-| Claude Code | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md) | Plugin + SKILL.md + Hooks |
+| Claude Code | [Installation](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/installation.md) | Plugin + SKILL.md + Hooks (Python 3.8+) |
 | Cursor | [Cursor Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/cursor.md) | Skills + [hooks.json](https://cursor.com/docs/hooks) |
 | GitHub Copilot | [Copilot Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/copilot.md) | [Hooks](https://docs.github.com/en/copilot/reference/hooks-configuration) (incl. errorOccurred) |
 | Mastra Code | [Mastra Setup](https://github.com/OthmanAdi/planning-with-files/blob/v3.29.1/docs/mastra.md) | Skills + [Hooks](https://mastra.ai/docs/mastra-code/configuration) |
