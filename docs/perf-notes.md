@@ -36,7 +36,11 @@ Each hook fire reads the plan once into a private snapshot. When the plan is
 attested, the fire hashes that snapshot with `sha256sum` (or `shasum -a 256`)
 and checks the attestation against those exact bytes. Everything the fire
 injects from the plan is read from the same snapshot, so replacing
-`task_plan.md` during the fire cannot pass a different plan through. No
+`task_plan.md` during the fire cannot pass a different plan through. For the
+shell hook this assumes a private snapshot directory that only your user
+controls (see Snapshot location below): the hook does not check who owns the
+directory, and anyone else who can write to it could replace the snapshots the
+fire hashes and injects. No
 attestation digest is reused between fires: a whole-second mtime and a cached
 digest are not trust signals, because `task_plan.md` can change while keeping
 both.
