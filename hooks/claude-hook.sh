@@ -36,7 +36,8 @@ FAST_PATH="${SCRIPTS_DIR}/inject-plan.py"
 # inject-plan.sh on every CI leg). When a CPython 3 is on PATH the event runs
 # there in one process. The twin exits 0 only when its stdout is the complete
 # answer; any other status, including an interpreter that cannot run it, falls
-# through to the reference chain below unchanged. PWF_FAST_PATH=0 forces the
+# through to the reference chain below. Without Python 3.8+, userprompt emits the interpreter
+# notice and no plan bytes. PWF_FAST_PATH=0 forces the
 # reference chain. The Stop event never takes the fast path because it must
 # forward Claude's stdin payload to gate-stop.sh.
 #

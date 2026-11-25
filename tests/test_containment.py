@@ -330,6 +330,59 @@ class InjectorInterpreterContainmentTests(unittest.TestCase):
                 "PATH Python must remain unexecuted until containment succeeds",
             )
 
+    @unittest.skipUnless(SYMLINK_OK, "platform cannot create an escaping dir symlink")
+    def test_escaping_planning_root_stays_silent_and_does_not_execute_path_python(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside:
+            root = Path(tmp)
+            outside_planning = Path(outside) / ".planning"
+            outside_plan = outside_planning / "escape"
+            outside_plan.mkdir(parents=True)
+            (outside_plan / "task_plan.md").write_text("# outside\n", encoding="utf-8")
+            (outside_planning / ".active_plan").write_text("escape\n", encoding="utf-8")
+            os.symlink(outside_planning, root / ".planning", target_is_directory=True)
+            marker = root / "path-python-executed"
+            bin_dir = self.make_python_canaries(root, marker)
+
+            result = self.run_with_canaries(root, bin_dir)
+
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual("", result.stdout)
+            self.assertFalse(
+                marker.exists(),
+                "PATH Python must remain unexecuted on precheck containment escape",
+            )
+
+
+
+class InjectorScriptDirTests(unittest.TestCase):
+    """A POSIX install path with a literal backslash must not fall back to CWD."""
+
+    @unittest.skipUnless(have_sh() and os.name != "nt", "POSIX sh required")
+    def test_backslash_install_dir_never_runs_project_helper(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            install = root / "pwf\\install" / "scripts"
+            shutil.copytree(REPO_ROOT / "scripts", install)
+            project = root / "project"
+            project.mkdir()
+            (project / "task_plan.md").write_text("# plan\n", encoding="utf-8")
+            marker = root / "project-helper-executed"
+            (project / "inject-plan.py").write_text(
+                f"open({str(marker)!r}, 'w').close()\n", encoding="utf-8"
+            )
+            env = dict(os.environ, PWF_SESSION_ID="sess-1")
+            env.pop("PWF_PRETOOL", None)
+            result = subprocess.run(
+                ["sh", str(install / "inject-plan.sh"), "--context=userprompt"],
+                cwd=project,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertFalse(marker.exists(), "project inject-plan.py must never run")
+
 
 if __name__ == "__main__":
     unittest.main()

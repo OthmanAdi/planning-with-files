@@ -44,6 +44,7 @@ CONTROL_LITERALS = """# Task Plan: doctor literals
 - [ ] reword the Ambiguous plan notice
 - [ ] check PWF_PLAN_ROOT is not a supported absolute local directory wording
 - [ ] and PLAN_ID does not name a plan directory too
+- [ ] [planning-with-files] Plan injection could not verify the plan path: it needs realpath, readlink -f, or an absolute PWF_TRUSTED_PYTHON or PYTHON_BIN path to Python 3.8 or newer, and none was usable, so nothing was injected.
 """
 
 
@@ -152,6 +153,28 @@ class PlanDoctorClassificationTests(unittest.TestCase):
         line = doctor_injection_line(self._doctor(scripts=stubs).stdout)
         self.assertTrue(line.startswith("WARN"), line)
         self.assertIn("BEGIN-PWF-DATA", line)
+
+    @unittest.skipIf(os.name == "nt", "MSYS sh requires runtime DLL directories on PATH")
+    def test_missing_canonicalizer_notice_reports_specific_failure(self):
+        sh = shutil.which("sh")
+        assert sh is not None
+        bin_dir = self.root / "sh-only-bin"
+        bin_dir.mkdir()
+        (bin_dir / Path(sh).name).symlink_to(sh)
+        (self.root / "task_plan.md").write_text("# plan\n", encoding="utf-8")
+        result = subprocess.run(
+            [sh, str(SCRIPTS / "plan-doctor.sh")],
+            cwd=str(self.root),
+            env={"PATH": str(bin_dir)},
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        line = doctor_injection_line(result.stdout)
+        self.assertTrue(line.startswith("FAIL"), line)
+        self.assertIn("could not verify the plan path", line)
+        self.assertNotIn("does not recognize", line)
 
 
 if __name__ == "__main__":
