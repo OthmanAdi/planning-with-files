@@ -80,11 +80,13 @@ HOOK_DISPATCH_SCRIPTS = [
     "scripts/gate-stop.sh",
 ]
 
-# gate-stop.sh runs its sibling check-complete.sh with --gate. Variants that do
-# not sync every script still need the current one; translated variants keep
-# their own localized copy.
+# gate-stop.sh runs its sibling check-complete.sh with --gate, and SKILL.md
+# documents check-complete --validate on both shells. Variants that do not sync
+# every script still need the current pair; translated variants keep their own
+# localized copies.
 STOP_CHECK_SCRIPTS = [
     "scripts/check-complete.sh",
+    "scripts/check-complete.ps1",
 ]
 
 # .agents/ ships the FULL canonical surface (no IDE adapter layer exists to
