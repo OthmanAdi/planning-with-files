@@ -280,6 +280,26 @@ class StopScalarBehaviorTests(unittest.TestCase):
             f"variant Stop scalar silent (stderr: {result.stderr!r})",
         )
 
+    def test_scripts_light_variants_gate_their_plan(self) -> None:
+        # .opencode and .mastracode receive gate-stop.sh from the sync, which
+        # runs the sibling check-complete.sh with --gate. A copy that predates
+        # --gate reads it as the plan path and reports no plan at all.
+        for name in (".opencode", ".mastracode"):
+            with self.subTest(variant=name):
+                project = self.tmp / name.lstrip(".")
+                project.mkdir()
+                make_plan(project)
+                (project / ".mode").write_text("autonomous gate\n", encoding="utf-8")
+                skill_dir = REPO_ROOT / name / "skills" / "planning-with-files"
+                result = run_scalar(
+                    extract_stop_scalar(skill_dir / "SKILL.md"),
+                    project,
+                    {"CLAUDE_SKILL_DIR": str(skill_dir)},
+                    stdin_data='{"stop_hook_active": false}',
+                )
+                self.assertEqual(result.returncode, 0)
+                self.assertIn('"decision":"block"', result.stdout, result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
