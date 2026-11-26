@@ -80,6 +80,13 @@ HOOK_DISPATCH_SCRIPTS = [
     "scripts/gate-stop.sh",
 ]
 
+# gate-stop.sh runs its sibling check-complete.sh with --gate. Variants that do
+# not sync every script still need the current one; translated variants keep
+# their own localized copy.
+STOP_CHECK_SCRIPTS = [
+    "scripts/check-complete.sh",
+]
+
 # .agents/ ships the FULL canonical surface (no IDE adapter layer exists to
 # carry the rest): hook dispatchers, ledger tooling, and every template.
 AGENTS_EXTRA_SCRIPTS = [
@@ -235,7 +242,7 @@ IDE_MANIFESTS = {
         ".opencode/skills/planning-with-files",
         ref_style="flat",
         include_scripts=False,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS,
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS + STOP_CHECK_SCRIPTS,
     ),
 
     # Mastracode: templates/references maintained under .mastracode/; only the
@@ -245,7 +252,7 @@ IDE_MANIFESTS = {
         ref_style="skip",
         template_dirs=[],
         include_scripts=False,
-        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS + ["plan-inventory.md"],
+        extra_scripts=HOOK_DISPATCH_SCRIPTS + LISTING_SCRIPTS + STOP_CHECK_SCRIPTS + ["plan-inventory.md"],
     ),
 
     # Hermes owns its Python lifecycle adapter and its skill bundle. Only
