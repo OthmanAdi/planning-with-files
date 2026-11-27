@@ -101,8 +101,8 @@ dsh cannot refuse to end a turn, but `agent/turn-stopping` is awaited before the
 
 1. `<plan-dir>/.mode` contains the `gate` token (`/pwf --gated`, `pwf_init` with `mode: gated`, or `init-session.sh --gated`).
 2. An `in_progress` phase exists, counted as the per-field maximum of `**Status:** in_progress` lines and inline `[in_progress]` markers.
-3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20).
-4. The ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block; a stall releases the turn.
+3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20). A newly completed phase resets the counter.
+4. A phase completed or the ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block. A stall releases the turn.
 
 Each block increments the counter and records the ledger size, so the shell gate and the dsh gate share one state. Subagent children are never held: the gate applies to the delegating agent only. This is Tier 2 in the host capability tiers (follow-up inject): the continuation is a new step, not a refusal, and a user who wants the turn to stop can edit the plan, clear the `.mode` file, set `PLANNING_DISABLED=1`, or set `gate: false` on the row.
 

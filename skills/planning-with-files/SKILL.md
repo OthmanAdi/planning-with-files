@@ -433,8 +433,10 @@ The Stop gate blocks ONLY when all of these hold. Any single failure allows the 
 1. Mode is gated (the `.mode` file contains `gate`).
 2. An `in_progress` phase exists (not merely COMPLETE < TOTAL).
 3. `stop_hook_active` is false on the Stop hook stdin (already inside a forced continuation means allow stop).
-4. Block count is below the cap (default 20, `PWF_GATE_CAP` to override, reset at init-session).
-5. The ledger progressed since the previous block (a stall means allow stop).
+4. Block count is below the cap (default 20, `PWF_GATE_CAP` to override). The count resets at initialization and when another phase completes.
+5. A phase completed or the ledger progressed since the previous block. A stall allows the stop.
+
+On hosts that set `stop_hook_active` for the forced continuation, the gate can hold one stop per user turn. Use `/plan-goal` for sustained continuation on Claude Code.
 
 The block reason is a fixed template plus the phase NAME only. Plan body text never enters the reason. Outside gated mode the wording is always advisory, never imperative (PR #180 lesson: imperative text in a `reason` field becomes a continuation command).
 
@@ -454,16 +456,16 @@ Hosts without a blocking Stop hook still get autonomous mode (low recitation + l
 
 The gate carries its own guards so a runaway loop cannot run unbounded, independent of any undocumented host behavior:
 
-- Persistent block counter in `.planning/<id>/.stop_blocks`, reset at init-session. Without the reset, a previous run's count would let the next run stop instantly.
-- Cap (default 20) on consecutive blocks. At the cap, the gate allows the stop.
-- Stall detection: no new ledger line since the previous block means the model is not progressing, so the gate allows the stop.
+- The persistent block counter in `.planning/<id>/.stop_blocks` resets at initialization and when the number of completed phases increases.
+- The gate allows the stop after 20 blocks between phase completions by default.
+- The gate allows the stop when neither the completed phase count nor the ledger advances.
 - `stop_hook_active` and the host block cap are backstops, not the primary guard. The counter and stall detector are deterministic and do not depend on undocumented platform fields.
 
 ### Ledger contract summary
 
 In autonomous and gated mode the raw `progress.md` tail injection is replaced by a synthesized summary from `scripts/ledger-summary.sh`. The summary reports tick count, phase complete/total, the in_progress phase heading, and the last event type per agent. No free text from disk reaches the model context, and the block carries no timestamps, so it is KV-cache stable by construction.
 
-The machine ledger lives at `.planning/<id>/ledger-<agent>.jsonl`, append-only, one JSON object per line. Workers append to their own ledger; the orchestrator owns `task_plan.md`. The gate's stall detector reads the ledger (a semantic signal) rather than `progress.md` mtime (which moves on any touch). See `scripts/ledger-append.sh` and `scripts/ledger-summary.sh`.
+The machine ledger lives at `.planning/<id>/ledger-<agent>.jsonl`, append-only, one JSON object per line. Workers append to their own ledger, and the orchestrator owns `task_plan.md`. The gate tracks completed phases alongside worker ledger entries. See `scripts/ledger-append.sh` and `scripts/ledger-summary.sh`.
 
 ### Trying it
 

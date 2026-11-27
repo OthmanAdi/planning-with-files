@@ -284,6 +284,19 @@ describe("injection", () => {
 })
 
 describe("gate", () => {
+  it.each(["1", "20"])("starts a new block budget after a completed phase with cap %s", (cap) => {
+    const dir = slugPlan(root, "2026-09-02-run", { mode: "autonomous gate", attest: true, pointer: true })
+    const gateEnv = { ...env, PWF_GATE_CAP: cap }
+    expect(evaluateGate(root, dir, gateEnv)).toContain(`gate block 1/${cap}`)
+    expect(evaluateGate(root, dir, gateEnv)).toBeNull()
+    fs.writeFileSync(path.join(dir, "task_plan.md"),
+      "### Phase 1: Review\n**Status:** complete\n"
+      + "### Phase 2: Build the adapter\n**Status:** complete\n"
+      + "### Phase 3: Verify\n**Status:** in_progress\n")
+    expect(evaluateGate(root, dir, gateEnv)).toContain(`(2/3 complete, gate block 1/${cap})`)
+    expect(evaluateGate(root, dir, gateEnv)).toBeNull()
+  })
+
   it("blocks, counts, stalls and caps like check-complete.sh --gate", () => {
     const dir = slugPlan(root, "2026-09-02-run", { mode: "autonomous gate", attest: true, pointer: true })
     const first = evaluateGate(root, dir, env)

@@ -132,8 +132,8 @@ Hermes fires `pre_verify` once per turn when the agent changed files and is abou
 
 1. `<plan-dir>/.mode` contains the `gate` token (only `/pwf --gated` or `init-session.sh --gated` write it).
 2. An `in_progress` status appears inside a phase block. Fenced examples and statuses quoted outside phase blocks do not activate the gate.
-3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20).
-4. The ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block; a stall releases the turn.
+3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20). A newly completed phase resets the counter.
+4. A phase completed or the ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block. A stall releases the turn.
 
 Every block increments the counter and records the ledger size, so the shell gate and the Hermes gate share one state. Limits that come from Hermes itself:
 

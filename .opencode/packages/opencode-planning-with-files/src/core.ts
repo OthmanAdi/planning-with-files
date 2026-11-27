@@ -539,9 +539,9 @@ export function firstInProgressPhase(text: string): string {
   return planPhases(text).phases.find((p) => p.statuses.includes("in_progress"))?.heading ?? ""
 }
 
-function readCounter(target: string): number {
+function readCounter(target: string, fallback = 0): number {
   const raw = (readText(target, 64) ?? "").trim()
-  return /^[0-9]+$/.test(raw) ? Number(raw) : 0
+  return /^[0-9]+$/.test(raw) ? Number(raw) : fallback
 }
 
 export function ledgerLineCount(planDir: string): number {
@@ -574,9 +574,23 @@ export function evaluateGate(root: string, planDir: string, env: Env): string | 
   if (counts.total <= 0 || counts.in_progress <= 0) return null
   const capRaw = (env.PWF_GATE_CAP ?? "").trim()
   const cap = /^[0-9]+$/.test(capRaw) ? Number(capRaw) : 20
-  const blocks = readCounter(path.join(planDir, ".stop_blocks"))
+  let blocks = readCounter(path.join(planDir, ".stop_blocks"))
   const ledgerPrev = readCounter(path.join(planDir, ".gate_last_ledger"))
   const ledgerNow = ledgerLineCount(planDir)
+  const completeFile = path.join(planDir, ".gate_last_complete")
+  const completeStat = lstatSafe(completeFile)
+  if (cap > 0 && (!completeStat || completeStat.isFile())) {
+    const completePrev = readCounter(completeFile, -1)
+    const phaseCompleted = completePrev >= 0 && counts.complete > completePrev
+    try {
+      if (blocks === 0 || completePrev < 0 || phaseCompleted) {
+        writeText(completeFile, `${counts.complete}\n`)
+        if (phaseCompleted) blocks = 0
+      }
+    } catch {
+      // Keep the existing budget if progress could not be recorded.
+    }
+  }
   if (blocks >= cap) return null
   if (blocks > 0 && ledgerNow === ledgerPrev) return null
   const phase = (firstInProgressPhase(text) || "unknown phase").replace(/[\x01-\x1f]/g, " ")

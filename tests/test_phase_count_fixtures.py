@@ -216,6 +216,44 @@ def test_active_phase_with_pending_checklist_still_requests_continuation(runtime
     assert "Phase 1: Build" in decision["reason"]
 
 
+@pytest.mark.parametrize("runtime", ["sh", "powershell"])
+@pytest.mark.parametrize("cap", [1, 20])
+def test_gate_resumes_after_completed_phase_without_ledger(runtime, cap, tmp_path):
+    executable = shutil.which("sh") if runtime == "sh" else PWSH
+    if executable is None:
+        pytest.skip(f"{runtime} unavailable")
+    plan = tmp_path / "task_plan.md"
+    (tmp_path / ".mode").write_text("autonomous gate\n", encoding="ascii")
+    args = ([str(ROOT / "scripts/check-complete.sh"), "--gate", str(plan)] if runtime == "sh" else
+            ["-NoProfile", "-File", str(ROOT / "scripts/check-complete.ps1"), "-Gate", str(plan)])
+    excluded = {"PLAN_ID", "PWF_PLAN_ROOT", "PLANNING_DISABLED", "PWF_SESSION_ID"}
+    env = {key: value for key, value in os.environ.items() if key not in excluded}
+    env["PWF_GATE_CAP"] = str(cap)
+
+    def check(stop_hook_active=False):
+        result = subprocess.run([executable, *args], cwd=tmp_path, env=env,
+                                input=json.dumps({"stop_hook_active": stop_hook_active}),
+                                capture_output=True, text=True, encoding="utf-8")
+        assert result.returncode == 0, result.stderr
+        return result.stdout
+
+    plan.write_text("### Phase 1: Build\n**Status:** in_progress\n"
+                    "### Phase 2: Verify\n**Status:** pending\n", encoding="utf-8")
+    assert f"gate block 1/{cap}" in json.loads(check())["reason"]
+    assert '"decision"' not in check(stop_hook_active=True)
+    assert '"decision"' not in check()
+
+    plan.write_text("### Phase 1: Build\n**Status:** complete\n"
+                    "### Phase 2: Verify\n**Status:** in_progress\n", encoding="utf-8")
+    resumed = check()
+    assert '"decision":"block"' in resumed, resumed
+    second = json.loads(resumed)
+    assert second["decision"] == "block"
+    assert "Phase 2: Verify" in second["reason"]
+    assert f"gate block 1/{cap}" in second["reason"]
+    assert '"decision"' not in check()
+
+
 @pytest.mark.parametrize("directory", [
     ".kiro/skills/planning-with-files/assets",
     *[f"skills/i18n/planning-with-files-{lang}" for lang in ("ar", "de", "es", "zh", "zht")],

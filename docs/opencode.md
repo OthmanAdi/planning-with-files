@@ -93,10 +93,10 @@ The plugin's completion gate sends a follow-up message after an idle event (`ses
 
 1. `<plan-dir>/.mode` contains the `gate` token (`/pwf --gated`, `pwf_init` with `mode: gated`, or `init-session.sh --gated`).
 2. An `in_progress` phase exists, counted as the per-field maximum of `**Status:** in_progress` lines and inline `[in_progress]` markers.
-3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20).
-4. The ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block; a stall releases the session.
+3. The block counter `<plan-dir>/.stop_blocks` is below `PWF_GATE_CAP` (default 20). A newly completed phase resets the counter.
+4. A phase completed or the ledger (`<plan-dir>/ledger-*.jsonl`) advanced since the previous block. A stall releases the session.
 
-Each block increments the counter and records the ledger size, so the shell gate and the OpenCode gate share one state. This is Tier 2 in the host capability tiers (follow-up inject): the continuation is a new message, not a refusal, and a user who wants the session to stop can edit the plan, clear the `.mode` file, or set `PLANNING_DISABLED=1`.
+The shell gate and the OpenCode gate share the block counter, ledger size, and completed-phase count. The OpenCode gate continues a session by sending a new message. To stop the session, edit the plan, clear the `.mode` file, or set `PLANNING_DISABLED=1`.
 
 ## Working with modes
 
