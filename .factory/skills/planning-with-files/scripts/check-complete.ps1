@@ -9,7 +9,7 @@
 #   2. an in_progress phase exists (not merely complete<total)
 #   3. the Stop hook input JSON on stdin does not set stop_hook_active=true
 #   4. the block counter (<plan-dir>/.stop_blocks) is below cap (PWF_GATE_CAP, default 20)
-#   5. the ledger advanced since the last block (stall -> allow stop)
+#   5. a phase completed or the ledger advanced since the last block
 # When all hold, emits a single-line block-decision JSON on stdout and exits 0.
 # Otherwise reports incomplete plans and exits 0; completed plans stay silent
 # with -Gate, including legacy plans without .mode. Explicit reports are unchanged.
@@ -262,6 +262,22 @@ if (Test-Path $ledgerFile) {
     if ($raw -match '^\s*(\d+)') { $ledgerPrev = [int]$Matches[1] }
 }
 $ledgerNow = Get-LedgerLineCount
+
+# A completed phase starts a new block budget, even without a worker ledger.
+$completeFile = Join-Path $PlanDir ".gate_last_complete"
+$completeItem = Get-Item -LiteralPath $completeFile -Force -ErrorAction SilentlyContinue
+if ($cap -gt 0 -and -not ($completeItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    $completePrev = 0
+    $hasComplete = $completeItem -and -not $completeItem.PSIsContainer -and
+        [int]::TryParse((Get-Content -LiteralPath $completeFile -Raw -ErrorAction SilentlyContinue), [ref]$completePrev) -and
+        $completePrev -ge 0
+    try {
+        if ($blocks -eq 0 -or -not $hasComplete -or $COMPLETE -ne $completePrev) {
+            [IO.File]::WriteAllText($completeFile, [string]$COMPLETE + "`n", [Text.Encoding]::ASCII)
+            if ($hasComplete -and $COMPLETE -gt $completePrev) { $blocks = 0 }
+        }
+    } catch {}
+}
 
 # Guard 4: block-count cap.
 if ($blocks -ge $cap) {

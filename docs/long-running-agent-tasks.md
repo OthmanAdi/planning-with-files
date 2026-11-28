@@ -22,7 +22,7 @@ Started with `--gated`. It adds a Stop gate on top of autonomous behavior: the g
 2. An `in_progress` phase exists.
 3. `stop_hook_active` is false (already inside a forced continuation means allow).
 4. The block count is below the cap (default 20, `PWF_GATE_CAP` to override).
-5. The ledger progressed since the previous block.
+5. A phase completed or the ledger progressed since the previous block.
 
 Any single failure allows the stop. An incomplete plan alone never traps a session.
 
@@ -30,15 +30,15 @@ Any single failure allows the stop. An incomplete plan alone never traps a sessi
 
 An unattended loop needs bounded behavior independent of host quirks:
 
-- a persistent block counter in `.planning/<id>/.stop_blocks`, reset at init-session
-- a cap (default 20) on consecutive blocks; at the cap the gate allows the stop
+- a persistent block counter in `.planning/<id>/.stop_blocks` that resets at initialization and when another phase completes
+- a block cap (20 by default) that allows the stop when reached
 - stall detection: no new ledger line since the previous block means the model is not progressing, so the gate allows the stop
 
 The counter and the stall detector are deterministic; `stop_hook_active` and host block caps are backstops. Enforcement is host-aware: hard block on Claude Code, Codex, and Continue; follow-up injection on Cursor, Pi, and Kiro; notify-only elsewhere.
 
 ## The run ledger
 
-In v3 modes the machine record of the run is an append-only JSONL file, `.planning/<id>/ledger-<agent>.jsonl`, one JSON object per line. What reaches the model each turn is a fixed-shape summary from `ledger-summary.sh`: tick count, phases complete/total, the in-progress phase heading, and the last event type per agent. No free text from disk enters context and the block carries no timestamps, so it is KV-cache stable by construction. The gate's stall detector reads the ledger, a semantic signal, rather than file mtimes.
+In v3 modes the machine record of the run is an append-only JSONL file, `.planning/<id>/ledger-<agent>.jsonl`, one JSON object per line. The summary from `ledger-summary.sh` includes the tick count, completed and total phase counts, the in-progress phase heading, and the last event type per agent. The fixed shape omits free text and timestamps. The gate's stall detector checks the completed phase count and the ledger.
 
 ## Attestation for unattended loops
 

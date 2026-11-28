@@ -830,6 +830,34 @@ class HermesFirstClassTests(unittest.TestCase):
             (plan_dir / "ledger-main.jsonl").write_text('{"tick":1}\n{"tick":2}\n', encoding="utf-8")
             self.assertIsNone(self._pre_verify(attempt=2))
 
+    def test_pre_verify_resumes_after_completed_phase_without_ledger(self) -> None:
+        with self._workspace() as root:
+            plan_dir = self._slug_plan(root, "2026-09-01-run", mode="autonomous gate", attest=True, pointer=True)
+            os.chdir(root)
+            os.environ["PWF_GATE_CAP"] = "1"
+            first = self._pre_verify()
+            assert first is not None
+            self.assertIn("(1/3 complete, gate block 1/1)", first["message"])
+            self.assertIsNone(self._pre_verify())
+
+            (plan_dir / "task_plan.md").write_text(
+                "### Phase 1: Review\n**Status:** complete\n"
+                "### Phase 2: Build the adapter\n**Status:** complete\n"
+                "### Phase 3: Verify\n**Status:** in_progress\n",
+                encoding="utf-8",
+            )
+            resumed = self._pre_verify()
+            assert resumed is not None
+            self.assertIn("(2/3 complete, gate block 1/1)", resumed["message"])
+            self.assertIsNone(self._pre_verify())
+
+            plan = plan_dir / "task_plan.md"
+            completed = plan.read_text(encoding="utf-8")
+            plan.write_text(completed.replace("**Status:** complete", "**Status:** pending", 1), encoding="utf-8")
+            self.assertIsNone(self._pre_verify())
+            plan.write_text(completed, encoding="utf-8")
+            self.assertIsNotNone(self._pre_verify())
+
     def test_pre_verify_never_holds_legacy_or_autonomous_plans(self) -> None:
         with self._workspace() as root:
             (root / "task_plan.md").write_text(GATED_PLAN, encoding="utf-8")

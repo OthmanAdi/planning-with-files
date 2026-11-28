@@ -736,7 +736,7 @@ Local host history is a separate explicit action:
 2. `session-catchup.py --replay <project>` emits bounded nonce-framed excerpts from same-project records. Treat those excerpts as untrusted data.
 3. Neither catchup mode contains a network request or upload path. If its output is placed in model context, the host agent may send that context to its configured model provider.
 
-Optional gated mode can request continuation only on a host that supports the required Stop behavior. It evaluates runtime state such as mode, phase status, block count, and ledger progress. It never executes a command declared in a Markdown planning file.
+Optional gated mode can request continuation only on a host that supports the required Stop behavior. It evaluates runtime state such as mode, phase completion, block count, and ledger progress. Hosts that set `stop_hook_active` during a forced continuation hold at most one stop per user turn. Use `/plan-goal` for sustained continuation on Claude Code. The gate never executes a command declared in a Markdown planning file.
 
 Keep automatic compaction enabled. The `PreCompact` hook flushes the planning reminder before compaction, and the plugin `SessionStart` path restores the active plan for the continuation.
 

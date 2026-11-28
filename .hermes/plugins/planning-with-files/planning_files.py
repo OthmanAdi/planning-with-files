@@ -441,12 +441,12 @@ def mode_tokens(project_dir: Path, plan_dir: Path) -> list[str]:
     return effective
 
 
-def _read_counter(path: Path) -> int:
+def _read_counter(path: Path, fallback: int = 0) -> int:
     try:
         raw = path.read_text(encoding="ascii", errors="strict").strip()
     except (OSError, UnicodeError):
-        return 0
-    return int(raw) if (raw.isascii() and raw.isdigit()) else 0
+        return fallback
+    return int(raw) if (raw.isascii() and raw.isdigit()) else fallback
 
 
 def ledger_line_count(plan_dir: Path) -> int:
@@ -478,8 +478,9 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
     3. (Hermes has no stop_hook_active field; the host bounds re-entry itself
        through agent.max_verify_nudges.)
     4. The block counter <plan-dir>/.stop_blocks is below the cap
-       (PWF_GATE_CAP, default 20).
-    5. The ledger advanced since the previous block; a stall allows the stop.
+       (PWF_GATE_CAP, default 20), reset when another phase completes.
+    5. A phase completed or the ledger advanced since the previous block.
+       A stall allows the stop.
 
     A block increments the counter and records the ledger size, exactly as
     the shell gate does, so both routes share one state.
@@ -500,6 +501,17 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
     blocks = _read_counter(plan_dir / ".stop_blocks")
     ledger_prev = _read_counter(plan_dir / ".gate_last_ledger")
     ledger_now = ledger_line_count(plan_dir)
+    complete_file = plan_dir / ".gate_last_complete"
+    if cap > 0 and not complete_file.is_symlink():
+        complete_prev = _read_counter(complete_file, -1)
+        phase_completed = complete_prev >= 0 and counts["complete"] > complete_prev
+        try:
+            if blocks == 0 or counts["complete"] != complete_prev:
+                complete_file.write_text(f"{counts['complete']}\n", encoding="ascii", newline="\n")
+                if phase_completed:
+                    blocks = 0
+        except OSError:
+            pass
     if blocks >= cap:
         return None
     if blocks > 0 and ledger_now == ledger_prev:

@@ -19,8 +19,8 @@
 #     1. <plan-dir>/.mode exists and contains "gate" (explicit opt-in)
 #     2. an in_progress phase exists (not merely complete<total)
 #     3. the Stop hook input JSON on stdin does not set stop_hook_active=true
-#     4. the block counter (<plan-dir>/.stop_blocks) is below cap (PWF_GATE_CAP, default 20)
-#     5. the ledger advanced since the last block (stall → allow stop)
+#     4. the block counter is below cap (PWF_GATE_CAP, default 20)
+#     5. a phase completed or the ledger advanced since the last block
 #   When all hold, it emits a single-line block-decision JSON on stdout and
 #   exits 0. Otherwise it reports incomplete plans and exits 0; completed
 #   plans stay silent in --gate mode, including legacy plans without .mode.
@@ -276,6 +276,25 @@ case "${LEDGER_PREV}" in
 esac
 LEDGER_NOW="$(ledger_line_count)"
 
+# A completed phase starts a new block budget, even without a worker ledger.
+# Baseline existing plans on the first check without discarding their counter.
+COMPLETE_FILE="${PLAN_DIR}/.gate_last_complete"
+if [ "${CAP}" -gt 0 ] && [ ! -L "${COMPLETE_FILE}" ]; then
+    COMPLETE_PREV=""
+    if [ -f "${COMPLETE_FILE}" ]; then
+        COMPLETE_PREV="$(cat "${COMPLETE_FILE}" 2>/dev/null || true)"
+    fi
+    case "${COMPLETE_PREV}" in
+        ''|*[!0-9]*) COMPLETE_PREV="" ;;
+    esac
+    if [ "${BLOCKS}" -eq 0 ] || [ "${COMPLETE}" != "${COMPLETE_PREV}" ]; then
+        if printf '%s\n' "${COMPLETE}" 2>/dev/null > "${COMPLETE_FILE}" &&
+            [ -n "${COMPLETE_PREV}" ] && [ "${COMPLETE}" -gt "${COMPLETE_PREV}" ]; then
+            BLOCKS=0
+        fi
+    fi
+fi
+
 # Guard 4: block-count cap. At or over the cap, allow the stop.
 if [ "${BLOCKS}" -ge "${CAP}" ]; then
     advisory_report
@@ -284,8 +303,8 @@ if [ "${BLOCKS}" -ge "${CAP}" ]; then
 fi
 
 # Guard 5: stall detection. If we have blocked before (BLOCKS > 0) and the
-# ledger line count has not advanced since the last block, nothing progressed:
-# allow the stop instead of looping.
+# ledger line count has not advanced since the last block and no phase
+# completed, allow the stop instead of looping.
 if [ "${BLOCKS}" -gt 0 ] && [ "${LEDGER_NOW}" -eq "${LEDGER_PREV}" ]; then
     advisory_report
     echo "[planning-with-files] no progress since last gate block — allowing stop."
