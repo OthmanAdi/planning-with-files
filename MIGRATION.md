@@ -164,9 +164,9 @@ with executing the plan, the Stop hook can hold the turn and feed back a fixed r
 the pending phase. This is the opposite of the accidental gate from issue #178: it fires only
 in gated mode, never for any incomplete plan, and the reminder text is a fixed template plus
 the phase name, never raw plan content. Guards keep it safe: a block cap (default 20, counted
-in `.planning/<id>/.stop_blocks` and reset at init), a stall detector (no new ledger line since
-the last block means the run is allowed to stop), and the host's own `stop_hook_active` and
-block-cap backstops.
+in `.planning/<id>/.stop_blocks`, reset at init and restarted when a phase completes), a stall
+detector (no change in the plan's phase statuses or `progress.md` since the last block means the
+run is allowed to stop), and the host's own `stop_hook_active` and block-cap backstops.
 
 ### Run-ledger
 

@@ -433,8 +433,8 @@ The Stop gate blocks ONLY when all of these hold. Any single failure allows the 
 1. Mode is gated (the `.mode` file contains `gate`).
 2. An `in_progress` phase exists (not merely COMPLETE < TOTAL).
 3. `stop_hook_active` is false on the Stop hook stdin (already inside a forced continuation means allow stop).
-4. Block count is below the cap (default 20, `PWF_GATE_CAP` to override, reset at init-session).
-5. The ledger progressed since the previous block (a stall means allow stop).
+4. Block count is below the cap (default 20, `PWF_GATE_CAP` to override, reset at init-session). The cap counts blocks within the current phase: a phase that completed since the previous block starts a fresh budget.
+5. The plan progressed since the previous block (completed phases, `in_progress` phases, or `progress.md` lines); a stall means allow stop.
 
 The block reason is a fixed template plus the phase NAME only. Plan body text never enters the reason. Outside gated mode the wording is always advisory, never imperative (PR #180 lesson: imperative text in a `reason` field becomes a continuation command).
 
@@ -454,16 +454,16 @@ Hosts without a blocking Stop hook still get autonomous mode (low recitation + l
 
 The gate carries its own guards so a runaway loop cannot run unbounded, independent of any undocumented host behavior:
 
-- Persistent block counter in `.planning/<id>/.stop_blocks`, reset at init-session. Without the reset, a previous run's count would let the next run stop instantly.
-- Cap (default 20) on consecutive blocks. At the cap, the gate allows the stop.
-- Stall detection: no new ledger line since the previous block means the model is not progressing, so the gate allows the stop.
+- Persistent block counter in `.planning/<id>/.stop_blocks`, reset at init-session and restarted by a completed phase. Without the reset, a previous run's count would let the next run stop instantly; without the per-phase restart, the cap becomes a lifetime total that ends a long plan (issue #376).
+- Cap (default 20) on consecutive blocks within a phase. At the cap, the gate allows the stop.
+- Stall detection: the plan's own state is the progress signal. No change in completed phases, `in_progress` phases, or `progress.md` lines since the previous block means the model is not progressing, so the gate allows the stop.
 - `stop_hook_active` and the host block cap are backstops, not the primary guard. The counter and stall detector are deterministic and do not depend on undocumented platform fields.
 
 ### Ledger contract summary
 
 In autonomous and gated mode the raw `progress.md` tail injection is replaced by a synthesized summary from `scripts/ledger-summary.sh`. The summary reports tick count, phase complete/total, the in_progress phase heading, and the last event type per agent. No free text from disk reaches the model context, and the block carries no timestamps, so it is KV-cache stable by construction.
 
-The machine ledger lives at `.planning/<id>/ledger-<agent>.jsonl`, append-only, one JSON object per line. Workers append to their own ledger; the orchestrator owns `task_plan.md`. The gate's stall detector reads the ledger (a semantic signal) rather than `progress.md` mtime (which moves on any touch). See `scripts/ledger-append.sh` and `scripts/ledger-summary.sh`.
+The machine ledger lives at `.planning/<id>/ledger-<agent>.jsonl`, append-only, one JSON object per line. Workers append to their own ledger; the orchestrator owns `task_plan.md`. The gate's stall detector reads the plan's own state (phase statuses and `progress.md` line count) rather than file mtimes, and never requires a ledger line: nothing in a normal run writes one (issue #376). See `scripts/ledger-append.sh` and `scripts/ledger-summary.sh`.
 
 ### Trying it
 
@@ -490,7 +490,7 @@ This skill uses PreToolUse and UserPromptSubmit hooks to inject plan context. Ho
 - Activated hooks place selected project planning data into model context. External material copied into planning files remains untrusted.
 - Automatic recovery and bare `session-catchup.py` do not inspect host session stores. Explicit `--metadata` reads same-project local session records and emits aggregate counts only; explicit `--replay` may emit bounded nonce-framed excerpts.
 - The shipped catchup path contains no network request or upload operation. Hook output may still become part of a request made by the host agent to its configured model provider.
-- Default Stop behavior is advisory. Optional gated mode can request continuation only through a capable host. It evaluates mode, phase status, Stop-hook state, block count, and ledger progress; it never executes commands declared in Markdown.
+- Default Stop behavior is advisory. Optional gated mode can request continuation only through a capable host. It evaluates mode, phase status, Stop-hook state, block count, and plan progress; it never executes commands declared in Markdown.
 
 ### Two layers of defense
 

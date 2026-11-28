@@ -819,15 +819,15 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertIn("Phase 2: Build the adapter", first["message"])
             self.assertIn("(1/3 complete, gate block 1/20)", first["message"])
             self.assertEqual("1", (plan_dir / ".stop_blocks").read_text(encoding="ascii").strip())
-            self.assertEqual("0", (plan_dir / ".gate_last_ledger").read_text(encoding="ascii").strip())
-            # Stall: no ledger progress since the previous block allows the stop.
+            self.assertEqual("1|1|2", (plan_dir / ".gate_last_progress").read_text(encoding="ascii").strip())
+            # Stall: no plan progress since the previous block allows the stop.
             self.assertIsNone(self._pre_verify(attempt=1))
-            (plan_dir / "ledger-main.jsonl").write_text('{"event":"progress","tick":1}\n', encoding="utf-8")
+            (plan_dir / "progress.md").write_text("# Progress\n- started\n- wrote the adapter\n", encoding="utf-8")
             second = self._pre_verify(attempt=1)
             assert second is not None
             self.assertIn("gate block 2/20", second["message"])
             os.environ["PWF_GATE_CAP"] = "2"
-            (plan_dir / "ledger-main.jsonl").write_text('{"tick":1}\n{"tick":2}\n', encoding="utf-8")
+            (plan_dir / "progress.md").write_text("# Progress\n- started\n- wrote the adapter\n- ran the tests\n", encoding="utf-8")
             self.assertIsNone(self._pre_verify(attempt=2))
 
     def test_pre_verify_never_holds_legacy_or_autonomous_plans(self) -> None:

@@ -195,10 +195,10 @@ apply_v3_mode() {
     ATTESTATION_COMMAND="attest-plan.sh"
     ATTESTATION_REASON="task_plan.md was not available for attestation"
 
-    # (a) reset the gate block counter and drop any stale gate ledger so a prior
-    #     run's high block count cannot let the next run stop instantly.
+    # (a) reset the gate block counter and drop the stale progress marker so a
+    #     prior run's high block count cannot let the next run stop instantly.
     printf '0\n' > "${_mode_dir}/.stop_blocks"
-    rm -f "${_mode_dir}/.gate_last_ledger" 2>/dev/null || true
+    rm -f "${_mode_dir}/.gate_last_progress" 2>/dev/null || true
 
     # (b) write a fresh 16-hex nonce for delimiter framing.
     gen_nonce > "${_mode_dir}/.nonce"

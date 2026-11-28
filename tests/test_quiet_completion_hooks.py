@@ -113,7 +113,7 @@ def test_completed_automatic_checks_are_silent_and_preserve_state(project, route
     # A finished plan can retain earlier gate bookkeeping. Repeated Stop
     # events must neither reset that state nor append new ledger activity.
     (root / ".stop_blocks").write_text("2\n", encoding="utf-8")
-    (root / ".gate_last_ledger").write_text("1\n", encoding="utf-8")
+    (root / ".gate_last_progress").write_text("2|0|0\n", encoding="utf-8")
     before = file_state(root)
     outputs = [invoke(route, project), invoke(route, project)]
     assert file_state(root) == before

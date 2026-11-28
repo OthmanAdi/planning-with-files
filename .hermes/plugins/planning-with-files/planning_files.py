@@ -129,7 +129,7 @@ def apply_v3_mode(project_dir: Path, plan_dir: Path, mode: str) -> dict[str, Any
     with _attestation_writer(project_dir, plan_dir) as target:
         (plan_dir / ".stop_blocks").write_text("0\n", encoding="ascii")
         try:
-            (plan_dir / ".gate_last_ledger").unlink()
+            (plan_dir / ".gate_last_progress").unlink()
         except FileNotFoundError:
             pass
         (plan_dir / ".nonce").write_text(secrets.token_hex(8) + "\n", encoding="ascii")
@@ -465,6 +465,22 @@ def ledger_line_count(plan_dir: Path) -> int:
     return total
 
 
+def _progress_line_count(plan_dir: Path) -> int:
+    """Line count of progress.md, counted the way `grep -c ''` counts it."""
+    try:
+        raw = (plan_dir / "progress.md").read_bytes()
+    except OSError:
+        return 0
+    if not raw:
+        return 0
+    return raw.count(b"\n") + (0 if raw.endswith(b"\n") else 1)
+
+
+def progress_fingerprint(plan_dir: Path, counts: dict[str, int]) -> str:
+    """Completed phases, in_progress phases, progress.md lines."""
+    return f"{counts['complete']}|{counts['in_progress']}|{_progress_line_count(plan_dir)}"
+
+
 def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
     """The v3 completion gate decision table, in Python, for the Hermes pre_verify hook.
 
@@ -478,11 +494,14 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
     3. (Hermes has no stop_hook_active field; the host bounds re-entry itself
        through agent.max_verify_nudges.)
     4. The block counter <plan-dir>/.stop_blocks is below the cap
-       (PWF_GATE_CAP, default 20).
-    5. The ledger advanced since the previous block; a stall allows the stop.
+       (PWF_GATE_CAP, default 20); a completed phase restarts the counter.
+    5. The plan advanced since the previous block; a stall allows the stop.
 
-    A block increments the counter and records the ledger size, exactly as
-    the shell gate does, so both routes share one state.
+    A block increments the counter and records the progress fingerprint,
+    exactly as the shell gate does, so both routes share one state. The
+    fingerprint is the plan's own state (completed phases, in_progress phases,
+    progress.md lines) because nothing in a normal run writes ledger-*.jsonl
+    (issue #376).
     """
     if os.environ.get("PLANNING_DISABLED", "") == "1":
         return None
@@ -498,18 +517,33 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
     cap_raw = os.environ.get("PWF_GATE_CAP", "").strip()
     cap = int(cap_raw) if (cap_raw.isascii() and cap_raw.isdigit()) else 20
     blocks = _read_counter(plan_dir / ".stop_blocks")
-    ledger_prev = _read_counter(plan_dir / ".gate_last_ledger")
-    ledger_now = ledger_line_count(plan_dir)
-    if blocks >= cap:
+    marker = ""
+    try:
+        marker = (plan_dir / ".gate_last_progress").read_text(encoding="ascii").strip()
+    except (OSError, UnicodeError):
+        marker = ""
+    # A missing or unparsable marker means the counter predates this scheme: treat
+    # it as unscoped and start a fresh phase budget rather than letting a stale
+    # count release Stop forever (#376 review).
+    marker_head = marker.split("|", 1)[0]
+    marker_complete = int(marker_head) if marker_head.isdigit() else None
+    progress_now = progress_fingerprint(plan_dir, counts)
+    # The cap bounds blocks within one phase; a completed phase starts a fresh
+    # budget, so the cap cannot become a lifetime limit (issue #376).
+    blocks_phase = blocks if marker_complete == counts["complete"] else 0
+    if blocks_phase >= cap:
         return None
-    if blocks > 0 and ledger_now == ledger_prev:
+    if blocks_phase > 0 and progress_now == marker:
         return None
     phase_name = first_in_progress_phase(task_plan) or "unknown phase"
     phase_name = _CONTROL_CHARS.sub(" ", phase_name)
-    new_blocks = blocks + 1
+    new_blocks = blocks_phase + 1
+    # Persist the marker before the counter: if only one write lands, a marker
+    # ahead of the counter still bounds the next hold, while a counter ahead of
+    # the marker would let the phase cap release Stop and never restore it.
     try:
+        (plan_dir / ".gate_last_progress").write_text(f"{progress_now}\n", encoding="ascii")
         (plan_dir / ".stop_blocks").write_text(f"{new_blocks}\n", encoding="ascii")
-        (plan_dir / ".gate_last_ledger").write_text(f"{ledger_now}\n", encoding="ascii")
     except OSError:
         pass
     return (

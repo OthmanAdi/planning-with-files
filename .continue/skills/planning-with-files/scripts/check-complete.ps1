@@ -9,7 +9,7 @@
 #   2. an in_progress phase exists (not merely complete<total)
 #   3. the Stop hook input JSON on stdin does not set stop_hook_active=true
 #   4. the block counter (<plan-dir>/.stop_blocks) is below cap (PWF_GATE_CAP, default 20)
-#   5. the ledger advanced since the last block (stall -> allow stop)
+#   5. the plan advanced since the last block (stall -> allow stop)
 # When all hold, emits a single-line block-decision JSON on stdout and exits 0.
 # Otherwise reports incomplete plans and exits 0; completed plans stay silent
 # with -Gate, including legacy plans without .mode. Explicit reports are unchanged.
@@ -232,15 +232,16 @@ if ($IN_PROGRESS -le 0) {
     exit 0
 }
 
-# ledger_line_count: total lines across all <plan-dir>/ledger-*.jsonl files.
-function Get-LedgerLineCount {
-    $total = 0
-    $files = Get-ChildItem -Path $PlanDir -Filter "ledger-*.jsonl" -File -ErrorAction SilentlyContinue
-    foreach ($f in $files) {
-        $lines = @(Get-Content $f.FullName -ErrorAction SilentlyContinue)
-        $total += $lines.Count
+# progress_fingerprint: the progress signal the plan itself carries, so the gate
+# no longer depends on ledger-*.jsonl, which nothing in a normal run writes
+# (issue #376). Fields: completed phases, in_progress phases, progress.md lines.
+function Get-ProgressFingerprint {
+    $lines = 0
+    $progressFile = Join-Path $PlanDir "progress.md"
+    if (Test-Path $progressFile) {
+        $lines = @(Get-Content $progressFile -ErrorAction SilentlyContinue | Where-Object { $_ -ne $null }).Count
     }
-    return $total
+    return ('' + $COMPLETE + '|' + $IN_PROGRESS + '|' + $lines)
 }
 
 $cap = 20
@@ -255,23 +256,34 @@ if (Test-Path $blocksFile) {
     if ($raw -match '^\s*(\d+)') { $blocks = [int]$Matches[1] }
 }
 
-$ledgerFile = Join-Path $PlanDir ".gate_last_ledger"
-$ledgerPrev = 0
-if (Test-Path $ledgerFile) {
-    $raw = (Get-Content $ledgerFile -Raw -ErrorAction SilentlyContinue)
-    if ($raw -match '^\s*(\d+)') { $ledgerPrev = [int]$Matches[1] }
+$markerFile = Join-Path $PlanDir ".gate_last_progress"
+$markerPrev = ""
+if (Test-Path $markerFile) {
+    $markerPrev = [string](Get-Content $markerFile -Raw -ErrorAction SilentlyContinue)
+    $markerPrev = $markerPrev.Trim()
 }
-$ledgerNow = Get-LedgerLineCount
+# A missing or unparsable marker means the counter predates this scheme: treat it
+# as unscoped and start a fresh phase budget rather than letting a stale count
+# release Stop forever (#376 review).
+# $null, not "": PowerShell coerces "" to 0 when comparing against an int, so an
+# empty-string sentinel would make "0 completed phases" look like a missing marker.
+$prevComplete = $null
+if ($markerPrev -match '^(\d+)\|') { $prevComplete = [int]$Matches[1] }
+# The counter only counts blocks within the current phase: a completed phase
+# starts a fresh budget, so the cap cannot become a lifetime limit (#376).
+$blocksPhase = $blocks
+if ($null -eq $prevComplete -or $prevComplete -ne $COMPLETE) { $blocksPhase = 0 }
+$progressNow = Get-ProgressFingerprint
 
-# Guard 4: block-count cap.
-if ($blocks -ge $cap) {
+# Guard 4: block-count cap, counted within the current phase.
+if ($blocksPhase -ge $cap) {
     Write-AdvisoryReport
-    Write-Host ('[planning-with-files] gate cap reached (' + $blocks + '/' + $cap + ') -- allowing stop.')
+    Write-Host ('[planning-with-files] gate cap reached (' + $blocksPhase + '/' + $cap + ') -- allowing stop.')
     exit 0
 }
 
 # Guard 5: stall detection.
-if ($blocks -gt 0 -and $ledgerNow -eq $ledgerPrev) {
+if ($blocksPhase -gt 0 -and $progressNow -eq $markerPrev) {
     Write-AdvisoryReport
     Write-Host '[planning-with-files] no progress since last gate block -- allowing stop.'
     exit 0
@@ -311,14 +323,16 @@ function ConvertTo-JsonEscaped {
 }
 $phaseEscaped = ConvertTo-JsonEscaped $phaseName
 
-$newBlocks = $blocks + 1
+$newBlocks = $blocksPhase + 1
 # Write sidecars as ASCII (single-byte digits) with an explicit LF and no BOM.
 # Set-Content on Windows emits CRLF; check-complete.sh then reads '5\r', whose
 # trailing CR makes the numeric guard reset BLOCKS to 0 on every cross-platform
 # read, so the cap and stall guards never fire. WriteAllText with ASCII gives
 # byte-for-byte '5\n' that both shells parse identically.
+# Marker first, counter second: a marker ahead of the counter still bounds the
+# next hold, a counter ahead of the marker would release Stop for good.
+try { [System.IO.File]::WriteAllText($markerFile, [string]$progressNow + "`n", [System.Text.Encoding]::ASCII) } catch {}
 try { [System.IO.File]::WriteAllText($blocksFile, [string]$newBlocks + "`n", [System.Text.Encoding]::ASCII) } catch {}
-try { [System.IO.File]::WriteAllText($ledgerFile, [string]$ledgerNow + "`n", [System.Text.Encoding]::ASCII) } catch {}
 
 # Reason built from the JSON-escaped phase name; the surrounding template text
 # has no quotes or backslashes, so only the heading needs escaping.
