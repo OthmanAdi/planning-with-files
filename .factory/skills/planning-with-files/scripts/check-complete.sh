@@ -287,10 +287,9 @@ if [ "${CAP}" -gt 0 ] && [ ! -L "${COMPLETE_FILE}" ]; then
     case "${COMPLETE_PREV}" in
         ''|*[!0-9]*) COMPLETE_PREV="" ;;
     esac
-    if [ "${BLOCKS}" -eq 0 ] || [ -z "${COMPLETE_PREV}" ]; then
-        printf '%s\n' "${COMPLETE}" 2>/dev/null > "${COMPLETE_FILE}" || true
-    elif [ "${COMPLETE}" -gt "${COMPLETE_PREV}" ]; then
-        if printf '%s\n' "${COMPLETE}" 2>/dev/null > "${COMPLETE_FILE}"; then
+    if [ "${BLOCKS}" -eq 0 ] || [ "${COMPLETE}" != "${COMPLETE_PREV}" ]; then
+        if printf '%s\n' "${COMPLETE}" 2>/dev/null > "${COMPLETE_FILE}" &&
+            [ -n "${COMPLETE_PREV}" ] && [ "${COMPLETE}" -gt "${COMPLETE_PREV}" ]; then
             BLOCKS=0
         fi
     fi

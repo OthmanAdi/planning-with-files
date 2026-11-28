@@ -298,6 +298,12 @@ describe("gate", () => {
       + "### Phase 3: Verify\n**Status:** in_progress\n")
     expect(evaluateGate(root, dir, gateEnv)).toContain(`(2/3 complete, gate block 1/${cap})`)
     expect(evaluateGate(root, dir, gateEnv)).toBeNull()
+    const plan = path.join(dir, "task_plan.md")
+    const completed = fs.readFileSync(plan, "utf8")
+    fs.writeFileSync(plan, completed.replace("**Status:** complete", "**Status:** pending"))
+    expect(evaluateGate(root, dir, gateEnv)).toBeNull()
+    fs.writeFileSync(plan, completed)
+    expect(evaluateGate(root, dir, gateEnv)).toContain(`(2/3 complete, gate block 1/${cap})`)
   })
 
   it("blocks, counts, stalls and caps like check-complete.sh --gate", () => {

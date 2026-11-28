@@ -506,7 +506,7 @@ def evaluate_gate(project_dir: Path, plan_dir: Path) -> str | None:
         complete_prev = _read_counter(complete_file, -1)
         phase_completed = complete_prev >= 0 and counts["complete"] > complete_prev
         try:
-            if blocks == 0 or complete_prev < 0 or phase_completed:
+            if blocks == 0 or counts["complete"] != complete_prev:
                 complete_file.write_text(f"{counts['complete']}\n", encoding="ascii", newline="\n")
                 if phase_completed:
                     blocks = 0

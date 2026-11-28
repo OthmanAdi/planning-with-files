@@ -272,11 +272,9 @@ if ($cap -gt 0 -and -not ($completeItem.Attributes -band [IO.FileAttributes]::Re
         [int]::TryParse((Get-Content -LiteralPath $completeFile -Raw -ErrorAction SilentlyContinue), [ref]$completePrev) -and
         $completePrev -ge 0
     try {
-        if ($blocks -eq 0 -or -not $hasComplete) {
+        if ($blocks -eq 0 -or -not $hasComplete -or $COMPLETE -ne $completePrev) {
             [IO.File]::WriteAllText($completeFile, [string]$COMPLETE + "`n", [Text.Encoding]::ASCII)
-        } elseif ($COMPLETE -gt $completePrev) {
-            [IO.File]::WriteAllText($completeFile, [string]$COMPLETE + "`n", [Text.Encoding]::ASCII)
-            $blocks = 0
+            if ($hasComplete -and $COMPLETE -gt $completePrev) { $blocks = 0 }
         }
     } catch {}
 }

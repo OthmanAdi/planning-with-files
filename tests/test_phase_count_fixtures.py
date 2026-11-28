@@ -253,6 +253,12 @@ def test_gate_resumes_after_completed_phase_without_ledger(runtime, cap, tmp_pat
     assert f"gate block 1/{cap}" in second["reason"]
     assert '"decision"' not in check()
 
+    completed = plan.read_text(encoding="utf-8")
+    plan.write_text(completed.replace("**Status:** complete", "**Status:** pending"), encoding="utf-8")
+    assert '"decision"' not in check()
+    plan.write_text(completed, encoding="utf-8")
+    assert f"gate block 1/{cap}" in json.loads(check())["reason"]
+
 
 @pytest.mark.parametrize("directory", [
     ".kiro/skills/planning-with-files/assets",

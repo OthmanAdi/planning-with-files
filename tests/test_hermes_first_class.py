@@ -851,6 +851,13 @@ class HermesFirstClassTests(unittest.TestCase):
             self.assertIn("(2/3 complete, gate block 1/1)", resumed["message"])
             self.assertIsNone(self._pre_verify())
 
+            plan = plan_dir / "task_plan.md"
+            completed = plan.read_text(encoding="utf-8")
+            plan.write_text(completed.replace("**Status:** complete", "**Status:** pending", 1), encoding="utf-8")
+            self.assertIsNone(self._pre_verify())
+            plan.write_text(completed, encoding="utf-8")
+            self.assertIsNotNone(self._pre_verify())
+
     def test_pre_verify_never_holds_legacy_or_autonomous_plans(self) -> None:
         with self._workspace() as root:
             (root / "task_plan.md").write_text(GATED_PLAN, encoding="utf-8")

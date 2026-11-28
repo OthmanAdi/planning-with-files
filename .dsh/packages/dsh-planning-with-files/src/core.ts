@@ -583,7 +583,7 @@ export function evaluateGate(root: string, planDir: string, env: Env): string | 
     const completePrev = readCounter(completeFile, -1)
     const phaseCompleted = completePrev >= 0 && counts.complete > completePrev
     try {
-      if (blocks === 0 || completePrev < 0 || phaseCompleted) {
+      if (blocks === 0 || counts.complete !== completePrev) {
         writeText(completeFile, `${counts.complete}\n`)
         if (phaseCompleted) blocks = 0
       }
