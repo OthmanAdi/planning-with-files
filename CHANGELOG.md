@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Stop gate's progress signal is the plan itself. A block is released only when the completed-phase count, the in-progress phase count and the `progress.md` line count are unchanged since the previous block, so a gated run no longer stalls after one block just because nothing writes `ledger-*.jsonl`. The block cap now counts blocks within the current phase: a phase that completes starts a fresh budget instead of the cap acting as a lifetime total (#376).
+
 ## [3.29.1] - 2026-11-23
 
 ### Fixed

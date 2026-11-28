@@ -184,7 +184,7 @@ describe("session.idle gate", () => {
     expect(body.path.id).toBe("ses_main")
     expect(body.body.parts[0].text).toContain("phase 'Phase 2: B' is in_progress (1/2 complete, gate block 1/20)")
     // a second idle while the re-prompt is in flight is ignored; after the next
-    // message the stall rule (no ledger progress) releases the stop
+    // message the stall rule (no plan progress) releases the stop
     await idle("ses_main")
     expect(prompts).toHaveLength(1)
     const { input, output } = message()

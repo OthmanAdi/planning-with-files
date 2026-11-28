@@ -244,7 +244,7 @@ describe("OpenCode v2", () => {
     expect(host.prompts).toHaveLength(1)
     await host.hooks.context(request())
     await host.idle()
-    expect(fs.readFileSync(path.join(root, ".gate_last_ledger"), "utf8")).toBeTruthy()
+    expect(fs.readFileSync(path.join(root, ".gate_last_progress"), "utf8")).toBeTruthy()
     expect(host.prompts).toHaveLength(1)
   })
 

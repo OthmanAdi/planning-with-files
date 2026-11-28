@@ -158,7 +158,7 @@ class TemplateTransparencyTests(unittest.TestCase):
             "phase state",
             "Stop hook state",
             "stop block cap",
-            "ledger progress",
+            "plan progress",
             "The gate never executes commands declared in this plan.",
         ):
             with self.subTest(required=required):

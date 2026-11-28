@@ -173,8 +173,8 @@ function namedPlan(slug: string, text: string, pointer = true): void {
   if (pointer) fs.writeFileSync(path.join(root, ".planning", ".active_plan"), `${slug}\n`)
 }
 
-function ledgerAdvance(dir = root): void {
-  fs.appendFileSync(path.join(dir, "ledger-1.jsonl"), `{"t":${Date.now()}}\n`)
+function progressAdvance(dir = root): void {
+  fs.appendFileSync(path.join(dir, "progress.md"), `- step ${Date.now()}\n`)
 }
 
 beforeEach(() => {
@@ -475,7 +475,7 @@ describe("compaction", () => {
 })
 
 describe("agent/turn-stopping", () => {
-  it("steers a gated agent with the gate reason, stalls without ledger progress, and honours the cap", async () => {
+  it("steers a gated agent with the gate reason, stalls without plan progress, and honours the cap", async () => {
     gatedRoot()
     const loaded = load()
     const agent = agentFor(root)
@@ -486,27 +486,27 @@ describe("agent/turn-stopping", () => {
     expect(textOf(first)).toContain("phase 'Phase 2: B' is in_progress (1/2 complete, gate block 1/20)")
     expect(fs.readFileSync(path.join(root, ".stop_blocks"), "utf8")).toBe("1\n")
 
-    // no ledger progress since the last block releases the stop
+    // no plan progress since the last block releases the stop
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(1)
 
-    ledgerAdvance()
+    progressAdvance()
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(2)
     expect(textOf(agent.steer.mock.calls[1][0] as UserMessage)).toContain("gate block 2/20")
 
     fs.writeFileSync(path.join(root, ".stop_blocks"), "20\n")
-    ledgerAdvance()
+    progressAdvance()
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(2)
 
     process.env.PWF_GATE_CAP = "3"
     fs.writeFileSync(path.join(root, ".stop_blocks"), "2\n")
-    ledgerAdvance()
+    progressAdvance()
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(3)
     expect(textOf(agent.steer.mock.calls[2][0] as UserMessage)).toContain("gate block 3/3")
-    ledgerAdvance()
+    progressAdvance()
     await stop(loaded, agent)
     expect(agent.steer).toHaveBeenCalledTimes(3)
 

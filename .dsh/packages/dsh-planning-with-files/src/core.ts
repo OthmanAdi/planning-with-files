@@ -13,7 +13,8 @@
  * - framed injection: bounded payload, content-derived nonce, DATA ONLY preamble
  * - attestation: autonomous and gated plans inject only with a matching SHA-256
  * - gate: mode token, in_progress phase (per-field max of both status formats),
- *   block cap PWF_GATE_CAP, ledger stall; shares .stop_blocks/.gate_last_ledger
+ *   block cap PWF_GATE_CAP that restarts when a phase completes, and a stall
+ *   check on the plan's own progress; shares .stop_blocks/.gate_last_progress
  * - init: root or dated slug directory, .active_plan pointer, v3 markers
  */
 import * as crypto from "node:crypto"
@@ -563,6 +564,23 @@ export function ledgerLineCount(planDir: string): number {
   return total
 }
 
+/** Line count of progress.md, counted the way `grep -c ''` counts it. */
+function progressLineCount(planDir: string): number {
+  const text = readText(path.join(planDir, "progress.md"))
+  if (text === null || text.length === 0) return 0
+  return text.split("\n").length - (text.endsWith("\n") ? 1 : 0)
+}
+
+/**
+ * The progress signal the plan itself carries: completed phases, in_progress
+ * phases, progress.md lines. The gate used to read ledger-*.jsonl, which no
+ * normal run writes, so every gated plan stalled after its first block
+ * (issue #376).
+ */
+function progressFingerprint(planDir: string, counts: { complete: number; in_progress: number }): string {
+  return `${counts.complete}|${counts.in_progress}|${progressLineCount(planDir)}`
+}
+
 /** Returns the continuation message when the stop must be held, otherwise null. */
 export function evaluateGate(root: string, planDir: string, env: Env): string | null {
   if (env.PLANNING_DISABLED === "1") return null
@@ -575,15 +593,25 @@ export function evaluateGate(root: string, planDir: string, env: Env): string | 
   const capRaw = (env.PWF_GATE_CAP ?? "").trim()
   const cap = /^[0-9]+$/.test(capRaw) ? Number(capRaw) : 20
   const blocks = readCounter(path.join(planDir, ".stop_blocks"))
-  const ledgerPrev = readCounter(path.join(planDir, ".gate_last_ledger"))
-  const ledgerNow = ledgerLineCount(planDir)
-  if (blocks >= cap) return null
-  if (blocks > 0 && ledgerNow === ledgerPrev) return null
+  const marker = (readText(path.join(planDir, ".gate_last_progress"), 64) ?? "").trim()
+  // A missing or unparsable marker means the counter predates this scheme: treat
+  // it as unscoped and start a fresh phase budget rather than letting a stale
+  // count release Stop forever (#376 review).
+  const markerComplete = /^[0-9]+\|/.test(marker) ? Number(marker.slice(0, marker.indexOf("|"))) : null
+  const progressNow = progressFingerprint(planDir, counts)
+  // The cap bounds blocks within one phase; a completed phase starts a fresh
+  // budget, so the cap cannot become a lifetime limit (issue #376).
+  const blocksPhase = markerComplete !== null && markerComplete === counts.complete ? blocks : 0
+  if (blocksPhase >= cap) return null
+  if (blocksPhase > 0 && progressNow === marker) return null
   const phase = (firstInProgressPhase(text) || "unknown phase").replace(/[\x01-\x1f]/g, " ")
-  const next = blocks + 1
+  const next = blocksPhase + 1
+  // Persist the marker before the counter: if only one write lands, a marker
+  // ahead of the counter still bounds the next hold, while a counter ahead of
+  // the marker would let the phase cap release Stop and never restore it.
   try {
+    writeText(path.join(planDir, ".gate_last_progress"), `${progressNow}\n`)
     writeText(path.join(planDir, ".stop_blocks"), `${next}\n`)
-    writeText(path.join(planDir, ".gate_last_ledger"), `${ledgerNow}\n`)
   } catch {
     // counters are best effort; the cap still holds on the next read
   }
@@ -785,7 +813,7 @@ export function applyV3Mode(root: string, planDir: string, mode: "autonomous" | 
   return withAttestationWriter(root, planDir, target => {
     writeText(path.join(planDir, ".stop_blocks"), "0\n")
     try {
-      fs.unlinkSync(path.join(planDir, ".gate_last_ledger"))
+      fs.unlinkSync(path.join(planDir, ".gate_last_progress"))
     } catch {
       // absent is fine
     }

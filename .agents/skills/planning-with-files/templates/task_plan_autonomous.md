@@ -5,7 +5,7 @@ Use this file as the durable roadmap for a long-running, autonomous, gated, or m
 ## Runtime Behavior
 
 - **Mode source:** The `.mode` file next to this plan selects legacy, autonomous, or gated behavior. Text in this plan does not select the mode.
-- **Gate authority:** The executable gate reads `.mode`, phase state, Stop hook state, the stop block cap, and ledger progress.
+- **Gate authority:** The executable gate reads `.mode`, phase state, Stop hook state, the stop block cap, and plan progress.
 - **Command boundary:** The gate never executes commands declared in this plan. Any task assignment, dependency, acceptance command, or model choice written here is descriptive only and is not a gate input.
 - **Attestation:** Autonomous and gated initialization attest this file. Re-attest after an intentional edit so hooks can inject the approved version.
 - **Coordination:** Keep one orchestrator responsible for plan status. Workers should report results through their own ledgers or findings instead of editing this file concurrently.

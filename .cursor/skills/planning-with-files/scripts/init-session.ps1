@@ -447,10 +447,10 @@ if ($UsePlanDir) {
 if ($Mode -ne "") {
     $PlanDirPwf = $TargetDir
 
-    # (a) reset gate block counter, drop stale gate ledger.
+    # (a) reset gate block counter, drop the stale progress marker.
     Set-Content -LiteralPath (Join-Path $PlanDirPwf ".stop_blocks") -Value "0" -Encoding ascii
-    $StaleLedger = Join-Path $PlanDirPwf ".gate_last_ledger"
-    if (Test-Path -LiteralPath $StaleLedger) { Remove-Item -LiteralPath $StaleLedger -Force }
+    $StaleMarker = Join-Path $PlanDirPwf ".gate_last_progress"
+    if (Test-Path -LiteralPath $StaleMarker) { Remove-Item -LiteralPath $StaleMarker -Force }
 
     # (b) fresh 16-hex nonce for delimiter framing.
     Set-Content -LiteralPath (Join-Path $PlanDirPwf ".nonce") -Value (Get-Nonce) -NoNewline -Encoding ascii

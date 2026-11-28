@@ -27,7 +27,7 @@ This repository ships markdown-based planning templates plus shell/PowerShell/Py
 - Automatic recovery and bare `session-catchup.py` do not inspect host agent session stores.
 - Explicit `session-catchup.py --metadata` reads same-project local session records and emits aggregate counts only. Explicit `--replay` may read and emit bounded nonce-framed same-project excerpts.
 - The shipped catchup path contains no network request or upload operation. Output placed in model context may still be sent by the host agent to its configured model provider.
-- Default Stop behavior is advisory. Optional gated mode can request continuation only on capable hosts. It evaluates runtime mode, phase status, Stop-hook state, block count, and ledger progress. It never executes commands declared in Markdown planning files.
+- Default Stop behavior is advisory. Optional gated mode can request continuation only on capable hosts. It evaluates runtime mode, phase status, Stop-hook state, block count, and plan progress. It never executes commands declared in Markdown planning files.
 
 Not in scope: vulnerabilities in the AI agents/IDEs themselves (Claude Code, Codex, etc.) — report those to their respective maintainers.
 

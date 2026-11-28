@@ -293,11 +293,36 @@ describe("gate", () => {
     expect(first).toContain("Phase 2: Build the adapter")
     expect(first).toContain("(1/3 complete, gate block 1/20)")
     expect(fs.readFileSync(path.join(dir, ".stop_blocks"), "utf8").trim()).toBe("1")
+    expect(fs.readFileSync(path.join(dir, ".gate_last_progress"), "utf8").trim()).toBe("1|1|2")
     expect(evaluateGate(root, dir, env)).toBeNull()
-    fs.writeFileSync(path.join(dir, "ledger-main.jsonl"), '{"tick":1}\n')
+    fs.appendFileSync(path.join(dir, "progress.md"), "- wrote the adapter\n")
     expect(evaluateGate(root, dir, env)).toContain("gate block 2/20")
-    fs.writeFileSync(path.join(dir, "ledger-main.jsonl"), '{"tick":1}\n{"tick":2}\n')
+    fs.appendFileSync(path.join(dir, "progress.md"), "- ran the tests\n")
     expect(evaluateGate(root, dir, { ...env, PWF_GATE_CAP: "2" })).toBeNull()
+  })
+
+  it("restarts the block counter when a phase completes (#376)", () => {
+    const dir = slugPlan(root, "2026-09-02-restart", { mode: "autonomous gate", attest: true, pointer: true })
+    // A prior phase left a high counter behind: the old code made the cap a
+    // lifetime total, so this plan could never block again.
+    fs.writeFileSync(path.join(dir, ".stop_blocks"), "5\n")
+    fs.writeFileSync(path.join(dir, ".gate_last_progress"), "1|1|2\n")
+    const nextPlan = [
+      "# Task Plan: Night run",
+      "",
+      "### Phase 1: Discovery",
+      "- **Status:** complete",
+      "",
+      "### Phase 2: Build the adapter",
+      "- **Status:** complete",
+      "",
+      "### Phase 3: Release",
+      "- **Status:** in_progress",
+      "",
+    ].join("\n")
+    fs.writeFileSync(path.join(dir, "task_plan.md"), nextPlan)
+    expect(evaluateGate(root, dir, env)).toContain("gate block 1/20")
+    expect(fs.readFileSync(path.join(dir, ".stop_blocks"), "utf8").trim()).toBe("1")
   })
 
   it("never holds legacy, autonomous, complete, heading-less or disabled plans", () => {

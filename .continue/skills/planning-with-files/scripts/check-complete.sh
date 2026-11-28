@@ -20,7 +20,7 @@
 #     2. an in_progress phase exists (not merely complete<total)
 #     3. the Stop hook input JSON on stdin does not set stop_hook_active=true
 #     4. the block counter (<plan-dir>/.stop_blocks) is below cap (PWF_GATE_CAP, default 20)
-#     5. the ledger advanced since the last block (stall → allow stop)
+#     5. the plan advanced since the last block (stall → allow stop)
 #   When all hold, it emits a single-line block-decision JSON on stdout and
 #   exits 0. Otherwise it reports incomplete plans and exits 0; completed
 #   plans stay silent in --gate mode, including legacy plans without .mode.
@@ -246,16 +246,15 @@ if [ "$IN_PROGRESS" -le 0 ]; then
     exit 0
 fi
 
-# ledger_line_count: total lines across all <plan-dir>/ledger-*.jsonl files.
-# Echoes a single integer (0 when no ledger files exist).
-ledger_line_count() {
-    _total=0
-    for _lf in "${PLAN_DIR}"/ledger-*.jsonl; do
-        [ -f "${_lf}" ] || continue
-        _n="$(grep -c '' "${_lf}" 2>/dev/null || echo 0)"
-        _total=$((_total + _n))
-    done
-    printf "%s" "${_total}"
+# progress_fingerprint: the progress signal the plan itself carries, so the gate
+# no longer depends on ledger-*.jsonl, which nothing in a normal run writes
+# (issue #376). Fields: completed phases, in_progress phases, progress.md lines.
+progress_fingerprint() {
+    _lines=0
+    if [ -f "${PLAN_DIR}/progress.md" ]; then
+        _lines="$(grep -c '' "${PLAN_DIR}/progress.md" 2>/dev/null)" || _lines=0
+    fi
+    printf "%s|%s|%s" "${COMPLETE}" "${IN_PROGRESS}" "${_lines}"
 }
 
 CAP="${PWF_GATE_CAP:-20}"
@@ -269,24 +268,30 @@ case "${BLOCKS}" in
     ''|*[!0-9]*) BLOCKS=0 ;;
 esac
 
-LEDGER_FILE="${PLAN_DIR}/.gate_last_ledger"
-LEDGER_PREV="$(cat "${LEDGER_FILE}" 2>/dev/null || echo 0)"
-case "${LEDGER_PREV}" in
-    ''|*[!0-9]*) LEDGER_PREV=0 ;;
+MARKER_FILE="${PLAN_DIR}/.gate_last_progress"
+MARKER_PREV="$(cat "${MARKER_FILE}" 2>/dev/null || true)"
+PREV_COMPLETE="${MARKER_PREV%%|*}"
+case "${PREV_COMPLETE}" in
+    ''|*[!0-9]*) PREV_COMPLETE="" ;;
 esac
-LEDGER_NOW="$(ledger_line_count)"
+# The counter only counts blocks within the current phase: a completed phase
+# starts a fresh budget, so the cap cannot become a lifetime limit (#376).
+BLOCKS_PHASE="${BLOCKS}"
+if [ -z "${PREV_COMPLETE}" ] || [ "${PREV_COMPLETE}" -ne "${COMPLETE}" ]; then
+    BLOCKS_PHASE=0
+fi
+PROGRESS_NOW="$(progress_fingerprint)"
 
-# Guard 4: block-count cap. At or over the cap, allow the stop.
-if [ "${BLOCKS}" -ge "${CAP}" ]; then
+# Guard 4: block-count cap, counted within the current phase.
+if [ "${BLOCKS_PHASE}" -ge "${CAP}" ]; then
     advisory_report
-    echo "[planning-with-files] gate cap reached ($BLOCKS/$CAP) — allowing stop."
+    echo "[planning-with-files] gate cap reached ($BLOCKS_PHASE/$CAP) — allowing stop."
     exit 0
 fi
 
-# Guard 5: stall detection. If we have blocked before (BLOCKS > 0) and the
-# ledger line count has not advanced since the last block, nothing progressed:
-# allow the stop instead of looping.
-if [ "${BLOCKS}" -gt 0 ] && [ "${LEDGER_NOW}" -eq "${LEDGER_PREV}" ]; then
+# Guard 5: stall detection. If we have blocked before in this phase and the plan
+# looks the same as it did at that block, nothing progressed: allow the stop.
+if [ "${BLOCKS_PHASE}" -gt 0 ] && [ "${PROGRESS_NOW}" = "${MARKER_PREV}" ]; then
     advisory_report
     echo "[planning-with-files] no progress since last gate block — allowing stop."
     exit 0
@@ -318,9 +323,12 @@ if [ -z "${PHASE_NAME}" ]; then
 fi
 PHASE_ESCAPED="$(json_escape "${PHASE_NAME}")"
 
-NEW_BLOCKS=$((BLOCKS + 1))
+NEW_BLOCKS=$((BLOCKS_PHASE + 1))
+# Persist the marker before the counter: if only one write lands, a marker ahead
+# of the counter still bounds the next hold, while a counter ahead of the marker
+# would let the phase cap release Stop and never restore it.
+printf "%s\n" "${PROGRESS_NOW}" > "${MARKER_FILE}" 2>/dev/null || true
 printf "%s\n" "${NEW_BLOCKS}" > "${BLOCKS_FILE}" 2>/dev/null || true
-printf "%s\n" "${LEDGER_NOW}" > "${LEDGER_FILE}" 2>/dev/null || true
 
 printf '{"decision":"block","reason":"[planning-with-files] Gated plan incomplete: phase '\''%s'\'' is in_progress (%s/%s complete, gate block %s/%s). Finish or update the plan, then stop."}\n' \
     "${PHASE_ESCAPED}" "${COMPLETE}" "${TOTAL}" "${NEW_BLOCKS}" "${CAP}"
